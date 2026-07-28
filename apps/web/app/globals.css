@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Generated design tokens (packages/design-tokens/src/css.ts) — run
+   `pnpm --filter @vela/design-tokens build:css` after any token change, then
+   copy/symlink dist/tokens.css here, or wire it via a build step. Foundation
+   inlines the token variables directly below until that pipeline step exists,
+   so the app is stylable without a cross-package build order dependency. */
+@import "../styles/tokens.css";
+
+@layer base {
+  :root {
+    --font-ui:
+      var(--next-font-inter, "Inter"), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-display: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+    --font-data: "Courier New", Courier, monospace;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-surface-canvas text-text-primary font-ui;
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  /* One focus grammar product-wide (Design System 9.3): 2px Cobalt ring, 2px
+     offset, on every interactive element, in both themes. :focus-visible only
+     — pointer clicks never paint a ring, keyboard focus always does. */
+  :focus-visible {
+    outline: 2px solid var(--color-cobalt);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-gold);
+    color: var(--color-midnight);
+  }
+}
+
+@layer utilities {
+  /* Design System 9.2: a skip-link precedes the app shell on every page. */
+  .skip-link {
+    @apply bg-gold text-midnight absolute left-4 top-[-100px] z-50 rounded-md px-4 py-2;
+    @apply duration-quick transition-all focus:top-4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

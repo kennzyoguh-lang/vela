@@ -1,0 +1,105 @@
+-- VELA — RLS, audit-log immutability, and extensions (Engineering Handbook Part 6.3/6.4/6.6).
+-- Applied as migration 20260728231500_rls_and_security, following 20260728230004_init.
+-- Source of truth for this content: prisma/rls-and-security.sql.template.
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS citext;
+
+-- Dedicated roles: the app's normal write role never gets UPDATE/DELETE on audit_log
+-- at all (Handbook 6.4), and a separate read-only role serves any export/report
+-- feature that reads it.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'api_write_role') THEN
+    CREATE ROLE api_write_role NOLOGIN;
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'audit_reader_role') THEN
+    CREATE ROLE audit_reader_role NOLOGIN;
+  END IF;
+END $$;
+
+-- === Row-Level Security — every table with org_id, no exceptions (Handbook 6.3) ===
+-- app.current_org_id is set once per request/transaction by the API's connection
+-- middleware (apps/api/src/lib/db.ts), immediately after JWT verification.
+
+ALTER TABLE organisations ENABLE ROW LEVEL SECURITY;
+-- Org creation (signup) has no existing org_id to check against — the insert
+-- itself is what mints the tenant boundary, so it's allowed unconditionally.
+-- Every other policy on every other table requires app.current_org_id to match.
+CREATE POLICY allow_insert ON organisations
+  FOR INSERT WITH CHECK (true);
+CREATE POLICY org_isolation_select ON organisations
+  FOR SELECT USING (id = current_setting('app.current_org_id', true)::uuid);
+CREATE POLICY org_isolation_update ON organisations
+  FOR UPDATE USING (id = current_setting('app.current_org_id', true)::uuid);
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY org_isolation_select ON users
+  FOR SELECT USING (org_id = current_setting('app.current_org_id', true)::uuid);
+CREATE POLICY org_isolation_insert ON users
+  FOR INSERT WITH CHECK (org_id = current_setting('app.current_org_id', true)::uuid);
+CREATE POLICY org_isolation_update ON users
+  FOR UPDATE USING (org_id = current_setting('app.current_org_id', true)::uuid);
+
+ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY org_isolation_select ON user_sessions
+  FOR SELECT USING (org_id = current_setting('app.current_org_id', true)::uuid);
+CREATE POLICY org_isolation_insert ON user_sessions
+  FOR INSERT WITH CHECK (org_id = current_setting('app.current_org_id', true)::uuid);
+CREATE POLICY org_isolation_update ON user_sessions
+  FOR UPDATE USING (org_id = current_setting('app.current_org_id', true)::uuid);
+
+ALTER TABLE organisation_invites ENABLE ROW LEVEL SECURITY;
+CREATE POLICY org_isolation_select ON organisation_invites
+  FOR SELECT USING (org_id = current_setting('app.current_org_id', true)::uuid);
+CREATE POLICY org_isolation_insert ON organisation_invites
+  FOR INSERT WITH CHECK (org_id = current_setting('app.current_org_id', true)::uuid);
+CREATE POLICY org_isolation_update ON organisation_invites
+  FOR UPDATE USING (org_id = current_setting('app.current_org_id', true)::uuid);
+
+-- === Audit log — write-once (Handbook 6.4) ===
+REVOKE UPDATE, DELETE ON audit_log FROM api_write_role;
+GRANT SELECT, INSERT ON audit_log TO api_write_role;
+GRANT SELECT ON audit_log TO audit_reader_role;
+
+CREATE OR REPLACE FUNCTION prevent_audit_log_mutation() RETURNS TRIGGER AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_log is write-once: % not permitted', TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS audit_log_immutable ON audit_log;
+CREATE TRIGGER audit_log_immutable
+  BEFORE UPDATE OR DELETE ON audit_log
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_log_mutation();
+
+-- === Login-by-email lookup — the one narrow, deliberate RLS exception ===
+-- `users` has no INSERT/SELECT policy that doesn't require app.current_org_id,
+-- which is structurally correct (Handbook 6.3 "no exceptions" at the table
+-- level) but breaks login: at the moment of authentication, org context isn't
+-- known yet — the app doesn't know which org an email belongs to until it
+-- finds the user. Rather than opening a table-level policy hole, a single
+-- SECURITY DEFINER function returns only the columns auth needs, callable only
+-- by the API's role. Direct SELECT access to `users` remains fully RLS-gated.
+CREATE OR REPLACE FUNCTION auth_lookup_user_by_email(p_email citext)
+RETURNS TABLE (
+  id uuid,
+  org_id uuid,
+  password_hash text,
+  role text,
+  two_fa_enabled boolean,
+  is_active boolean
+)
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT id, org_id, password_hash, role::text, two_fa_enabled, is_active
+  FROM users
+  WHERE email = p_email
+  LIMIT 1;
+$$;
+
+REVOKE ALL ON FUNCTION auth_lookup_user_by_email(citext) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION auth_lookup_user_by_email(citext) TO api_write_role;

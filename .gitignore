@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+.next/
+dist/
+build/
+.turbo/
+
+# Env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Prisma
+apps/api/prisma/dev.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+*.tsbuildinfo
+
+# Testing
+coverage/
+
+# Husky
+.husky/_

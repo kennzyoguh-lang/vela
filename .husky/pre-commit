@@ -1,0 +1,11 @@
+npx lint-staged
+
+# gitleaks is a standalone binary (not an npm package) — CI enforces it via
+# gitleaks/gitleaks-action regardless (Handbook 8.6's two-layer check), so a
+# dev machine without it installed locally shouldn't be blocked from
+# committing; it just loses the pre-commit layer, not the CI one.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --no-banner
+else
+  echo "gitleaks not installed locally — skipping pre-commit secret scan (CI still runs it)"
+fi

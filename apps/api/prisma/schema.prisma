@@ -1,0 +1,134 @@
+// VELA — Foundation schema. Module-owned tables (invoices, employees, transactions,
+// compliance_obligations, ...) are added when their module ships (Handbook Part 6.2/6.8).
+// RLS policies are NOT expressed here — Prisma has no RLS primitive — they are
+// hand-authored SQL added via `prisma migrate dev --create-only` immediately after
+// each migration that introduces an org_id-scoped table (see prisma/migrations/
+// and scripts/verify-rls.mjs, which fails CI if one is missing).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  owner
+  admin
+  accountant
+  staff
+  view_only
+
+  @@map("role")
+}
+
+enum SubscriptionTier {
+  starter
+  growth
+  enterprise
+  corporate
+
+  @@map("subscription_tier")
+}
+
+model Organisation {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String
+  industry           String?
+  baseCurrency       String           @default("NGN") @map("base_currency") @db.Char(3)
+  country            String           @default("NG")
+  registrationNumber String?          @map("registration_number")
+  taxId              String?          @map("tax_id")
+  subscriptionTier   SubscriptionTier @default(starter) @map("subscription_tier")
+  subscriptionStatus String           @default("trialing") @map("subscription_status")
+  ownerId            String?          @map("owner_id") @db.Uuid
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  users            User[]
+  sessions         UserSession[]
+  invites          OrganisationInvite[]
+
+  @@map("organisations")
+}
+
+model User {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId            String    @map("org_id") @db.Uuid
+  name             String
+  email            String    @unique @db.Citext
+  passwordHash     String    @map("password_hash")
+  role             Role      @default(staff)
+  twoFaSecretHash  String?   @map("two_fa_secret_hash")
+  twoFaEnabled     Boolean   @default(false) @map("two_fa_enabled")
+  backupCodesHash  String[]  @map("backup_codes_hash")
+  lastLogin        DateTime? @map("last_login") @db.Timestamptz
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  sessions     UserSession[]
+
+  @@index([orgId])
+  @@map("users")
+}
+
+model UserSession {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String   @map("user_id") @db.Uuid
+  orgId              String   @map("org_id") @db.Uuid
+  refreshTokenHash   String   @map("refresh_token_hash")
+  sessionFamilyId    String   @map("session_family_id") @db.Uuid
+  deviceInfo         String?  @map("device_info")
+  ipAddress          String?  @map("ip_address")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+  lastActive         DateTime @default(now()) @map("last_active") @db.Timestamptz
+  isActive           Boolean  @default(true) @map("is_active")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([userId])
+  @@map("user_sessions")
+}
+
+model OrganisationInvite {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId     String   @map("org_id") @db.Uuid
+  email     String   @db.Citext
+  role      Role     @default(staff)
+  status    String   @default("pending")
+  invitedBy String   @map("invited_by") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@map("organisation_invites")
+}
+
+// Write-once — REVOKE UPDATE/DELETE + immutability trigger applied via raw SQL
+// migration (Handbook 6.4). org_id is intentionally NOT a foreign key with cascade
+// delete, so an org deletion (data export + closure) can never take audit history
+// with it (Handbook 6.9).
+model AuditLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId       String   @map("org_id") @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String?  @map("entity_id") @db.Uuid
+  oldValue    Json?    @map("old_value")
+  newValue    Json?    @map("new_value")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([orgId, createdAt(sort: Desc)])
+  @@map("audit_log")
+}

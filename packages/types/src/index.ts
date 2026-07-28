@@ -1,0 +1,55 @@
+// Shared TypeScript types, hand-written for Foundation. Once Phase 2 introduces
+// the OpenAPI spec (Engineering Handbook Part 7.8), these become generated types
+// and this file is replaced by the generator's output — do not hand-duplicate
+// domain types once that pipeline exists.
+
+export type Role = "owner" | "admin" | "accountant" | "staff" | "view_only";
+
+export interface Organisation {
+  id: string;
+  name: string;
+  industry: string | null;
+  baseCurrency: string;
+  country: string;
+  subscriptionTier: "starter" | "growth" | "enterprise" | "corporate";
+  subscriptionStatus: string;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface User {
+  id: string;
+  orgId: string;
+  name: string;
+  email: string;
+  role: Role;
+  twoFaEnabled: boolean;
+  isActive: boolean;
+  lastLogin: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserSession {
+  id: string;
+  userId: string;
+  deviceInfo: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+  lastActive: string;
+  isActive: boolean;
+  isCurrent: boolean;
+}
+
+/** API response envelope — Engineering Handbook Part 7.6. Uniform for every endpoint. */
+export type ApiResponse<T> =
+  | {
+      success: true;
+      data: T;
+      meta?: { page?: number; limit?: number; total?: number; cursor?: string; requestId: string };
+    }
+  | {
+      success: false;
+      error: { code: string; message: string; details?: unknown; requestId: string };
+    };

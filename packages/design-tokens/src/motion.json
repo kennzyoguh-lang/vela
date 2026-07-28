@@ -1,0 +1,7 @@
+{
+  "instant": { "duration": "100ms", "easing": "ease-out" },
+  "quick": { "duration": "180ms", "easing": "cubic-bezier(0.4, 0, 0.2, 1)" },
+  "standard": { "duration": "240ms", "easing": "cubic-bezier(0.4, 0, 0.2, 1)" },
+  "deliberate": { "duration": "400ms", "easing": "cubic-bezier(0.2, 0, 0, 1)" },
+  "exitFactor": 0.7
+}

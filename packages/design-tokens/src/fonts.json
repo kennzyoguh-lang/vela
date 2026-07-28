@@ -1,0 +1,15 @@
+{
+  "display": {
+    "family": "Palatino Linotype",
+    "fallback": ["Palatino Linotype", "Book Antiqua", "Palatino", "Georgia", "serif"]
+  },
+  "ui": {
+    "family": "Inter",
+    "fallback": ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"]
+  },
+  "data": {
+    "family": "Courier New",
+    "fallback": ["Courier New", "Courier", "monospace"],
+    "weight": 700
+  }
+}
