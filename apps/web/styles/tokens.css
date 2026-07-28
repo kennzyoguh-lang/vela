@@ -1,0 +1,157 @@
+/*
+ * Hand-generated snapshot matching packages/design-tokens/src/*.json exactly.
+ * Once Node/pnpm are available, run:
+ *   pnpm --filter @vela/design-tokens build:css
+ * and replace this file with packages/design-tokens/dist/tokens.css (or wire a
+ * prebuild step that copies it here) — this file must never drift from the
+ * token JSON, which remains the single source of truth (Handbook Part 2).
+ */
+:root {
+  --color-midnight: #0d1b2a;
+  --color-gold: #c9a84c;
+  --color-goldDark: #a08030;
+  --color-cobalt: #1a4a8a;
+  --color-slate: #e8edf5;
+  --color-sage: #2d6a4f;
+  --color-rust: #c4552a;
+
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f7f9fc;
+  --color-neutral-100: #e8edf5;
+  --color-neutral-200: #d3dce8;
+  --color-neutral-300: #aab8ca;
+  --color-neutral-400: #7a8ca3;
+  --color-neutral-500: #55677e;
+  --color-neutral-600: #3a4c61;
+  --color-neutral-700: #263749;
+  --color-neutral-800: #152538;
+  --color-neutral-900: #0d1b2a;
+
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  --elevation-0: none;
+  --elevation-1: 0 1px 2px rgba(13, 27, 42, 0.08);
+  --elevation-2: 0 2px 8px rgba(13, 27, 42, 0.12);
+  --elevation-3: 0 8px 24px rgba(13, 27, 42, 0.18);
+  --elevation-modal: 0 16px 48px rgba(13, 27, 42, 0.28);
+
+  --motion-instant: 100ms ease-out;
+  --motion-quick: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-standard: 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-deliberate: 400ms cubic-bezier(0.2, 0, 0, 1);
+
+  /* Dark is the default theme (Design System 2.11) */
+  --surface-canvas: var(--color-neutral-900);
+  --surface-raised: var(--color-neutral-800);
+  --surface-overlay: var(--color-neutral-700);
+  --surface-primary: var(--color-midnight);
+  --surface-secondary: #152538;
+  --border-default: var(--color-neutral-700);
+  --border-strong: var(--color-neutral-600);
+  --text-primary: #f4f6fa;
+  --text-secondary: var(--color-neutral-300);
+  --text-disabled: var(--color-neutral-600);
+  --text-onAccent: var(--color-midnight);
+  --action-primary: var(--color-gold);
+  --action-primaryText: var(--color-midnight);
+  --status-success: var(--color-sage);
+  --status-warning: var(--color-gold);
+  --status-danger: #e06b42;
+  --data-aiAccent: #4a7fc9;
+}
+
+:root[data-theme="light"] {
+  --surface-canvas: var(--color-neutral-50);
+  --surface-raised: var(--color-neutral-0);
+  --surface-overlay: var(--color-neutral-0);
+  --surface-primary: var(--color-slate);
+  --surface-secondary: #ffffff;
+  --border-default: var(--color-neutral-200);
+  --border-strong: var(--color-neutral-300);
+  --text-primary: var(--color-midnight);
+  --text-secondary: var(--color-neutral-500);
+  --text-disabled: var(--color-neutral-300);
+  --text-onAccent: var(--color-midnight);
+  --action-primary: var(--color-gold);
+  --action-primaryText: var(--color-midnight);
+  --status-success: var(--color-sage);
+  --status-warning: #b8862e;
+  --status-danger: var(--color-rust);
+  --data-aiAccent: var(--color-cobalt);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --surface-canvas: var(--color-neutral-50);
+    --surface-raised: var(--color-neutral-0);
+    --surface-overlay: var(--color-neutral-0);
+    --surface-primary: var(--color-slate);
+    --surface-secondary: #ffffff;
+    --border-default: var(--color-neutral-200);
+    --border-strong: var(--color-neutral-300);
+    --text-primary: var(--color-midnight);
+    --text-secondary: var(--color-neutral-500);
+    --text-disabled: var(--color-neutral-300);
+    --text-onAccent: var(--color-midnight);
+    --action-primary: var(--color-gold);
+    --action-primaryText: var(--color-midnight);
+    --status-success: var(--color-sage);
+    --status-warning: #b8862e;
+    --status-danger: var(--color-rust);
+    --data-aiAccent: var(--color-cobalt);
+  }
+}
+
+/* Type scale (Design System 2.3, corrected product scale) */
+:root {
+  --type-display-xl-size: 2.5rem;
+  --type-display-xl-line-height: 1.1;
+  --type-display-xl-weight: 400;
+  --type-display-size: 2rem;
+  --type-display-line-height: 1.15;
+  --type-display-weight: 400;
+  --type-h1-size: 1.5rem;
+  --type-h1-line-height: 1.25;
+  --type-h1-weight: 700;
+  --type-h2-size: 1.25rem;
+  --type-h2-line-height: 1.3;
+  --type-h2-weight: 600;
+  --type-h3-size: 1rem;
+  --type-h3-line-height: 1.4;
+  --type-h3-weight: 600;
+  --type-body-size: 1rem;
+  --type-body-line-height: 1.55;
+  --type-body-weight: 400;
+  --type-body-sm-size: 0.875rem;
+  --type-body-sm-line-height: 1.5;
+  --type-body-sm-weight: 400;
+  --type-caption-size: 0.75rem;
+  --type-caption-line-height: 1.4;
+  --type-caption-weight: 500;
+  --type-label-size: 0.75rem;
+  --type-label-line-height: 1.35;
+  --type-label-weight: 600;
+  --type-data-lg-size: 1.25rem;
+  --type-data-lg-line-height: 1.3;
+  --type-data-lg-weight: 700;
+  --type-data-size: 0.875rem;
+  --type-data-line-height: 1.45;
+  --type-data-weight: 700;
+  --type-data-sm-size: 0.75rem;
+  --type-data-sm-line-height: 1.4;
+  --type-data-sm-weight: 700;
+}

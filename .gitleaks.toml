@@ -1,0 +1,11 @@
+# Secret scanning config — Engineering Handbook Part 8.6 (pre-commit + CI, two independent layers).
+title = "vela-gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+paths = [
+  '''\.env\.example$''',
+  '''pnpm-lock\.yaml$''',
+]

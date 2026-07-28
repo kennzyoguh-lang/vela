@@ -1,0 +1,19 @@
+{
+  "surface.primary": { "light": "color.slate", "dark": "color.midnight" },
+  "surface.secondary": { "light": "#FFFFFF", "dark": "#152538" },
+  "surface.canvas": { "light": "neutral.50", "dark": "neutral.900" },
+  "surface.raised": { "light": "neutral.0", "dark": "neutral.800" },
+  "surface.overlay": { "light": "neutral.0", "dark": "neutral.700" },
+  "border.default": { "light": "neutral.200", "dark": "neutral.700" },
+  "border.strong": { "light": "neutral.300", "dark": "neutral.600" },
+  "text.primary": { "light": "color.midnight", "dark": "#F4F6FA" },
+  "text.secondary": { "light": "neutral.500", "dark": "neutral.300" },
+  "text.disabled": { "light": "neutral.300", "dark": "neutral.600" },
+  "text.onAccent": { "light": "color.midnight", "dark": "color.midnight" },
+  "action.primary": { "light": "color.gold", "dark": "color.gold" },
+  "action.primaryText": { "light": "color.midnight", "dark": "color.midnight" },
+  "status.success": { "light": "color.sage", "dark": "color.sage" },
+  "status.warning": { "light": "#B8862E", "dark": "color.gold" },
+  "status.danger": { "light": "color.rust", "dark": "#E06B42" },
+  "data.aiAccent": { "light": "color.cobalt", "dark": "#4A7FC9" }
+}

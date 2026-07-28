@@ -1,0 +1,50 @@
+{
+  "midnight": {
+    "value": "#0D1B2A",
+    "role": "primary-background",
+    "usage": "nav, headers, dark surfaces, authority moments"
+  },
+  "gold": {
+    "value": "#C9A84C",
+    "role": "primary-accent",
+    "usage": "CTAs, highlights, logo mark, data callouts"
+  },
+  "goldDark": {
+    "value": "#A08030",
+    "role": "accent-on-light",
+    "usage": "tagline and accents on light backgrounds"
+  },
+  "cobalt": {
+    "value": "#1A4A8A",
+    "role": "intelligence",
+    "usage": "AI features, data viz, precision indicators"
+  },
+  "slate": {
+    "value": "#E8EDF5",
+    "role": "expansion",
+    "usage": "card backgrounds, surfaces, breathing space"
+  },
+  "sage": {
+    "value": "#2D6A4F",
+    "role": "stability",
+    "usage": "success states, financial health, positive metrics"
+  },
+  "rust": {
+    "value": "#C4552A",
+    "role": "urgency",
+    "usage": "alerts, overdue states, warnings, required action"
+  },
+  "neutral": {
+    "0": "#FFFFFF",
+    "50": "#F7F9FC",
+    "100": "#E8EDF5",
+    "200": "#D3DCE8",
+    "300": "#AAB8CA",
+    "400": "#7A8CA3",
+    "500": "#55677E",
+    "600": "#3A4C61",
+    "700": "#263749",
+    "800": "#152538",
+    "900": "#0D1B2A"
+  }
+}
