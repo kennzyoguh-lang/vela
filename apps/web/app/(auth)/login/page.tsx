@@ -24,14 +24,18 @@ export default function LoginPage() {
   async function onSubmit(values: LoginFormValues) {
     setFormError(null);
     try {
-      const result = await api.post<{ accessToken: string; requiresTwoFa: boolean }>(
-        "/v1/auth/login",
-        values,
-      );
-      useAuthStore.getState().setAccessToken(result.accessToken);
+      const result = await api.post<
+        | { requiresTwoFa: true; challengeToken: string }
+        | { requiresTwoFa: false; accessToken: string }
+      >("/v1/auth/login", values);
       if (result.requiresTwoFa) {
+        // No real access token exists yet — nothing to store there. The
+        // challenge token is single-purpose (redeemable only at
+        // /v1/auth/2fa/verify) and lives in the same in-memory store.
+        useAuthStore.getState().setChallengeToken(result.challengeToken);
         router.push("/2fa");
       } else {
+        useAuthStore.getState().setAccessToken(result.accessToken);
         router.push("/");
       }
     } catch (err) {

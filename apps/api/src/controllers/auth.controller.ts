@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import * as authService from "../services/auth.service";
-import { signupSchema, loginSchema } from "../validation/auth.schema";
+import { signupSchema, loginSchema, twoFaChallengeSchema } from "../validation/auth.schema";
 import { sendSuccess } from "../lib/response";
 import { env } from "../lib/env";
 
@@ -56,7 +56,10 @@ export async function signup(req: Request, res: Response) {
   // completes, so they're set here, immediately before the response is sent.
   req.orgId = result.orgId;
   req.userId = result.userId;
-  sendSuccess(res, { accessToken: result.accessToken, requiresTwoFa: result.requiresTwoFa }, 201);
+  // A fresh signup never has 2FA enabled yet (that's a separate, later
+  // enrollment flow) — requiresTwoFa is always false here, never read off
+  // the service result.
+  sendSuccess(res, { accessToken: result.accessToken, requiresTwoFa: false }, 201);
 }
 
 export async function login(req: Request, res: Response) {
@@ -65,10 +68,36 @@ export async function login(req: Request, res: Response) {
     deviceInfo: req.headers["user-agent"],
     ipAddress: req.ip,
   });
+
+  if (result.requiresTwoFa) {
+    // No session exists yet — the refresh cookie is not set. req.orgId/userId
+    // are still set (from the already-verified password check) so the
+    // auditLog("auth.login", "user") middleware on this route doesn't
+    // silently no-op just because 2FA is enabled for this account.
+    req.orgId = result.orgId;
+    req.userId = result.userId;
+    return sendSuccess(res, { requiresTwoFa: true, challengeToken: result.challengeToken });
+  }
+
   setRefreshCookie(res, result.orgId, result.sessionFamilyId, result.refreshToken);
   req.orgId = result.orgId;
   req.userId = result.userId;
-  sendSuccess(res, { accessToken: result.accessToken, requiresTwoFa: result.requiresTwoFa });
+  sendSuccess(res, { accessToken: result.accessToken, requiresTwoFa: false });
+}
+
+// Completes a login that paused on a 2FA challenge (login() above returned
+// requiresTwoFa: true). Not part of the enrollment flow (/2fa/setup,
+// /2fa/confirm below) — this is the ongoing, every-future-login check.
+export async function verifyTwoFa(req: Request, res: Response) {
+  const { challengeToken, code } = twoFaChallengeSchema.parse(req.body);
+  const result = await authService.verifyTwoFaChallenge(challengeToken, code, {
+    deviceInfo: req.headers["user-agent"],
+    ipAddress: req.ip,
+  });
+  setRefreshCookie(res, result.orgId, result.sessionFamilyId, result.refreshToken);
+  req.orgId = result.orgId;
+  req.userId = result.userId;
+  sendSuccess(res, { accessToken: result.accessToken, requiresTwoFa: false });
 }
 
 export async function refresh(req: Request, res: Response) {

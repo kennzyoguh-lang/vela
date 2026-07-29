@@ -29,18 +29,39 @@ const TWO_FA_ATTEMPTS_KEY = (userId: string) => `2fa:attempts:${userId}`;
 const LOCKOUT_SECONDS = 15 * 60;
 const MAX_ATTEMPTS = 5;
 
+// Same fail-open contract as checkAndIncrement above, for the same reason:
+// the lockout is defense-in-depth ON TOP OF verifyTotpCode/consumeBackupCode
+// actually rejecting a wrong code — it never gates whether a *correct* code
+// succeeds. A Redis outage degrading this to "no brute-force throttling"
+// leaves login no less safe than before this lockout existed; the
+// alternative (propagating the error) would instead lock every legitimate
+// user with 2FA enabled out of their own account until Redis recovers,
+// which is worse than the risk being traded off.
 export async function isTwoFaLockedOut(userId: string): Promise<boolean> {
-  return (await redis.exists(TWO_FA_LOCKOUT_KEY(userId))) === 1;
+  try {
+    return (await redis.exists(TWO_FA_LOCKOUT_KEY(userId))) === 1;
+  } catch (err) {
+    logger.warn({ err, userId }, "2FA lockout check failed — failing open");
+    return false;
+  }
 }
 
 export async function recordTwoFaFailure(userId: string): Promise<void> {
-  const attempts = await redis.incr(TWO_FA_ATTEMPTS_KEY(userId));
-  if (attempts === 1) await redis.expire(TWO_FA_ATTEMPTS_KEY(userId), LOCKOUT_SECONDS);
-  if (attempts >= MAX_ATTEMPTS) {
-    await redis.set(TWO_FA_LOCKOUT_KEY(userId), "1", "EX", LOCKOUT_SECONDS);
+  try {
+    const attempts = await redis.incr(TWO_FA_ATTEMPTS_KEY(userId));
+    if (attempts === 1) await redis.expire(TWO_FA_ATTEMPTS_KEY(userId), LOCKOUT_SECONDS);
+    if (attempts >= MAX_ATTEMPTS) {
+      await redis.set(TWO_FA_LOCKOUT_KEY(userId), "1", "EX", LOCKOUT_SECONDS);
+    }
+  } catch (err) {
+    logger.warn({ err, userId }, "2FA failure recording failed — the wrong code is still rejected");
   }
 }
 
 export async function clearTwoFaFailures(userId: string): Promise<void> {
-  await redis.del(TWO_FA_ATTEMPTS_KEY(userId), TWO_FA_LOCKOUT_KEY(userId));
+  try {
+    await redis.del(TWO_FA_ATTEMPTS_KEY(userId), TWO_FA_LOCKOUT_KEY(userId));
+  } catch (err) {
+    logger.warn({ err, userId }, "2FA failure counter clear failed");
+  }
 }

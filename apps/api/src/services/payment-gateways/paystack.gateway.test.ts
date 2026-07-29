@@ -10,6 +10,7 @@ beforeAll(() => {
   process.env.REDIS_URL ??= "redis://localhost:6379";
   process.env.JWT_PRIVATE_KEY_BASE64 ??= "placeholder";
   process.env.JWT_PUBLIC_KEY_BASE64 ??= "placeholder";
+  process.env.TWO_FA_ENCRYPTION_KEY_BASE64 ??= "placeholder";
 });
 
 function signBody(body: string): string {

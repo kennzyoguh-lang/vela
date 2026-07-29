@@ -15,6 +15,7 @@ beforeAll(() => {
   process.env.DATABASE_URL ??= "postgresql://vela:vela@localhost:5432/vela_test";
   process.env.APP_DATABASE_URL ??= "postgresql://vela:vela@localhost:5432/vela_test";
   process.env.REDIS_URL ??= "redis://localhost:6379";
+  process.env.TWO_FA_ENCRYPTION_KEY_BASE64 ??= "placeholder";
 });
 
 describe("jwt.service", () => {
@@ -55,5 +56,34 @@ describe("jwt.service", () => {
     const b = newRefreshToken();
     expect(a.token).not.toBe(b.token);
     expect(a.familyId).not.toBe(b.familyId);
+  });
+
+  describe("2FA challenge token — structural separation from real access tokens", () => {
+    it("round-trips claims through sign/verify", async () => {
+      const { signTwoFaChallengeToken, verifyTwoFaChallengeToken } = await import("./jwt.service");
+      const token = signTwoFaChallengeToken({ sub: "user-1", orgId: "org-1" });
+      expect(verifyTwoFaChallengeToken(token)).toMatchObject({ sub: "user-1", orgId: "org-1" });
+    });
+
+    // The hard invariant: both token types share a signing key, so this
+    // check — not the shape of the claims — is the only thing that stops a
+    // password-verified-but-not-yet-2FA-confirmed token from being usable
+    // as a real session.
+    it("verifyAccessToken rejects a 2FA challenge token", async () => {
+      const { signTwoFaChallengeToken, verifyAccessToken } = await import("./jwt.service");
+      const challengeToken = signTwoFaChallengeToken({ sub: "user-1", orgId: "org-1" });
+      expect(() => verifyAccessToken(challengeToken)).toThrow();
+    });
+
+    it("verifyTwoFaChallengeToken rejects a real access token", async () => {
+      const { signAccessToken, verifyTwoFaChallengeToken } = await import("./jwt.service");
+      const accessToken = signAccessToken({
+        sub: "user-1",
+        orgId: "org-1",
+        role: "owner",
+        sessionFamilyId: "family-1",
+      });
+      expect(() => verifyTwoFaChallengeToken(accessToken)).toThrow();
+    });
   });
 });

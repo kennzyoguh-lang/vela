@@ -6,6 +6,7 @@ import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import { NAV_ITEMS } from "./nav-items";
 import { useUiStore } from "@/stores/ui-store";
 import { cn } from "@/lib/utils";
+import { VelaLogo, VelaMark } from "@/components/brand/VelaLogo";
 
 // Design System 3.2 — fixed 240px expanded / 64px icon rail, user-collapsible,
 // state persisted. Always Midnight (neutral.900) in both themes — the sidebar
@@ -23,6 +24,13 @@ export function Sidebar() {
         sidebarCollapsed ? "w-16" : "w-60",
       )}
     >
+      <div className="flex h-16 shrink-0 items-center border-b border-white/10 px-4">
+        {sidebarCollapsed ? (
+          <VelaMark variant="primary-dark" className="size-8" />
+        ) : (
+          <VelaLogo variant="primary-dark" />
+        )}
+      </div>
       <ul className="flex flex-1 flex-col gap-1 p-2">
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.href;

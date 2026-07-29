@@ -1,12 +1,13 @@
 import { Router } from "express";
 import * as employeeController from "../controllers/employee.controller";
 import { requireAuth } from "../middleware/auth.middleware";
+import { requireRole } from "../middleware/rbac.middleware";
 import { apiRateLimit } from "../middleware/rate-limit.middleware";
 import { auditLog } from "../middleware/audit.middleware";
 import { asyncHandler } from "../lib/async-handler";
 
 export const employeeRouter = Router();
-employeeRouter.use(requireAuth, apiRateLimit());
+employeeRouter.use(requireAuth, apiRateLimit(), requireRole("owner", "admin"));
 
 employeeRouter.post(
   "/",

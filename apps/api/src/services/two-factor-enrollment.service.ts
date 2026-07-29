@@ -6,8 +6,8 @@ import {
   verifyTotpCode,
   generateBackupCodes,
   consumeBackupCode,
+  encryptTwoFaSecret,
 } from "./twofa.service";
-import { hashToken } from "./password.service";
 import { ValidationError } from "../lib/errors";
 
 /** Orchestrates 2FA enrollment (repo + crypto) — the pure TOTP math stays in twofa.service.ts. */
@@ -27,7 +27,7 @@ export async function confirmEnrollment(
   }
   const { plain, hashed } = await generateBackupCodes();
   await userRepo.setTwoFa(orgId, userId, {
-    secretHash: await hashToken(secret),
+    secretEncrypted: encryptTwoFaSecret(secret, userId),
     backupCodesHash: hashed,
   });
   await auditLogRepo.write({

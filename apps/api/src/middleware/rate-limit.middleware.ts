@@ -44,6 +44,22 @@ export function askVelaRateLimit() {
   });
 }
 
+// Thin per-IP limiter on the 2FA challenge endpoint — DoS/hammering
+// protection only. The actual brute-force control on the 6-digit code is
+// the per-userId lockout inside auth.service.ts#verifyTwoFaChallenge
+// (isTwoFaLockedOut/recordTwoFaFailure), not this: a per-IP-only limit would
+// still let an attacker spread guesses across many IPs, and a login()-issued
+// challenge token can't be rate-limited by its own value either, since a
+// stolen password mints a fresh one on demand.
+export function twoFaVerifyRateLimit() {
+  return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
+    const key = `ratelimit:2fa-verify:${req.ip}`;
+    const { allowed } = await checkAndIncrement(key, 20, 60);
+    if (!allowed) return next(new RateLimitedError("Too many attempts — try again shortly", 60));
+    next();
+  });
+}
+
 // The public payment portal (Handbook 7.1) is unauthenticated by design, so
 // it gets its own, stricter, per-IP limit rather than apiRateLimit's per-org
 // one (there's no org context to key on until the token is resolved).

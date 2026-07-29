@@ -76,7 +76,10 @@ model User {
   email           String    @unique @db.Citext
   passwordHash    String    @map("password_hash")
   role            Role      @default(staff)
-  twoFaSecretHash String?   @map("two_fa_secret_hash")
+  // Reversible (AES-256-GCM), not hashed — TOTP verification requires the
+  // original secret to recompute the expected code, which a one-way hash
+  // structurally can never provide. See twofa.service.ts encrypt/decrypt.
+  twoFaSecretEncrypted String? @map("two_fa_secret_encrypted")
   twoFaEnabled    Boolean   @default(false) @map("two_fa_enabled")
   backupCodesHash String[]  @map("backup_codes_hash")
   lastLogin       DateTime? @map("last_login") @db.Timestamptz
