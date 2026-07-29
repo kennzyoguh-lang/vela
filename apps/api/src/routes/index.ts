@@ -12,6 +12,7 @@ import { bankTransactionRouter } from "./bank-transaction.routes";
 import { pnlRouter } from "./pnl.routes";
 import { employeeRouter } from "./employee.routes";
 import { payrollRouter } from "./payroll.routes";
+import { accountantPortalRouter } from "./accountant-portal.routes";
 
 // URL path versioning (Handbook 7.4) — a breaking change gets /v2, never an
 // in-place change to /v1.
@@ -28,5 +29,6 @@ v1Router.use("/bank-transactions", bankTransactionRouter);
 v1Router.use("/pnl", pnlRouter);
 v1Router.use("/employees", employeeRouter);
 v1Router.use("/payroll-runs", payrollRouter);
+v1Router.use("/accountant-portal", accountantPortalRouter);
 // Public, unauthenticated — Design System 6.13's payment portal.
 v1Router.use("/pay", paymentPortalRouter);

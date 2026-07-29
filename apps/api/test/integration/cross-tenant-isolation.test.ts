@@ -10,6 +10,8 @@
 import { randomUUID } from "node:crypto";
 import { describe, it, expect, afterAll } from "vitest";
 import { prisma, withOrgScope } from "../../src/lib/prisma";
+import * as accountantLinkRepo from "../../src/repositories/accountant-link.repository";
+import * as accountantPortalService from "../../src/services/accountant-portal.service";
 
 // Test-local helper mirroring organisation.repository.ts#createOrganisation:
 // INSERT ... RETURNING (what Prisma's .create() always does) also has to
@@ -77,6 +79,107 @@ describe("cross-tenant isolation (RLS)", () => {
     const rows = await withOrgScope(orgA.id, (tx) => tx.organisation.findMany({}));
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).toBe(orgA.id);
+  });
+
+  // Accountant Portal (Phase 6) fulfils the promise the placeholder test above
+  // anticipated: a new accountant_client_links table, isolated exactly like
+  // every other org-scoped table, plus an application-layer access check
+  // (never a loosened RLS policy — Handbook 6.3) gating cross-org reads.
+  it("never returns org B's accountant_client_links rows while scoped to org A", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    await accountantLinkRepo.create(orgB.id, {
+      accountantEmail: `accountant-${orgB.id}@example.com`,
+      invitedBy: randomUUID(),
+    });
+
+    const rows = await withOrgScope(orgA.id, (tx) => tx.accountantClientLink.findMany({}));
+
+    expect(rows.every((l) => l.orgId === orgA.id)).toBe(true);
+    expect(rows.some((l) => l.orgId === orgB.id)).toBe(false);
+  });
+
+  it("an active accountant link grants scoped read access to exactly that client org", async () => {
+    const clientOrg = await createTestOrg("Client Org");
+    const accountantOrg = await createTestOrg("Accountant Org");
+    createdOrgIds.push(clientOrg.id, accountantOrg.id);
+
+    const accountantUser = await withOrgScope(accountantOrg.id, (tx) =>
+      tx.user.create({
+        data: {
+          orgId: accountantOrg.id,
+          name: "Accountant",
+          email: `accountant-${accountantOrg.id}@example.com`,
+          passwordHash: "irrelevant-for-this-test",
+          role: "owner",
+        },
+      }),
+    );
+
+    const link = await accountantLinkRepo.create(clientOrg.id, {
+      accountantEmail: accountantUser.email,
+      invitedBy: randomUUID(),
+    });
+    await accountantLinkRepo.accept(clientOrg.id, link.id, accountantUser.id);
+
+    const summary = await accountantPortalService.getClientOrgSummary(
+      accountantUser.id,
+      clientOrg.id,
+    );
+    expect(summary.orgName).toBe("Client Org");
+  });
+
+  it("a revoked accountant link denies read access to the client org summary", async () => {
+    const clientOrg = await createTestOrg("Client Org");
+    const accountantOrg = await createTestOrg("Accountant Org");
+    createdOrgIds.push(clientOrg.id, accountantOrg.id);
+
+    const accountantUser = await withOrgScope(accountantOrg.id, (tx) =>
+      tx.user.create({
+        data: {
+          orgId: accountantOrg.id,
+          name: "Accountant",
+          email: `accountant-${accountantOrg.id}@example.com`,
+          passwordHash: "irrelevant-for-this-test",
+          role: "owner",
+        },
+      }),
+    );
+
+    const link = await accountantLinkRepo.create(clientOrg.id, {
+      accountantEmail: accountantUser.email,
+      invitedBy: randomUUID(),
+    });
+    await accountantLinkRepo.accept(clientOrg.id, link.id, accountantUser.id);
+    await accountantLinkRepo.revoke(clientOrg.id, link.id);
+
+    await expect(
+      accountantPortalService.getClientOrgSummary(accountantUser.id, clientOrg.id),
+    ).rejects.toThrow(/don't have access/);
+  });
+
+  it("no accountant link at all denies read access to the client org summary", async () => {
+    const clientOrg = await createTestOrg("Client Org");
+    const accountantOrg = await createTestOrg("Accountant Org");
+    createdOrgIds.push(clientOrg.id, accountantOrg.id);
+
+    const accountantUser = await withOrgScope(accountantOrg.id, (tx) =>
+      tx.user.create({
+        data: {
+          orgId: accountantOrg.id,
+          name: "Unlinked Accountant",
+          email: `unlinked-${accountantOrg.id}@example.com`,
+          passwordHash: "irrelevant-for-this-test",
+          role: "owner",
+        },
+      }),
+    );
+
+    await expect(
+      accountantPortalService.getClientOrgSummary(accountantUser.id, clientOrg.id),
+    ).rejects.toThrow(/don't have access/);
   });
 
   // SmartInvoice (Phase 2) introduced clients/invoices as new org-scoped
