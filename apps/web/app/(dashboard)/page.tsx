@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Landmark, ShieldCheck, Users, Sparkles } from "lucide-react";
+import { CheckCircle2, Circle, Landmark, Users, Sparkles } from "lucide-react";
 import {
   DashboardTemplate,
   type DashboardWidgetSlot,
@@ -6,6 +6,7 @@ import {
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { OutstandingInvoicesWidget } from "@/components/modules/OutstandingInvoicesWidget";
+import { ComplianceWidget } from "@/components/modules/ComplianceWidget";
 
 const ONBOARDING_STEPS = [
   { label: "Business created", done: true },
@@ -82,14 +83,7 @@ export default function DashboardHomePage() {
       id: "compliance",
       span: 1,
       mobilePriority: 2,
-      children: (
-        <PlaceholderWidget
-          icon={ShieldCheck}
-          title="Compliance"
-          description="ComplianceRadar isn't built yet — this card will show your next filing deadline."
-          cta="Coming soon"
-        />
-      ),
+      children: <ComplianceWidget />,
     },
     {
       id: "cash-position",

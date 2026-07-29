@@ -47,14 +47,16 @@ model Organisation {
   createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  users              User[]
-  sessions           UserSession[]
-  invites            OrganisationInvite[]
-  clients            Client[]
-  invoices           Invoice[]
-  recurringInvoices  RecurringInvoice[]
-  transactionMarkups TransactionMarkup[]
-  paymentActivation  PaymentActivation?
+  users                 User[]
+  sessions              UserSession[]
+  invites               OrganisationInvite[]
+  clients               Client[]
+  invoices              Invoice[]
+  recurringInvoices     RecurringInvoice[]
+  transactionMarkups    TransactionMarkup[]
+  paymentActivation     PaymentActivation?
+  complianceObligations OrgComplianceObligation[]
+  complianceFilings     ComplianceFiling[]
 
   @@map("organisations")
 }
@@ -299,4 +301,63 @@ model AuditLog {
 
   @@index([orgId, createdAt(sort: Desc)])
   @@map("audit_log")
+}
+
+// === ComplianceRadar™ (Phase 3) ===
+// Scope: six MUST obligation types, Nigeria-only, no e-filing API integration
+// (see the Phase 3 plan) — filing status is derived (compliance.service.ts's
+// computeFilingStatus), never stored, same "derive don't store" approach as
+// invoice-risk.service.ts's risk band.
+
+enum ComplianceObligationType {
+  vat
+  paye
+  pension
+  wht
+  cit
+  cac_annual_return
+
+  @@map("compliance_obligation_type")
+}
+
+// Frequency ("monthly"/"annual") is pure application metadata — read from
+// compliance-obligation-rules.ts's OBLIGATION_RULES, never stored on a row —
+// so it's a plain TypeScript type there, not a Postgres enum/column here.
+
+// Which obligation types a given org has switched on (Settings page toggle) —
+// a filing is only ever generated for an active obligation.
+model OrgComplianceObligation {
+  id             String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId          String                   @map("org_id") @db.Uuid
+  obligationType ComplianceObligationType @map("obligation_type")
+  isActive       Boolean                  @default(true) @map("is_active")
+  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime                 @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, obligationType])
+  @@map("org_compliance_obligations")
+}
+
+// One row per due period (e.g. "2026-08" for a monthly VAT filing, "FY2026"
+// for CAC's annual return). The @@unique constraint is what makes the daily
+// generator job idempotent — it upserts, never duplicates, a period's row.
+model ComplianceFiling {
+  id               String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId            String                   @map("org_id") @db.Uuid
+  obligationType   ComplianceObligationType @map("obligation_type")
+  periodLabel      String                   @map("period_label")
+  dueDate          DateTime                 @map("due_date") @db.Date
+  filedAt          DateTime?                @map("filed_at") @db.Timestamptz
+  receiptReference String?                  @map("receipt_reference")
+  notes            String?
+  createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime                 @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, obligationType, periodLabel])
+  @@index([orgId, dueDate])
+  @@map("compliance_filings")
 }

@@ -100,6 +100,38 @@ export interface PublicInvoiceView {
   clientName?: string;
 }
 
+// === ComplianceRadar™ (Phase 3) ===
+
+export type ComplianceObligationType =
+  "vat" | "paye" | "pension" | "wht" | "cit" | "cac_annual_return";
+
+export type ComplianceFrequency = "monthly" | "annual";
+
+export interface ComplianceObligation {
+  type: ComplianceObligationType;
+  label: string;
+  authority: string;
+  frequency: ComplianceFrequency;
+  description: string;
+  isActive: boolean;
+}
+
+export type FilingStatus = "upcoming" | "due_soon" | "overdue" | "filed";
+
+export interface ComplianceFiling {
+  id: string;
+  orgId: string;
+  obligationType: ComplianceObligationType;
+  periodLabel: string;
+  dueDate: string;
+  filedAt: string | null;
+  receiptReference: string | null;
+  notes: string | null;
+  status: FilingStatus; // computed server-side (compliance.service.ts), never stored
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** API response envelope — Engineering Handbook Part 7.6. Uniform for every endpoint. */
 export type ApiResponse<T> =
   | {

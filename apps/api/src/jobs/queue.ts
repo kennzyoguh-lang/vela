@@ -13,12 +13,20 @@ export const jobsConnection = new Redis(env.REDIS_URL, { maxRetriesPerRequest: n
 export const REMINDER_QUEUE = "invoice-reminders";
 export const RECURRING_INVOICE_QUEUE = "recurring-invoices";
 export const RISK_SCORING_QUEUE = "invoice-risk-scoring";
+export const COMPLIANCE_FILING_GENERATION_QUEUE = "compliance-filing-generation";
+export const COMPLIANCE_REMINDER_QUEUE = "compliance-reminders";
 
 export const reminderQueue = new Queue(REMINDER_QUEUE, { connection: jobsConnection });
 export const recurringInvoiceQueue = new Queue(RECURRING_INVOICE_QUEUE, {
   connection: jobsConnection,
 });
 export const riskScoringQueue = new Queue(RISK_SCORING_QUEUE, { connection: jobsConnection });
+export const complianceFilingGenerationQueue = new Queue(COMPLIANCE_FILING_GENERATION_QUEUE, {
+  connection: jobsConnection,
+});
+export const complianceReminderQueue = new Queue(COMPLIANCE_REMINDER_QUEUE, {
+  connection: jobsConnection,
+});
 
 // All jobs are idempotent by design (Handbook 5.8) — safe to re-run. Retry
 // policy: 3 attempts with exponential backoff, matching the reminder/
