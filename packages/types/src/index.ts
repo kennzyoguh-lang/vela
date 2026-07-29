@@ -183,6 +183,59 @@ export interface PnlStatement {
   netProfit: number;
 }
 
+// === PeopleHub (Phase 5) ===
+
+export type EmploymentType = "full_time" | "part_time" | "contract";
+export type PayrollRunStatus = "draft" | "paid";
+
+export interface Employee {
+  id: string;
+  orgId: string;
+  name: string;
+  email: string | null;
+  jobTitle: string;
+  employmentType: EmploymentType;
+  basicSalary: string; // Prisma Decimal serializes as a string over JSON
+  housingAllowance: string;
+  transportAllowance: string;
+  otherAllowances: string;
+  startDate: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Payslip {
+  id: string;
+  orgId: string;
+  payrollRunId: string;
+  employeeId: string;
+  grossPay: string;
+  paye: string;
+  employeePension: string;
+  employerPension: string;
+  nhf: string;
+  netPay: string;
+  createdAt: string;
+}
+
+export interface PayrollRun {
+  id: string;
+  orgId: string;
+  periodLabel: string;
+  status: PayrollRunStatus;
+  runDate: string;
+  totalGrossPay: string;
+  totalDeductions: string;
+  totalNetPay: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayrollRunDetail extends PayrollRun {
+  payslips: Payslip[];
+}
+
 /** API response envelope — Engineering Handbook Part 7.6. Uniform for every endpoint. */
 export type ApiResponse<T> =
   | {

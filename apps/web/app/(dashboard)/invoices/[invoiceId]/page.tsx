@@ -14,9 +14,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { invoiceBadgeStatus, invoiceStatusLabel, riskLabel } from "@/lib/invoice-status";
 import { formatMoney, formatDuePhrase } from "@/lib/format";
-import { api, ApiError } from "@/lib/api/client";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+import { api, ApiError, openAuthenticatedPdf } from "@/lib/api/client";
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ invoiceId: string }>();
@@ -25,6 +23,19 @@ export default function InvoiceDetailPage() {
   const [voiding, setVoiding] = useState(false);
   const [voidReason, setVoidReason] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [pdfPending, setPdfPending] = useState(false);
+
+  async function handleDownloadPdf() {
+    setActionError(null);
+    setPdfPending(true);
+    try {
+      await openAuthenticatedPdf(`/v1/invoices/${params.invoiceId}/pdf`);
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Couldn't open the invoice PDF.");
+    } finally {
+      setPdfPending(false);
+    }
+  }
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["invoices", params.invoiceId],
@@ -109,12 +120,15 @@ export default function InvoiceDetailPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <a href={`${API_URL}/v1/invoices/${invoice.id}/pdf`} target="_blank" rel="noreferrer">
-                <Button variant="secondary" size="sm">
-                  <Download className="size-4" aria-hidden />
-                  PDF
-                </Button>
-              </a>
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={pdfPending}
+                onClick={handleDownloadPdf}
+              >
+                <Download className="size-4" aria-hidden />
+                PDF
+              </Button>
               {canSend ? (
                 <Button
                   size="sm"

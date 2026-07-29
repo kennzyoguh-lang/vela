@@ -370,4 +370,107 @@ describe("cross-tenant isolation (RLS)", () => {
     );
     expect(stillUncategorized?.category).toBe("uncategorized");
   });
+
+  // PeopleHub (Phase 5) introduced employees/payroll_runs/payslips as new
+  // org-scoped tables — same isolation guarantee, extended rather than
+  // assumed to carry over automatically.
+  it("never returns org B's employees while scoped to org A, even querying without an org_id filter", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    await withOrgScope(orgB.id, (tx) =>
+      tx.employee.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          name: "Org B Employee",
+          jobTitle: "Engineer",
+          employmentType: "full_time",
+          basicSalary: 200_000,
+          startDate: new Date("2026-01-01"),
+        },
+      }),
+    );
+
+    const rows = await withOrgScope(orgA.id, (tx) => tx.employee.findMany({}));
+
+    expect(rows.every((e) => e.orgId === orgA.id)).toBe(true);
+    expect(rows.some((e) => e.orgId === orgB.id)).toBe(false);
+  });
+
+  it("never returns org B's payroll runs or payslips while scoped to org A, even querying without an org_id filter", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    const employeeB = await withOrgScope(orgB.id, (tx) =>
+      tx.employee.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          name: "Org B Employee",
+          jobTitle: "Engineer",
+          employmentType: "full_time",
+          basicSalary: 200_000,
+          startDate: new Date("2026-01-01"),
+        },
+      }),
+    );
+    const runB = await withOrgScope(orgB.id, (tx) =>
+      tx.payrollRun.create({
+        data: { id: randomUUID(), orgId: orgB.id, periodLabel: "2026-07" },
+      }),
+    );
+    await withOrgScope(orgB.id, (tx) =>
+      tx.payslip.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          payrollRunId: runB.id,
+          employeeId: employeeB.id,
+          grossPay: 280_000,
+          paye: 10_000,
+          employeePension: 22_400,
+          employerPension: 28_000,
+          nhf: 5_000,
+          netPay: 242_600,
+        },
+      }),
+    );
+
+    const runRows = await withOrgScope(orgA.id, (tx) => tx.payrollRun.findMany({}));
+    const payslipRows = await withOrgScope(orgA.id, (tx) => tx.payslip.findMany({}));
+
+    expect(runRows.every((r) => r.orgId === orgA.id)).toBe(true);
+    expect(runRows.some((r) => r.orgId === orgB.id)).toBe(false);
+    expect(payslipRows.every((p) => p.orgId === orgA.id)).toBe(true);
+    expect(payslipRows.some((p) => p.orgId === orgB.id)).toBe(false);
+  });
+
+  it("org A cannot mutate org B's payroll run by guessing its id", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    const runB = await withOrgScope(orgB.id, (tx) =>
+      tx.payrollRun.create({
+        data: { id: randomUUID(), orgId: orgB.id, periodLabel: "2026-07" },
+      }),
+    );
+
+    await expect(
+      withOrgScope(orgA.id, (tx) =>
+        tx.payrollRun.update({
+          where: { id: runB.id, orgId: orgA.id },
+          data: { status: "paid" },
+        }),
+      ),
+    ).rejects.toThrow();
+
+    const stillDraft = await withOrgScope(orgB.id, (tx) =>
+      tx.payrollRun.findUnique({ where: { id: runB.id } }),
+    );
+    expect(stillDraft?.status).toBe("draft");
+  });
 });

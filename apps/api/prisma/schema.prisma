@@ -59,6 +59,9 @@ model Organisation {
   complianceFilings     ComplianceFiling[]
   bankAccounts          BankAccount[]
   bankTransactions      BankTransaction[]
+  employees             Employee[]
+  payrollRuns           PayrollRun[]
+  payslips              Payslip[]
 
   @@map("organisations")
 }
@@ -443,4 +446,93 @@ model BankTransaction {
   @@unique([bankAccountId, providerTransactionId])
   @@index([orgId, transactionDate])
   @@map("bank_transactions")
+}
+
+// === PeopleHub (Phase 5) ===
+// Scope: payroll calculation (PAYE/pension/NHF) and payslips, no salary
+// disbursement, fixed (non-configurable) Nigerian PAYE bands and a flat 2.5%
+// NHF rate — see the Phase 5 plan for the full list of deferrals.
+
+enum EmploymentType {
+  full_time
+  part_time
+  contract
+
+  @@map("employment_type")
+}
+
+// Two states, not Invoice's eight — no external event drives a transition
+// here, just the org marking payroll as actually paid.
+enum PayrollRunStatus {
+  draft
+  paid
+
+  @@map("payroll_run_status")
+}
+
+model Employee {
+  id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId              String         @map("org_id") @db.Uuid
+  name               String
+  email              String?
+  jobTitle           String         @map("job_title")
+  employmentType     EmploymentType @map("employment_type")
+  basicSalary        Decimal        @map("basic_salary") @db.Decimal(14, 2)
+  housingAllowance   Decimal        @default(0) @map("housing_allowance") @db.Decimal(14, 2)
+  transportAllowance Decimal        @default(0) @map("transport_allowance") @db.Decimal(14, 2)
+  otherAllowances    Decimal        @default(0) @map("other_allowances") @db.Decimal(14, 2)
+  startDate          DateTime       @map("start_date") @db.Date
+  isActive           Boolean        @default(true) @map("is_active")
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  payslips     Payslip[]
+
+  @@index([orgId])
+  @@map("employees")
+}
+
+// @@unique on [orgId, periodLabel] means running payroll twice for the same
+// month recomputes the existing draft rather than duplicating it
+// (payroll.service.ts's runPayroll) — a paid run is immutable.
+model PayrollRun {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId           String           @map("org_id") @db.Uuid
+  periodLabel     String           @map("period_label")
+  status          PayrollRunStatus @default(draft)
+  runDate         DateTime         @default(now()) @map("run_date") @db.Timestamptz
+  totalGrossPay   Decimal          @default(0) @map("total_gross_pay") @db.Decimal(16, 2)
+  totalDeductions Decimal          @default(0) @map("total_deductions") @db.Decimal(16, 2)
+  totalNetPay     Decimal          @default(0) @map("total_net_pay") @db.Decimal(16, 2)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  payslips     Payslip[]
+
+  @@unique([orgId, periodLabel])
+  @@index([orgId, periodLabel])
+  @@map("payroll_runs")
+}
+
+model Payslip {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId           String   @map("org_id") @db.Uuid
+  payrollRunId    String   @map("payroll_run_id") @db.Uuid
+  employeeId      String   @map("employee_id") @db.Uuid
+  grossPay        Decimal  @map("gross_pay") @db.Decimal(14, 2)
+  paye            Decimal  @db.Decimal(14, 2)
+  employeePension Decimal  @map("employee_pension") @db.Decimal(14, 2)
+  employerPension Decimal  @map("employer_pension") @db.Decimal(14, 2)
+  nhf             Decimal  @db.Decimal(14, 2)
+  netPay          Decimal  @map("net_pay") @db.Decimal(14, 2)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  payrollRun   PayrollRun   @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employee     Employee     @relation(fields: [employeeId], references: [id])
+
+  @@unique([payrollRunId, employeeId])
+  @@map("payslips")
 }
