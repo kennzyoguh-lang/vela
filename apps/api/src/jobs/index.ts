@@ -12,6 +12,7 @@ import {
   startComplianceReminderWorker,
   scheduleComplianceReminderScan,
 } from "./compliance-reminder.job";
+import { startBankSyncWorker, scheduleBankSync } from "./bank-sync.job";
 import { logger } from "../lib/logger";
 
 export async function startJobs() {
@@ -21,6 +22,7 @@ export async function startJobs() {
     startRiskScoringWorker(),
     startComplianceFilingGenerationWorker(),
     startComplianceReminderWorker(),
+    startBankSyncWorker(),
   ];
 
   await Promise.all([
@@ -29,6 +31,7 @@ export async function startJobs() {
     scheduleRiskScoring(),
     scheduleComplianceFilingGeneration(),
     scheduleComplianceReminderScan(),
+    scheduleBankSync(),
   ]);
 
   logger.info("Background job workers started and daily schedules registered");

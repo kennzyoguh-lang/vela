@@ -252,4 +252,122 @@ describe("cross-tenant isolation (RLS)", () => {
     );
     expect(stillUnfiled?.filedAt).toBeNull();
   });
+
+  // P&L Intelligence (Phase 4) introduced bank_accounts/bank_transactions as
+  // new org-scoped tables — same isolation guarantee, extended rather than
+  // assumed to carry over automatically.
+  it("never returns org B's bank accounts while scoped to org A, even querying without an org_id filter", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    await withOrgScope(orgB.id, (tx) =>
+      tx.bankAccount.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          provider: "mono",
+          providerAccountId: "mono-acc-b",
+          institutionName: "Org B Bank",
+          accountType: "savings",
+          accountNumberMasked: "****1234",
+          currency: "NGN",
+        },
+      }),
+    );
+
+    const rows = await withOrgScope(orgA.id, (tx) => tx.bankAccount.findMany({}));
+
+    expect(rows.every((a) => a.orgId === orgA.id)).toBe(true);
+    expect(rows.some((a) => a.orgId === orgB.id)).toBe(false);
+  });
+
+  it("never returns org B's bank transactions while scoped to org A, even querying without an org_id filter", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    const accountB = await withOrgScope(orgB.id, (tx) =>
+      tx.bankAccount.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          provider: "mono",
+          providerAccountId: "mono-acc-b2",
+          institutionName: "Org B Bank",
+          accountType: "savings",
+          accountNumberMasked: "****5678",
+          currency: "NGN",
+        },
+      }),
+    );
+    await withOrgScope(orgB.id, (tx) =>
+      tx.bankTransaction.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          bankAccountId: accountB.id,
+          providerTransactionId: "mono-tx-b1",
+          type: "debit",
+          amount: 5000,
+          narration: "Org B expense",
+          transactionDate: new Date("2026-07-15"),
+        },
+      }),
+    );
+
+    const rows = await withOrgScope(orgA.id, (tx) => tx.bankTransaction.findMany({}));
+
+    expect(rows.every((t) => t.orgId === orgA.id)).toBe(true);
+    expect(rows.some((t) => t.orgId === orgB.id)).toBe(false);
+  });
+
+  it("org A cannot mutate org B's bank transaction by guessing its id", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    const accountB = await withOrgScope(orgB.id, (tx) =>
+      tx.bankAccount.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          provider: "mono",
+          providerAccountId: "mono-acc-b3",
+          institutionName: "Org B Bank",
+          accountType: "savings",
+          accountNumberMasked: "****9012",
+          currency: "NGN",
+        },
+      }),
+    );
+    const transactionB = await withOrgScope(orgB.id, (tx) =>
+      tx.bankTransaction.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          bankAccountId: accountB.id,
+          providerTransactionId: "mono-tx-b2",
+          type: "debit",
+          amount: 5000,
+          narration: "Org B expense",
+          transactionDate: new Date("2026-07-15"),
+        },
+      }),
+    );
+
+    await expect(
+      withOrgScope(orgA.id, (tx) =>
+        tx.bankTransaction.update({
+          where: { id: transactionB.id, orgId: orgA.id },
+          data: { category: "income" },
+        }),
+      ),
+    ).rejects.toThrow();
+
+    const stillUncategorized = await withOrgScope(orgB.id, (tx) =>
+      tx.bankTransaction.findUnique({ where: { id: transactionB.id } }),
+    );
+    expect(stillUncategorized?.category).toBe("uncategorized");
+  });
 });

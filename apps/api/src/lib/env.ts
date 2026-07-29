@@ -16,6 +16,10 @@ const envSchema = z.object({
   // block invoicing, payroll, or anything else). Attempting to actually
   // initialize a payment without one fails loudly at that call site instead.
   PAYSTACK_SECRET_KEY: z.string().optional(),
+  // Optional — bank-sync provider key (Phase 4). Same "never blocks anything
+  // else" contract as PAYSTACK_SECRET_KEY: unset means linking/syncing a
+  // bank account fails loudly at that call site, not at boot.
+  MONO_SECRET_KEY: z.string().optional(),
   WEB_APP_URL: z.string().default("http://localhost:3000"),
 });
 

@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { OutstandingInvoicesWidget } from "@/components/modules/OutstandingInvoicesWidget";
 import { ComplianceWidget } from "@/components/modules/ComplianceWidget";
+import { CashPositionWidget } from "@/components/modules/CashPositionWidget";
 
 const ONBOARDING_STEPS = [
   { label: "Business created", done: true },
@@ -89,14 +90,7 @@ export default function DashboardHomePage() {
       id: "cash-position",
       span: 1,
       mobilePriority: 3,
-      children: (
-        <PlaceholderWidget
-          icon={Landmark}
-          title="Cash position"
-          description="Connect a bank account once P&L Intelligence ships to see your balance here."
-          cta="Coming soon"
-        />
-      ),
+      children: <CashPositionWidget />,
     },
     {
       id: "invoices",
