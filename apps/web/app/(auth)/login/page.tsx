@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { loginSchema, type LoginFormValues } from "@/lib/validation/auth.schema";
 import { api, ApiError } from "@/lib/api/client";
+import { useAuthStore } from "@/stores/auth-store";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
@@ -27,6 +28,7 @@ export default function LoginPage() {
         "/v1/auth/login",
         values,
       );
+      useAuthStore.getState().setAccessToken(result.accessToken);
       if (result.requiresTwoFa) {
         router.push("/2fa");
       } else {

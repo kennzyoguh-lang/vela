@@ -1,18 +1,11 @@
-import {
-  CheckCircle2,
-  Circle,
-  Landmark,
-  ShieldCheck,
-  FileText,
-  Users,
-  Sparkles,
-} from "lucide-react";
+import { CheckCircle2, Circle, Landmark, ShieldCheck, Users, Sparkles } from "lucide-react";
 import {
   DashboardTemplate,
   type DashboardWidgetSlot,
 } from "@/components/templates/DashboardTemplate";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { OutstandingInvoicesWidget } from "@/components/modules/OutstandingInvoicesWidget";
 
 const ONBOARDING_STEPS = [
   { label: "Business created", done: true },
@@ -115,14 +108,7 @@ export default function DashboardHomePage() {
       id: "invoices",
       span: 2,
       mobilePriority: 4,
-      children: (
-        <PlaceholderWidget
-          icon={FileText}
-          title="Outstanding invoices"
-          description="SmartInvoice isn't built yet — this card will list what clients owe you."
-          cta="Coming soon"
-        />
-      ),
+      children: <OutstandingInvoicesWidget />,
     },
     {
       id: "payroll",

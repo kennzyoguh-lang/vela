@@ -1,17 +1,27 @@
 import { redis } from "../lib/redis";
+import { logger } from "../lib/logger";
 
 // Redis sliding-window counters — survives across multiple API instances once
 // horizontally scaled (Handbook 5.6/1.5 Horizon 2), unlike an in-memory counter.
+//
+// Fails OPEN on a Redis outage: rate limiting is defense-in-depth, not a
+// business rule, so a Redis blip should degrade to "unlimited" rather than
+// take the whole API down (or lock every request out) until Redis recovers.
 export async function checkAndIncrement(
   key: string,
   limit: number,
   windowSeconds: number,
 ): Promise<{ allowed: boolean; remaining: number }> {
-  const count = await redis.incr(key);
-  if (count === 1) {
-    await redis.expire(key, windowSeconds);
+  try {
+    const count = await redis.incr(key);
+    if (count === 1) {
+      await redis.expire(key, windowSeconds);
+    }
+    return { allowed: count <= limit, remaining: Math.max(0, limit - count) };
+  } catch (err) {
+    logger.warn({ err, key }, "Rate limit check failed — failing open");
+    return { allowed: true, remaining: limit };
   }
-  return { allowed: count <= limit, remaining: Math.max(0, limit - count) };
 }
 
 const TWO_FA_LOCKOUT_KEY = (userId: string) => `2fa:lockout:${userId}`;

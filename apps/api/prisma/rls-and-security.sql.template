@@ -1,15 +1,14 @@
 -- VELA — RLS, audit-log immutability, and extensions (Engineering Handbook Part 6.3/6.4/6.6).
 --
--- HOW TO APPLY (once Node/pnpm are installed and DATABASE_URL points at a real Postgres):
---   1. pnpm --filter @vela/api db:migrate --name init         (generates+applies the base schema from schema.prisma)
---   2. pnpm --filter @vela/api exec prisma migrate dev --create-only --name rls_and_security
---   3. Paste the contents of this file into the generated
---      prisma/migrations/<timestamp>_rls_and_security/migration.sql
---   4. pnpm --filter @vela/api db:migrate                     (applies it)
---
--- This file is a template, not a live migration, because Prisma migration folders
--- must be created by the Prisma CLI (timestamp + _prisma_migrations bookkeeping) —
--- hand-placing a folder here would desync Prisma's migration history.
+-- STATUS: already applied — this content was copied into
+-- prisma/migrations/20260728231500_rls_and_security/migration.sql during
+-- Foundation and is live on the real Supabase database. This file is kept as
+-- the readable source-of-intent for that migration (Prisma migration folders
+-- must be Prisma-CLI-generated, so this couldn't be the live file itself) —
+-- do not re-apply it directly; any further RLS changes are new migrations
+-- following the same `migrate diff`/hand-authored-SQL pattern (see
+-- Foundation's app_role_login and Phase 2's smartinvoice_rls migrations for
+-- examples).
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS citext;

@@ -47,27 +47,32 @@ model Organisation {
   createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  users            User[]
-  sessions         UserSession[]
-  invites          OrganisationInvite[]
+  users              User[]
+  sessions           UserSession[]
+  invites            OrganisationInvite[]
+  clients            Client[]
+  invoices           Invoice[]
+  recurringInvoices  RecurringInvoice[]
+  transactionMarkups TransactionMarkup[]
+  paymentActivation  PaymentActivation?
 
   @@map("organisations")
 }
 
 model User {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orgId            String    @map("org_id") @db.Uuid
-  name             String
-  email            String    @unique @db.Citext
-  passwordHash     String    @map("password_hash")
-  role             Role      @default(staff)
-  twoFaSecretHash  String?   @map("two_fa_secret_hash")
-  twoFaEnabled     Boolean   @default(false) @map("two_fa_enabled")
-  backupCodesHash  String[]  @map("backup_codes_hash")
-  lastLogin        DateTime? @map("last_login") @db.Timestamptz
-  isActive         Boolean   @default(true) @map("is_active")
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId           String    @map("org_id") @db.Uuid
+  name            String
+  email           String    @unique @db.Citext
+  passwordHash    String    @map("password_hash")
+  role            Role      @default(staff)
+  twoFaSecretHash String?   @map("two_fa_secret_hash")
+  twoFaEnabled    Boolean   @default(false) @map("two_fa_enabled")
+  backupCodesHash String[]  @map("backup_codes_hash")
+  lastLogin       DateTime? @map("last_login") @db.Timestamptz
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   organisation Organisation  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   sessions     UserSession[]
@@ -77,16 +82,16 @@ model User {
 }
 
 model UserSession {
-  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId             String   @map("user_id") @db.Uuid
-  orgId              String   @map("org_id") @db.Uuid
-  refreshTokenHash   String   @map("refresh_token_hash")
-  sessionFamilyId    String   @map("session_family_id") @db.Uuid
-  deviceInfo         String?  @map("device_info")
-  ipAddress          String?  @map("ip_address")
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
-  lastActive         DateTime @default(now()) @map("last_active") @db.Timestamptz
-  isActive           Boolean  @default(true) @map("is_active")
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  orgId            String   @map("org_id") @db.Uuid
+  refreshTokenHash String   @map("refresh_token_hash")
+  sessionFamilyId  String   @map("session_family_id") @db.Uuid
+  deviceInfo       String?  @map("device_info")
+  ipAddress        String?  @map("ip_address")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  lastActive       DateTime @default(now()) @map("last_active") @db.Timestamptz
+  isActive         Boolean  @default(true) @map("is_active")
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -112,22 +117,185 @@ model OrganisationInvite {
   @@map("organisation_invites")
 }
 
+// === SmartInvoice™ (Phase 2, BRD Module 1 / Handbook Part 16.1) ===
+
+enum InvoiceStatus {
+  draft
+  sent
+  viewed
+  partially_paid
+  paid
+  overdue
+  written_off
+  void
+
+  @@map("invoice_status")
+}
+
+enum RecurringFrequency {
+  weekly
+  monthly
+  quarterly
+
+  @@map("recurring_frequency")
+}
+
+enum PaymentProcessor {
+  paystack
+  flutterwave
+  stripe
+
+  @@map("payment_processor")
+}
+
+model Client {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId          String   @map("org_id") @db.Uuid
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  paymentTerms   Int      @default(14) @map("payment_terms") // net days
+  avgPaymentDays Float?   @map("avg_payment_days") // recalculated from paid invoice history
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation      Organisation       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoices          Invoice[]
+  recurringInvoices RecurringInvoice[]
+
+  @@index([orgId])
+  @@map("clients")
+}
+
+// Invoice numbering (INV-<sequential>) is per-org and generated inside the
+// same transaction as creation (invoice.repository.ts) — this counter table
+// avoids a race between two concurrent invoice creations in the same org.
+model InvoiceNumberCounter {
+  orgId String @id @map("org_id") @db.Uuid
+  next  Int    @default(1)
+
+  @@map("invoice_number_counters")
+}
+
+model Invoice {
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId              String        @map("org_id") @db.Uuid
+  number             String // "INV-0001", unique per org (see @@unique below)
+  clientId           String        @map("client_id") @db.Uuid
+  lineItems          Json          @map("line_items")
+  subtotal           Decimal       @db.Decimal(14, 2)
+  tax                Decimal       @default(0) @db.Decimal(14, 2)
+  discount           Decimal       @default(0) @db.Decimal(14, 2)
+  total              Decimal       @db.Decimal(14, 2)
+  currency           String        @default("NGN") @db.Char(3)
+  status             InvoiceStatus @default(draft)
+  dueDate            DateTime      @map("due_date") @db.Date
+  riskScore          Int?          @map("risk_score") // 0-100, null until first scored (Epic 3)
+  paymentPortalToken String        @unique @map("payment_portal_token")
+  notes              String?
+  sentAt             DateTime?     @map("sent_at") @db.Timestamptz
+  viewedAt           DateTime?     @map("viewed_at") @db.Timestamptz
+  paidAt             DateTime?     @map("paid_at") @db.Timestamptz
+  voidedReason       String?       @map("voided_reason")
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation       Organisation        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client             Client              @relation(fields: [clientId], references: [id])
+  transactionMarkups TransactionMarkup[]
+
+  @@unique([orgId, number])
+  @@index([orgId, status, dueDate])
+  @@map("invoices")
+}
+
+model RecurringInvoice {
+  id           String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId        String             @map("org_id") @db.Uuid
+  clientId     String             @map("client_id") @db.Uuid
+  frequency    RecurringFrequency
+  nextSendDate DateTime           @map("next_send_date") @db.Date
+  templateData Json               @map("template_data")
+  status       String             @default("active") // active | paused | cancelled
+  lastSentAt   DateTime?          @map("last_sent_at") @db.Timestamptz
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client       Client       @relation(fields: [clientId], references: [id])
+
+  @@index([orgId, status, nextSendDate])
+  @@map("recurring_invoices")
+}
+
+// F-72: recorded as a distinct line, never blended into the processor's own
+// fee (BRD's explicit requirement) — one row per settled payment.
+model TransactionMarkup {
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId         String           @map("org_id") @db.Uuid
+  invoiceId     String           @map("invoice_id") @db.Uuid
+  processor     PaymentProcessor
+  grossAmount   Decimal          @map("gross_amount") @db.Decimal(14, 2)
+  processorFee  Decimal          @map("processor_fee") @db.Decimal(14, 2)
+  velaMarkupPct Decimal          @map("vela_markup_pct") @db.Decimal(5, 4) // e.g. 0.0100 = 1.00%
+  velaFeeAmount Decimal          @map("vela_fee_amount") @db.Decimal(14, 2)
+  currency      String           @db.Char(3)
+  settledAt     DateTime         @map("settled_at") @db.Timestamptz
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id])
+
+  @@index([orgId, settledAt])
+  @@map("transaction_markups")
+}
+
+// BRD v3.1 Section 6.3 — tracks per-org Pay Now adoption; F-73's nudge logic
+// (deferred to the P&L Intelligence phase) will read this, but the table
+// itself is populated starting now by the webhook handler (Epic 5).
+model PaymentActivation {
+  orgId                  String    @id @map("org_id") @db.Uuid
+  payNowEnabledAt        DateTime? @map("pay_now_enabled_at") @db.Timestamptz
+  firstPaymentReceivedAt DateTime? @map("first_payment_received_at") @db.Timestamptz
+  activationChannel      String?   @map("activation_channel") // whatsapp_link | portal
+  cumulativeVolumeNgn    Decimal   @default(0) @map("cumulative_volume_ngn") @db.Decimal(16, 2)
+  updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("payment_activations")
+}
+
+// Handbook 5.9: idempotent against replay via the provider's event ID —
+// every webhook handler checks this table before processing, regardless of
+// provider.
+model WebhookEvent {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  processor       PaymentProcessor
+  providerEventId String           @map("provider_event_id")
+  receivedAt      DateTime         @default(now()) @map("received_at") @db.Timestamptz
+
+  @@unique([processor, providerEventId])
+  @@map("webhook_events")
+}
+
 // Write-once — REVOKE UPDATE/DELETE + immutability trigger applied via raw SQL
 // migration (Handbook 6.4). org_id is intentionally NOT a foreign key with cascade
 // delete, so an org deletion (data export + closure) can never take audit history
 // with it (Handbook 6.9).
 model AuditLog {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orgId       String   @map("org_id") @db.Uuid
-  userId      String?  @map("user_id") @db.Uuid
-  action      String
-  entityType  String   @map("entity_type")
-  entityId    String?  @map("entity_id") @db.Uuid
-  oldValue    Json?    @map("old_value")
-  newValue    Json?    @map("new_value")
-  ipAddress   String?  @map("ip_address")
-  userAgent   String?  @map("user_agent")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId      String   @map("org_id") @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id") @db.Uuid
+  oldValue   Json?    @map("old_value")
+  newValue   Json?    @map("new_value")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([orgId, createdAt(sort: Desc)])
   @@map("audit_log")

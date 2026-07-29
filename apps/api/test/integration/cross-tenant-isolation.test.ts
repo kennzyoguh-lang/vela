@@ -78,4 +78,103 @@ describe("cross-tenant isolation (RLS)", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).toBe(orgA.id);
   });
+
+  // SmartInvoice (Phase 2) introduced clients/invoices as new org-scoped
+  // tables — same isolation guarantee, extended rather than assumed to carry
+  // over automatically (each table's RLS policy is a separate migration).
+  it("never returns org B's clients while scoped to org A, even querying without an org_id filter", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    await withOrgScope(orgB.id, (tx) =>
+      tx.client.create({
+        data: { id: randomUUID(), orgId: orgB.id, name: "Org B Client", paymentTerms: 14 },
+      }),
+    );
+
+    const rows = await withOrgScope(orgA.id, (tx) => tx.client.findMany({}));
+
+    expect(rows.every((c) => c.orgId === orgA.id)).toBe(true);
+    expect(rows.some((c) => c.orgId === orgB.id)).toBe(false);
+  });
+
+  it("never returns org B's invoices while scoped to org A, even querying without an org_id filter", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    const clientB = await withOrgScope(orgB.id, (tx) =>
+      tx.client.create({
+        data: { id: randomUUID(), orgId: orgB.id, name: "Org B Client", paymentTerms: 14 },
+      }),
+    );
+    await withOrgScope(orgB.id, (tx) =>
+      tx.invoice.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          number: "INV-0001",
+          clientId: clientB.id,
+          lineItems: [{ description: "Org B work", quantity: 1, unitPrice: 1000 }],
+          subtotal: 1000,
+          tax: 0,
+          discount: 0,
+          total: 1000,
+          currency: "NGN",
+          dueDate: new Date("2026-08-01"),
+          paymentPortalToken: randomUUID(),
+        },
+      }),
+    );
+
+    const rows = await withOrgScope(orgA.id, (tx) => tx.invoice.findMany({}));
+
+    expect(rows.every((i) => i.orgId === orgA.id)).toBe(true);
+    expect(rows.some((i) => i.orgId === orgB.id)).toBe(false);
+  });
+
+  it("org A cannot mutate org B's invoice by guessing its id", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    const clientB = await withOrgScope(orgB.id, (tx) =>
+      tx.client.create({
+        data: { id: randomUUID(), orgId: orgB.id, name: "Org B Client", paymentTerms: 14 },
+      }),
+    );
+    const invoiceB = await withOrgScope(orgB.id, (tx) =>
+      tx.invoice.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          number: "INV-0001",
+          clientId: clientB.id,
+          lineItems: [{ description: "Org B work", quantity: 1, unitPrice: 1000 }],
+          subtotal: 1000,
+          tax: 0,
+          discount: 0,
+          total: 1000,
+          currency: "NGN",
+          dueDate: new Date("2026-08-01"),
+          paymentPortalToken: randomUUID(),
+        },
+      }),
+    );
+
+    // Prisma's .update({where:{id, orgId}}) throws (record not found under
+    // org A's RLS view) rather than silently affecting 0 rows elsewhere —
+    // this is what every repository's updateStatus-style call relies on.
+    await expect(
+      withOrgScope(orgA.id, (tx) =>
+        tx.invoice.update({ where: { id: invoiceB.id, orgId: orgA.id }, data: { status: "paid" } }),
+      ),
+    ).rejects.toThrow();
+
+    const stillUnpaid = await withOrgScope(orgB.id, (tx) =>
+      tx.invoice.findUnique({ where: { id: invoiceB.id } }),
+    );
+    expect(stillUnpaid?.status).toBe("draft");
+  });
 });

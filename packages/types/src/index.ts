@@ -42,6 +42,64 @@ export interface UserSession {
   isCurrent: boolean;
 }
 
+// === SmartInvoice™ (Phase 2) ===
+
+export type InvoiceStatus =
+  "draft" | "sent" | "viewed" | "partially_paid" | "paid" | "overdue" | "written_off" | "void";
+
+export interface Client {
+  id: string;
+  orgId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  paymentTerms: number;
+  avgPaymentDays: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LineItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface Invoice {
+  id: string;
+  orgId: string;
+  number: string;
+  clientId: string;
+  lineItems: LineItem[];
+  subtotal: string; // Prisma Decimal serializes as a string over JSON
+  tax: string;
+  discount: string;
+  total: string;
+  currency: string;
+  status: InvoiceStatus;
+  dueDate: string;
+  riskScore: number | null;
+  paymentPortalToken: string;
+  notes: string | null;
+  sentAt: string | null;
+  viewedAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicInvoiceView {
+  number: string;
+  total: string;
+  currency: string;
+  dueDate: string;
+  status: InvoiceStatus;
+  lineItems: LineItem[];
+  businessName?: string;
+  clientName?: string;
+}
+
 /** API response envelope — Engineering Handbook Part 7.6. Uniform for every endpoint. */
 export type ApiResponse<T> =
   | {

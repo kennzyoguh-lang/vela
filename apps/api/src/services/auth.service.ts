@@ -11,6 +11,7 @@ export interface AuthResult {
   refreshToken: string;
   orgId: string;
   userId: string;
+  sessionFamilyId: string;
   role: string;
   requiresTwoFa: boolean;
 }
@@ -71,7 +72,15 @@ async function issueSession(
     deviceInfo: meta.deviceInfo,
     ipAddress: meta.ipAddress,
   });
-  return { accessToken, refreshToken, orgId, userId, role, requiresTwoFa };
+  return {
+    accessToken,
+    refreshToken,
+    orgId,
+    userId,
+    sessionFamilyId: familyId,
+    role,
+    requiresTwoFa,
+  };
 }
 
 /**

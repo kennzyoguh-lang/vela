@@ -6,6 +6,7 @@ import pinoHttp from "pino-http";
 import { requestId } from "./middleware/request-id.middleware";
 import { errorHandler } from "./middleware/error-handler.middleware";
 import { healthRouter } from "./routes/health.routes";
+import { webhookRouter } from "./routes/webhook.routes";
 import { v1Router } from "./routes";
 import { logger } from "./lib/logger";
 
@@ -21,12 +22,19 @@ export function createApp() {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: "1mb" }));
-  app.use(cookieParser());
   app.use(requestId);
   app.use(pinoHttp({ logger, customProps: (req) => ({ requestId: req.res?.locals.requestId }) }));
 
   app.use(healthRouter);
+
+  // Mounted BEFORE express.json() — webhook signature verification (Handbook
+  // 5.9) needs the exact raw request bytes; webhookRouter applies its own
+  // express.raw() body parser per-route (see routes/webhook.routes.ts).
+  app.use("/webhooks", webhookRouter);
+
+  app.use(express.json({ limit: "1mb" }));
+  app.use(cookieParser());
+
   // Per-org rate limiting (Handbook 5.6) is applied inside each authenticated
   // router, immediately after requireAuth — org_id doesn't exist until the JWT
   // is verified, so it can't be enforced generically at this mount point.
