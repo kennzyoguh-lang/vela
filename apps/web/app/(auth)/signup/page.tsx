@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { signupSchema, type SignupFormValues } from "@/lib/validation/auth.schema";
 import { api, ApiError } from "@/lib/api/client";
+import { useAuthStore } from "@/stores/auth-store";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
@@ -28,7 +29,11 @@ export default function SignupPage() {
   async function onSubmit(values: SignupFormValues) {
     setFormError(null);
     try {
-      await api.post("/v1/auth/signup", values);
+      const result = await api.post<{ accessToken: string; requiresTwoFa: boolean }>(
+        "/v1/auth/signup",
+        values,
+      );
+      useAuthStore.getState().setAccessToken(result.accessToken);
       router.push("/");
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Something went wrong. Try again.");

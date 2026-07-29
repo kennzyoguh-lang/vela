@@ -2,15 +2,16 @@
 // CI gate — Engineering Handbook Part 6.3 ("no exceptions") + Part 11.2's
 // `rls-policy-check` job. Fails the build if schema.prisma defines a table with
 // an org_id/orgId column that has no matching `ENABLE ROW LEVEL SECURITY` +
-// policy statement anywhere in the applied migrations (or, before the first real
-// migration exists, the documented rls-and-security.sql.template).
+// policy statement anywhere in the applied migrations. This caught a real gap
+// during Phase 2 (SmartInvoice): audit_log had an org_id column since
+// Foundation but never actually had RLS enabled — fixed in
+// migrations/20260729010200_audit_log_rls.
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 const apiDir = join(import.meta.dirname, "..", "apps", "api");
 const schemaPath = join(apiDir, "prisma", "schema.prisma");
 const migrationsDir = join(apiDir, "prisma", "migrations");
-const templatePath = join(apiDir, "prisma", "rls-and-security.sql.template");
 
 function extractOrgScopedTables(schema) {
   const tables = [];
@@ -33,9 +34,6 @@ function collectMigrationSql() {
       if (existsSync(sqlFile)) sql += readFileSync(sqlFile, "utf8") + "\n";
     }
   }
-  // TODO: remove this fallback once a real `rls_and_security` migration exists —
-  // see prisma/rls-and-security.sql.template's header for the exact steps.
-  if (existsSync(templatePath)) sql += readFileSync(templatePath, "utf8");
   return sql;
 }
 
