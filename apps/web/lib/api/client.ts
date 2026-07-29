@@ -11,7 +11,18 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 // they never go through the "attach token" / "refresh on 401" logic below
 // (attaching a stale token to /refresh, or refreshing in response to /login's
 // own 401, would be nonsensical).
-const NO_AUTH_PATHS = ["/v1/auth/login", "/v1/auth/signup", "/v1/auth/refresh", "/v1/auth/logout"];
+// /v1/auth/2fa/verify has no session yet either — and critically, a wrong
+// code there must not trigger the 401-retry-and-refresh logic below (meant
+// for an expired session), which would otherwise silently double the
+// attempts consumed against the per-account lockout and add confusing
+// latency to a simple "wrong code" error.
+const NO_AUTH_PATHS = [
+  "/v1/auth/login",
+  "/v1/auth/signup",
+  "/v1/auth/refresh",
+  "/v1/auth/logout",
+  "/v1/auth/2fa/verify",
+];
 
 export class ApiError extends Error {
   constructor(

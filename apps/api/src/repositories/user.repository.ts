@@ -82,13 +82,13 @@ export async function updateLastLogin(orgId: string, userId: string): Promise<vo
 export async function setTwoFa(
   orgId: string,
   userId: string,
-  input: { secretHash: string; backupCodesHash: string[] },
+  input: { secretEncrypted: string; backupCodesHash: string[] },
 ): Promise<void> {
   await withOrgScope(orgId, (tx) =>
     tx.user.update({
       where: { id: userId, orgId },
       data: {
-        twoFaSecretHash: input.secretHash,
+        twoFaSecretEncrypted: input.secretEncrypted,
         twoFaEnabled: true,
         backupCodesHash: input.backupCodesHash,
       },

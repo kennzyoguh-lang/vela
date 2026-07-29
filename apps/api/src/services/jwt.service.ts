@@ -22,8 +22,43 @@ export function signAccessToken(claims: AccessTokenClaims): string {
   });
 }
 
+// A real access token never carries an `aud` claim; a 2FA-challenge token
+// always does (see below) — both are signed with the same RS256 keypair, so
+// this check is the entire security boundary between the two token types,
+// not a nice-to-have. Without it, a challenge token (issued before 2FA is
+// verified) would decode successfully here too, since jwt.verify only
+// enforces `audience` when that option is explicitly passed.
 export function verifyAccessToken(token: string): AccessTokenClaims {
-  return jwt.verify(token, publicKey, { algorithms: ["RS256"] }) as unknown as AccessTokenClaims;
+  const claims = jwt.verify(token, publicKey, { algorithms: ["RS256"] }) as jwt.JwtPayload;
+  if (claims.aud) throw new Error("Not a valid access token");
+  return claims as unknown as AccessTokenClaims;
+}
+
+export interface TwoFaChallengeClaims {
+  sub: string; // user id
+  orgId: string;
+}
+
+const TWO_FA_CHALLENGE_AUDIENCE = "2fa-challenge";
+const TWO_FA_CHALLENGE_TTL_SECONDS = 5 * 60;
+
+// Issued at password-verified-but-2FA-not-yet-confirmed login — deliberately
+// cannot be used as a real access token (requireAuth's verifyAccessToken call
+// rejects any `aud` claim) and expires quickly, since its only purpose is to
+// survive the short hop from /login to /2fa/verify.
+export function signTwoFaChallengeToken(claims: TwoFaChallengeClaims): string {
+  return jwt.sign(claims, privateKey, {
+    algorithm: "RS256",
+    expiresIn: TWO_FA_CHALLENGE_TTL_SECONDS,
+    audience: TWO_FA_CHALLENGE_AUDIENCE,
+  });
+}
+
+export function verifyTwoFaChallengeToken(token: string): TwoFaChallengeClaims {
+  return jwt.verify(token, publicKey, {
+    algorithms: ["RS256"],
+    audience: TWO_FA_CHALLENGE_AUDIENCE,
+  }) as unknown as TwoFaChallengeClaims;
 }
 
 export function newRefreshToken(): { token: string; familyId: string } {

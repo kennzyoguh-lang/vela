@@ -10,6 +10,11 @@ const envSchema = z.object({
   JWT_PUBLIC_KEY_BASE64: z.string().min(1),
   JWT_ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().default(3600),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().default(30),
+  // Required, not optional — 2FA is a core Foundation security feature
+  // (mandatory for Owner), not a third-party integration like Paystack/Mono/
+  // Anthropic, so a missing key fails loud at boot rather than silently
+  // degrading. 32 raw bytes, base64-encoded (AES-256-GCM key).
+  TWO_FA_ENCRYPTION_KEY_BASE64: z.string().min(1),
   // Optional — payment gateway keys (Epic 5). The app boots and every non-
   // payment feature works without these (Handbook 1.4: "AI is a feature, not
   // a foundation" applies equally here — a missing Paystack key must never
