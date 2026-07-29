@@ -40,3 +40,21 @@ organisationRouter.post(
   auditLog("user.deactivate", "user"),
   asyncHandler(organisationController.deactivateUser),
 );
+
+organisationRouter.post(
+  "/accountant-links",
+  requireRole("owner", "admin"),
+  auditLog("accountant_link.create", "accountant_client_link"),
+  asyncHandler(organisationController.inviteAccountant),
+);
+organisationRouter.get(
+  "/accountant-links",
+  requireRole("owner", "admin"),
+  asyncHandler(organisationController.listAccountantLinks),
+);
+organisationRouter.delete(
+  "/accountant-links/:linkId",
+  requireRole("owner", "admin"),
+  auditLog("accountant_link.revoke", "accountant_client_link"),
+  asyncHandler(organisationController.revokeAccountantLink),
+);
