@@ -48,11 +48,12 @@ function refreshAccessToken(): Promise<string | null> {
 }
 
 // Attaches the Bearer token and retries once through a silent refresh on a
-// 401 — the one place this logic lives, shared by both the JSON request()
-// helper below and openAuthenticatedPdf() (a plain <a href> to a PDF endpoint
-// can't carry an Authorization header, so any authenticated file download
-// must go through this instead of a raw anchor tag).
-async function authorizedFetch(
+// 401 — the one place this logic lives, shared by the JSON request() helper
+// below, openAuthenticatedPdf() (a plain <a href> to a PDF endpoint can't
+// carry an Authorization header, so any authenticated file download must go
+// through this instead of a raw anchor tag), and streamAskVela() (a streamed
+// response body can't go through request()'s single res.json() either).
+export async function authorizedFetch(
   path: string,
   init: RequestInit = {},
   isRetry = false,

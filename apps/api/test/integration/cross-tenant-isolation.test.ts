@@ -576,4 +576,76 @@ describe("cross-tenant isolation (RLS)", () => {
     );
     expect(stillDraft?.status).toBe("draft");
   });
+
+  // Ask Vela (Phase 7) introduced ask_vela_conversations/ask_vela_messages as
+  // new org-scoped tables — same isolation guarantee, extended rather than
+  // assumed to carry over automatically. Unlike Accountant Portal, there is
+  // no cross-org exception here at all: the assistant only ever answers
+  // within the caller's own org.
+  it("never returns org B's Ask Vela conversations while scoped to org A, even querying without an org_id filter", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    const userB = await withOrgScope(orgB.id, (tx) =>
+      tx.user.create({
+        data: {
+          orgId: orgB.id,
+          name: "Org B Owner",
+          email: `org-b-owner-askvela-${orgB.id}@example.com`,
+          passwordHash: "irrelevant-for-this-test",
+          role: "owner",
+        },
+      }),
+    );
+    await withOrgScope(orgB.id, (tx) =>
+      tx.askVelaConversation.create({
+        data: { id: randomUUID(), orgId: orgB.id, userId: userB.id },
+      }),
+    );
+
+    const rows = await withOrgScope(orgA.id, (tx) => tx.askVelaConversation.findMany({}));
+
+    expect(rows.every((c) => c.orgId === orgA.id)).toBe(true);
+    expect(rows.some((c) => c.orgId === orgB.id)).toBe(false);
+  });
+
+  it("never returns org B's Ask Vela messages while scoped to org A, even querying without an org_id filter", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    const userB = await withOrgScope(orgB.id, (tx) =>
+      tx.user.create({
+        data: {
+          orgId: orgB.id,
+          name: "Org B Owner",
+          email: `org-b-owner-askvela-msg-${orgB.id}@example.com`,
+          passwordHash: "irrelevant-for-this-test",
+          role: "owner",
+        },
+      }),
+    );
+    const conversationB = await withOrgScope(orgB.id, (tx) =>
+      tx.askVelaConversation.create({
+        data: { id: randomUUID(), orgId: orgB.id, userId: userB.id },
+      }),
+    );
+    await withOrgScope(orgB.id, (tx) =>
+      tx.askVelaMessage.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          conversationId: conversationB.id,
+          role: "user",
+          content: "What's my cash position?",
+        },
+      }),
+    );
+
+    const rows = await withOrgScope(orgA.id, (tx) => tx.askVelaMessage.findMany({}));
+
+    expect(rows.every((m) => m.orgId === orgA.id)).toBe(true);
+    expect(rows.some((m) => m.orgId === orgB.id)).toBe(false);
+  });
 });

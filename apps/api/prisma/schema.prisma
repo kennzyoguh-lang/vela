@@ -63,6 +63,8 @@ model Organisation {
   payrollRuns           PayrollRun[]
   payslips              Payslip[]
   accountantLinks       AccountantClientLink[]
+  askVelaConversations  AskVelaConversation[]
+  askVelaMessages       AskVelaMessage[]
 
   @@map("organisations")
 }
@@ -82,9 +84,10 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  organisation    Organisation           @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  sessions        UserSession[]
-  accountantLinks AccountantClientLink[]
+  organisation         Organisation           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  sessions             UserSession[]
+  accountantLinks      AccountantClientLink[]
+  askVelaConversations AskVelaConversation[]
 
   @@index([orgId])
   @@map("users")
@@ -573,4 +576,56 @@ model AccountantClientLink {
 
   @@unique([orgId, accountantEmail])
   @@map("accountant_client_links")
+}
+
+// === Ask Vela (Phase 7) ===
+// Scope: a tool-calling AI assistant grounded only in existing read-only
+// service/repository functions (never raw SQL, never a mutation) — RLS on
+// these two tables is the standard org_isolation policy, no SECURITY
+// DEFINER function needed since every read/write here already has an org
+// context from the authenticated request. See the Phase 7 plan for the
+// deferred scope (voice, cross-conversation memory, mutating tools).
+
+enum AskVelaMessageRole {
+  user
+  assistant
+
+  @@map("ask_vela_message_role")
+}
+
+model AskVelaConversation {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId     String   @map("org_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     AskVelaMessage[]
+
+  @@index([orgId, userId])
+  @@map("ask_vela_conversations")
+}
+
+// citations: [{module, refId, label}] — the literal set of DB rows a tool
+// executor touched while answering, not an LLM-invented source.
+// toolCalls: [{name, input}] audit trail for debugging/testability, never
+// rendered raw to the user.
+model AskVelaMessage {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId          String             @map("org_id") @db.Uuid
+  conversationId String             @map("conversation_id") @db.Uuid
+  role           AskVelaMessageRole
+  content        String
+  citations      Json?
+  toolCalls      Json?              @map("tool_calls")
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz
+
+  organisation Organisation        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  conversation AskVelaConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, conversationId])
+  @@map("ask_vela_messages")
 }
