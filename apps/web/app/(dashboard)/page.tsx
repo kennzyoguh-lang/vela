@@ -1,14 +1,14 @@
-import { CheckCircle2, Circle, Landmark, Sparkles } from "lucide-react";
+import { CheckCircle2, Circle } from "lucide-react";
 import {
   DashboardTemplate,
   type DashboardWidgetSlot,
 } from "@/components/templates/DashboardTemplate";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { OutstandingInvoicesWidget } from "@/components/modules/OutstandingInvoicesWidget";
 import { ComplianceWidget } from "@/components/modules/ComplianceWidget";
 import { CashPositionWidget } from "@/components/modules/CashPositionWidget";
 import { UpcomingPayrollWidget } from "@/components/modules/UpcomingPayrollWidget";
+import { AskVelaInsightWidget } from "@/components/modules/AskVelaInsightWidget";
 
 const ONBOARDING_STEPS = [
   { label: "Business created", done: true },
@@ -48,33 +48,6 @@ function FirstRunChecklist() {
   );
 }
 
-function PlaceholderWidget({
-  icon: Icon,
-  title,
-  description,
-  cta,
-}: {
-  icon: typeof Landmark;
-  title: string;
-  description: string;
-  cta: string;
-}) {
-  return (
-    <Card className="flex h-full flex-col justify-between gap-4">
-      <div>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <Icon className="text-text-secondary size-4" aria-hidden />
-        </CardHeader>
-        <p className="font-ui text-text-secondary text-[0.875rem]">{description}</p>
-      </div>
-      <Button variant="secondary" size="sm" disabled>
-        {cta}
-      </Button>
-    </Card>
-  );
-}
-
 export default function DashboardHomePage() {
   // Priority order per Design System 7.1 — Foundation has no live data yet, so
   // every slot below the checklist is an honest "not built yet" placeholder
@@ -109,14 +82,7 @@ export default function DashboardHomePage() {
       id: "ai-insight",
       span: 1,
       mobilePriority: 6,
-      children: (
-        <PlaceholderWidget
-          icon={Sparkles}
-          title="Ask Vela insight"
-          description="Ask Vela isn't connected yet — this card will surface one AI insight at a time."
-          cta="Coming soon"
-        />
-      ),
+      children: <AskVelaInsightWidget />,
     },
   ];
 

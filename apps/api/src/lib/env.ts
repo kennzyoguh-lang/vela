@@ -20,6 +20,11 @@ const envSchema = z.object({
   // else" contract as PAYSTACK_SECRET_KEY: unset means linking/syncing a
   // bank account fails loudly at that call site, not at boot.
   MONO_SECRET_KEY: z.string().optional(),
+  // Optional — Ask Vela's LLM provider key (Phase 7). Same "never blocks
+  // anything else" contract: unset means the app boots and every other
+  // module works, but Ask Vela itself fails loudly at the call site
+  // (Handbook 1.4 — "AI is a feature, not a foundation").
+  ANTHROPIC_API_KEY: z.string().optional(),
   WEB_APP_URL: z.string().default("http://localhost:3000"),
 });
 

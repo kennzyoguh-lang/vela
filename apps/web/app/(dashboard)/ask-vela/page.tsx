@@ -1,12 +1,18 @@
-import { Sparkles } from "lucide-react";
-import { ModulePlaceholder } from "@/components/templates/ModulePlaceholder";
+import { ChatPanel } from "@/components/modules/ask-vela/ChatPanel";
 
 export default function AskVelaPage() {
   return (
-    <ModulePlaceholder
-      icon={Sparkles}
-      title="Ask Vela is coming soon"
-      description="The full-page Ask Vela chat mirrors the dock panel (Design System 6.10) and ships once the AI Context Builder is live."
-    />
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="font-display text-text-primary text-[1.5rem] font-bold">Ask Vela</h1>
+        <p className="font-ui text-text-secondary text-[0.875rem]">
+          Ask about your invoices, compliance deadlines, cash position, or payroll — grounded in
+          this business&apos;s own records.
+        </p>
+      </div>
+      <div className="border-border bg-surface-raised h-[75vh] min-h-[500px] rounded-lg border">
+        <ChatPanel variant="full" />
+      </div>
+    </div>
   );
 }
