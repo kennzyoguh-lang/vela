@@ -7,6 +7,9 @@ import { invoiceRouter } from "./invoice.routes";
 import { recurringInvoiceRouter } from "./recurring-invoice.routes";
 import { paymentPortalRouter } from "./payment-portal.routes";
 import { complianceRouter } from "./compliance.routes";
+import { bankAccountRouter } from "./bank-account.routes";
+import { bankTransactionRouter } from "./bank-transaction.routes";
+import { pnlRouter } from "./pnl.routes";
 
 // URL path versioning (Handbook 7.4) — a breaking change gets /v2, never an
 // in-place change to /v1.
@@ -18,5 +21,8 @@ v1Router.use("/clients", clientRouter);
 v1Router.use("/invoices", invoiceRouter);
 v1Router.use("/recurring-invoices", recurringInvoiceRouter);
 v1Router.use("/compliance", complianceRouter);
+v1Router.use("/bank-accounts", bankAccountRouter);
+v1Router.use("/bank-transactions", bankTransactionRouter);
+v1Router.use("/pnl", pnlRouter);
 // Public, unauthenticated — Design System 6.13's payment portal.
 v1Router.use("/pay", paymentPortalRouter);

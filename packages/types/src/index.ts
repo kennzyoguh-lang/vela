@@ -132,6 +132,57 @@ export interface ComplianceFiling {
   updatedAt: string;
 }
 
+// === P&L Intelligence (Phase 4) ===
+
+export type BankSyncProvider = "mono" | "okra";
+export type TransactionType = "credit" | "debit";
+export type TransactionCategory =
+  | "income"
+  | "cost_of_goods"
+  | "payroll"
+  | "rent"
+  | "utilities"
+  | "marketing"
+  | "transport"
+  | "other_expense"
+  | "transfer"
+  | "uncategorized";
+
+export interface BankAccount {
+  id: string;
+  orgId: string;
+  provider: BankSyncProvider;
+  institutionName: string;
+  accountType: string;
+  accountNumberMasked: string;
+  currency: string;
+  currentBalance: string; // Prisma Decimal serializes as a string over JSON
+  lastSyncedAt: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BankTransaction {
+  id: string;
+  orgId: string;
+  bankAccountId: string;
+  type: TransactionType;
+  amount: string;
+  category: TransactionCategory;
+  categorizedManually: boolean;
+  narration: string;
+  transactionDate: string;
+  createdAt: string;
+}
+
+export interface PnlStatement {
+  income: number;
+  expensesByCategory: Partial<Record<TransactionCategory, number>>;
+  totalExpenses: number;
+  netProfit: number;
+}
+
 /** API response envelope — Engineering Handbook Part 7.6. Uniform for every endpoint. */
 export type ApiResponse<T> =
   | {
