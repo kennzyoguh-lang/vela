@@ -177,4 +177,79 @@ describe("cross-tenant isolation (RLS)", () => {
     );
     expect(stillUnpaid?.status).toBe("draft");
   });
+
+  // ComplianceRadar (Phase 3) introduced org_compliance_obligations/
+  // compliance_filings as new org-scoped tables — same isolation guarantee,
+  // extended rather than assumed to carry over automatically.
+  it("never returns org B's compliance obligations while scoped to org A, even querying without an org_id filter", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    await withOrgScope(orgB.id, (tx) =>
+      tx.orgComplianceObligation.create({
+        data: { id: randomUUID(), orgId: orgB.id, obligationType: "vat", isActive: true },
+      }),
+    );
+
+    const rows = await withOrgScope(orgA.id, (tx) => tx.orgComplianceObligation.findMany({}));
+
+    expect(rows.every((o) => o.orgId === orgA.id)).toBe(true);
+    expect(rows.some((o) => o.orgId === orgB.id)).toBe(false);
+  });
+
+  it("never returns org B's compliance filings while scoped to org A, even querying without an org_id filter", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    await withOrgScope(orgB.id, (tx) =>
+      tx.complianceFiling.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          obligationType: "vat",
+          periodLabel: "2026-07",
+          dueDate: new Date("2026-08-21"),
+        },
+      }),
+    );
+
+    const rows = await withOrgScope(orgA.id, (tx) => tx.complianceFiling.findMany({}));
+
+    expect(rows.every((f) => f.orgId === orgA.id)).toBe(true);
+    expect(rows.some((f) => f.orgId === orgB.id)).toBe(false);
+  });
+
+  it("org A cannot mutate org B's compliance filing by guessing its id", async () => {
+    const orgA = await createTestOrg("Org A");
+    const orgB = await createTestOrg("Org B");
+    createdOrgIds.push(orgA.id, orgB.id);
+
+    const filingB = await withOrgScope(orgB.id, (tx) =>
+      tx.complianceFiling.create({
+        data: {
+          id: randomUUID(),
+          orgId: orgB.id,
+          obligationType: "vat",
+          periodLabel: "2026-07",
+          dueDate: new Date("2026-08-21"),
+        },
+      }),
+    );
+
+    await expect(
+      withOrgScope(orgA.id, (tx) =>
+        tx.complianceFiling.update({
+          where: { id: filingB.id, orgId: orgA.id },
+          data: { filedAt: new Date() },
+        }),
+      ),
+    ).rejects.toThrow();
+
+    const stillUnfiled = await withOrgScope(orgB.id, (tx) =>
+      tx.complianceFiling.findUnique({ where: { id: filingB.id } }),
+    );
+    expect(stillUnfiled?.filedAt).toBeNull();
+  });
 });
