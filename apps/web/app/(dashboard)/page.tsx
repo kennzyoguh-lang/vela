@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Landmark, Users, Sparkles } from "lucide-react";
+import { CheckCircle2, Circle, Landmark, Sparkles } from "lucide-react";
 import {
   DashboardTemplate,
   type DashboardWidgetSlot,
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { OutstandingInvoicesWidget } from "@/components/modules/OutstandingInvoicesWidget";
 import { ComplianceWidget } from "@/components/modules/ComplianceWidget";
 import { CashPositionWidget } from "@/components/modules/CashPositionWidget";
+import { UpcomingPayrollWidget } from "@/components/modules/UpcomingPayrollWidget";
 
 const ONBOARDING_STEPS = [
   { label: "Business created", done: true },
@@ -102,14 +103,7 @@ export default function DashboardHomePage() {
       id: "payroll",
       span: 1,
       mobilePriority: 5,
-      children: (
-        <PlaceholderWidget
-          icon={Users}
-          title="Upcoming payroll"
-          description="PeopleHub isn't built yet — this card will show your next payroll run."
-          cta="Coming soon"
-        />
-      ),
+      children: <UpcomingPayrollWidget />,
     },
     {
       id: "ai-insight",

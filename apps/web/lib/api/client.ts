@@ -47,7 +47,16 @@ function refreshAccessToken(): Promise<string | null> {
   return refreshPromise;
 }
 
-async function request<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {
+// Attaches the Bearer token and retries once through a silent refresh on a
+// 401 — the one place this logic lives, shared by both the JSON request()
+// helper below and openAuthenticatedPdf() (a plain <a href> to a PDF endpoint
+// can't carry an Authorization header, so any authenticated file download
+// must go through this instead of a raw anchor tag).
+async function authorizedFetch(
+  path: string,
+  init: RequestInit = {},
+  isRetry = false,
+): Promise<Response> {
   const skipAuth = NO_AUTH_PATHS.includes(path);
   let token = useAuthStore.getState().accessToken;
   if (!token && !skipAuth) {
@@ -59,7 +68,6 @@ async function request<T>(path: string, init: RequestInit = {}, isRetry = false)
     ...init,
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
@@ -69,16 +77,66 @@ async function request<T>(path: string, init: RequestInit = {}, isRetry = false)
     const refreshedToken = await refreshAccessToken();
     if (refreshedToken) {
       useAuthStore.getState().setAccessToken(refreshedToken);
-      return request<T>(path, init, true);
+      return authorizedFetch(path, init, true);
     }
     useAuthStore.getState().setAccessToken(null);
   }
+
+  return res;
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await authorizedFetch(path, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...init.headers },
+  });
 
   const body = (await res.json()) as ApiResponse<T>;
   if (!body.success) {
     throw new ApiError(body.error.code, body.error.message, res.status);
   }
   return body.data;
+}
+
+// Fetches an authenticated PDF (or other file) endpoint and opens it in a new
+// tab. Every PDF download in the app must go through this, not a plain
+// `<a href={apiUrl}>` — requireAuth only accepts a Bearer header, which a
+// browser-navigated anchor click never sends.
+//
+// The tab is opened synchronously, before the `await`, and only pointed at
+// the blob URL once the fetch resolves — opening it *after* an await loses
+// the "direct response to a user gesture" context most browsers require to
+// avoid popup-blocking, even though the fetch itself was triggered by a click.
+export async function openAuthenticatedPdf(path: string): Promise<void> {
+  const pendingTab = window.open("", "_blank");
+  try {
+    const res = await authorizedFetch(path, { method: "GET" });
+    if (!res.ok) {
+      let message = "Couldn't load the document.";
+      try {
+        const body = (await res.json()) as ApiResponse<unknown>;
+        if (!body.success) message = body.error.message;
+      } catch {
+        // Response wasn't JSON (e.g. the PDF itself) — keep the generic message.
+      }
+      throw new ApiError("PDF_FETCH_FAILED", message, res.status);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    if (pendingTab) {
+      pendingTab.location.href = url;
+    } else {
+      // The synchronous open() itself got blocked (rare) — fall back to a
+      // second attempt, which at least has a chance outside stricter policies.
+      window.open(url, "_blank");
+    }
+    // Revoked after a delay rather than immediately — revoking right away can
+    // race the new tab's own load of the blob URL.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (err) {
+    pendingTab?.close();
+    throw err;
+  }
 }
 
 export const api = {
