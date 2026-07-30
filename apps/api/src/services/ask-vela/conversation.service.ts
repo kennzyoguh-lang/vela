@@ -3,6 +3,7 @@ import { getAnthropicClient } from "./anthropic-client";
 import { askVelaTools, getToolByName, type Citation } from "./tools";
 import * as askVelaRepo from "../../repositories/ask-vela.repository";
 import { NotFoundError } from "../../lib/errors";
+import { logger } from "../../lib/logger";
 
 const MODEL = "claude-sonnet-5";
 const MAX_TOKENS = 2048;
@@ -142,10 +143,17 @@ export async function runTurn(
           content: JSON.stringify(result.data),
         });
       } catch (err) {
+        // The raw error (a Prisma driver message, a stack trace, an internal
+        // path) goes to our own logs only — sending it back as tool_result
+        // content puts it directly in the model's context, and from there
+        // potentially in what it says back to the user. The model only needs
+        // to know the call failed, not why.
+        logger.error({ err, tool: block.name, orgId }, "Ask Vela tool execution failed");
         toolResults.push({
           type: "tool_result",
           tool_use_id: block.id,
-          content: err instanceof Error ? err.message : "Tool execution failed",
+          content:
+            "This tool failed to execute. Try a different approach, or let the user know you couldn't retrieve that information.",
           is_error: true,
         });
       }
