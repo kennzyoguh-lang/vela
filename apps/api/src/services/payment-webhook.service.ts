@@ -2,6 +2,7 @@ import * as invoiceRepo from "../repositories/invoice.repository";
 import * as invoiceService from "./invoice.service";
 import * as transactionMarkupService from "./transaction-markup.service";
 import * as webhookEventRepo from "../repositories/webhook-event.repository";
+import * as auditLogRepo from "../repositories/audit-log.repository";
 import { getGateway } from "./payment-gateways";
 import { logger } from "../lib/logger";
 import type { PaymentProcessor } from "@prisma/client";
@@ -64,6 +65,18 @@ export async function processWebhook(
   }
 
   await invoiceService.markPaid(invoice.orgId, invoice.id);
+  // No req.orgId/userId to hang the usual auditLog middleware off of here —
+  // this is the one invoice.status mutation that never goes through an HTTP
+  // route at all (the middleware's http requires those), so without an
+  // explicit write here, the most consequential status change (a customer's
+  // payment actually landing) would be invisible in the audit trail entirely.
+  await auditLogRepo.write({
+    orgId: invoice.orgId,
+    action: "invoice.mark_paid",
+    entityType: "invoice",
+    entityId: invoice.id,
+    newValue: { source: "webhook", processor, providerEventId: event.eventId },
+  });
   await transactionMarkupService.recordMarkup({
     orgId: invoice.orgId,
     invoiceId: invoice.id,
