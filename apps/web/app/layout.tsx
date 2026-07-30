@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -27,10 +28,15 @@ const THEME_INIT_SCRIPT = `
 `;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Read back the per-request nonce middleware.ts attached to this request's
+  // headers — required for this inline script to run under the CSP's
+  // nonce-based script-src (a plain <script> with no nonce is blocked).
+  const nonce = headers().get("x-nonce") ?? undefined;
+
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
         <Providers>{children}</Providers>

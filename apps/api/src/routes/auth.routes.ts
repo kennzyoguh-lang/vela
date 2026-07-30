@@ -2,7 +2,11 @@ import { Router } from "express";
 import * as authController from "../controllers/auth.controller";
 import * as twoFactorController from "../controllers/two-factor.controller";
 import { requireAuth } from "../middleware/auth.middleware";
-import { loginRateLimit, twoFaVerifyRateLimit } from "../middleware/rate-limit.middleware";
+import {
+  loginRateLimit,
+  signupRateLimit,
+  twoFaVerifyRateLimit,
+} from "../middleware/rate-limit.middleware";
 import { auditLog } from "../middleware/audit.middleware";
 import { asyncHandler } from "../lib/async-handler";
 
@@ -10,6 +14,7 @@ export const authRouter = Router();
 
 authRouter.post(
   "/signup",
+  signupRateLimit(),
   auditLog("auth.signup", "organisation"),
   asyncHandler(authController.signup),
 );
