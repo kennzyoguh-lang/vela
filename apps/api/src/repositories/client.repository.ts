@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { withOrgScope } from "../lib/prisma";
 import type { Client } from "@prisma/client";
+import { toPage, type Page, type PageParams } from "../lib/pagination";
 
 export async function createClient(
   orgId: string,
@@ -25,10 +26,19 @@ export async function findById(orgId: string, clientId: string): Promise<Client 
   return withOrgScope(orgId, (tx) => tx.client.findFirst({ where: { id: clientId, orgId } }));
 }
 
-export async function listByOrg(orgId: string): Promise<Client[]> {
-  return withOrgScope(orgId, (tx) =>
-    tx.client.findMany({ where: { orgId }, orderBy: { name: "asc" } }),
-  );
+export async function listByOrg(orgId: string, page: PageParams): Promise<Page<Client>> {
+  return withOrgScope(orgId, async (tx) => {
+    const [items, total] = await Promise.all([
+      tx.client.findMany({
+        where: { orgId },
+        orderBy: { name: "asc" },
+        skip: page.skip,
+        take: page.take,
+      }),
+      tx.client.count({ where: { orgId } }),
+    ]);
+    return toPage(items, total, page);
+  });
 }
 
 export async function update(

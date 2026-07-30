@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { Client } from "@vela/types";
+import type { Client, Page } from "@vela/types";
 import { ListTemplate } from "@/components/templates/ListTemplate";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -10,11 +10,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { api } from "@/lib/api/client";
 
 export default function ClientsPage() {
-  const { data: clients, isLoading } = useQuery({
+  const { data: clientPage, isLoading } = useQuery({
     queryKey: ["clients"],
-    queryFn: () => api.get<Client[]>("/v1/clients"),
+    queryFn: () => api.get<Page<Client>>("/v1/clients?pageSize=100"),
     staleTime: 5 * 60_000,
   });
+  const clients = clientPage?.items;
 
   return (
     <ListTemplate

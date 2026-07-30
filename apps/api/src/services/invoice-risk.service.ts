@@ -83,7 +83,7 @@ export async function scoreInvoice(orgId: string, invoiceId: string): Promise<nu
 // Recalculated daily via a scheduled job (Epic 4's job runner), not
 // per-request — Handbook 16.1: "a slow-changing signal, not a real-time one."
 export async function scoreAllOpenInvoices(orgId: string): Promise<void> {
-  const openInvoices = await invoiceRepo.listByOrg(orgId);
+  const openInvoices = await invoiceRepo.listAllByOrg(orgId);
   for (const invoice of openInvoices) {
     if (["paid", "written_off", "void"].includes(invoice.status)) continue;
     await scoreInvoice(orgId, invoice.id);

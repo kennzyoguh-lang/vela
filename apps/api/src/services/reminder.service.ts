@@ -42,7 +42,7 @@ async function deliverReminderEmail(invoice: Invoice, trigger: ReminderTrigger):
 }
 
 export async function processRemindersForOrg(orgId: string, now: Date): Promise<number> {
-  const candidates = await invoiceRepo.listByOrg(orgId);
+  const candidates = await invoiceRepo.listAllByOrg(orgId);
   let sent = 0;
   for (const invoice of candidates) {
     if (["paid", "written_off", "void", "draft"].includes(invoice.status)) continue;

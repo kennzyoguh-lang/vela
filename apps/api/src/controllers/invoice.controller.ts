@@ -8,6 +8,7 @@ import {
 } from "../validation/invoice.schema";
 import { sendSuccess } from "../lib/response";
 import { getAuthContext } from "../lib/auth-context";
+import { parsePageParams } from "../lib/pagination";
 import { renderInvoicePdf } from "../services/invoice-pdf.service";
 import * as organisationRepo from "../repositories/organisation.repository";
 import type { InvoiceStatus } from "@prisma/client";
@@ -30,7 +31,7 @@ export async function list(req: Request, res: Response) {
   const { orgId } = getAuthContext(req);
   const status =
     typeof req.query.status === "string" ? (req.query.status as InvoiceStatus) : undefined;
-  const invoices = await invoiceService.listInvoices(orgId, status);
+  const invoices = await invoiceService.listInvoices(orgId, status, parsePageParams(req));
   sendSuccess(res, invoices);
 }
 

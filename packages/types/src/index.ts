@@ -5,6 +5,16 @@
 
 export type Role = "owner" | "admin" | "accountant" | "staff" | "view_only";
 
+// Shared envelope for paginated list endpoints (invoices, clients, bank
+// transactions) — a bare array response was returning every row in the org
+// unbounded; every paginated list endpoint now returns this shape instead.
+export interface Page<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface Organisation {
   id: string;
   name: string;

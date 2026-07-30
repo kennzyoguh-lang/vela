@@ -4,6 +4,7 @@ import { getBankSyncGateway } from "./bank-sync";
 import { categorizeTransaction } from "./transaction-categorization.service";
 import { NotFoundError } from "../lib/errors";
 import type { TransactionCategory } from "@prisma/client";
+import type { PageParams } from "../lib/pagination";
 
 /**
  * Fetches everything new since the account's last sync, upserts by
@@ -39,8 +40,8 @@ export async function syncTransactions(orgId: string, bankAccountId: string): Pr
   return newCount;
 }
 
-export async function listTransactions(orgId: string) {
-  return bankTransactionRepo.listByOrg(orgId);
+export async function listTransactions(orgId: string, page: PageParams) {
+  return bankTransactionRepo.listByOrg(orgId, page);
 }
 
 export async function recategorizeTransaction(

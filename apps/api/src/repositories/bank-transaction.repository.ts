@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { withOrgScope } from "../lib/prisma";
 import type { BankTransaction, TransactionCategory, TransactionType } from "@prisma/client";
+import { toPage, type Page, type PageParams } from "../lib/pagination";
 
 // Idempotent by construction — the @@unique([bankAccountId,
 // providerTransactionId]) constraint means a re-sync of a transaction
@@ -61,14 +62,19 @@ export async function listByOrgAndRange(
   );
 }
 
-export async function listByOrg(orgId: string, limit = 100): Promise<BankTransaction[]> {
-  return withOrgScope(orgId, (tx) =>
-    tx.bankTransaction.findMany({
-      where: { orgId },
-      orderBy: { transactionDate: "desc" },
-      take: limit,
-    }),
-  );
+export async function listByOrg(orgId: string, page: PageParams): Promise<Page<BankTransaction>> {
+  return withOrgScope(orgId, async (tx) => {
+    const [items, total] = await Promise.all([
+      tx.bankTransaction.findMany({
+        where: { orgId },
+        orderBy: { transactionDate: "desc" },
+        skip: page.skip,
+        take: page.take,
+      }),
+      tx.bankTransaction.count({ where: { orgId } }),
+    ]);
+    return toPage(items, total, page);
+  });
 }
 
 export async function findById(

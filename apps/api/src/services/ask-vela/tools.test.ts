@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../../repositories/invoice.repository", () => ({
-  listByOrg: vi.fn(),
+  listAllByOrg: vi.fn(),
 }));
 vi.mock("../../repositories/bank-account.repository", () => ({
   listActiveByOrg: vi.fn(),
@@ -34,7 +34,7 @@ describe("ask-vela tools", () => {
 
   describe("get_outstanding_invoices", () => {
     it("filters to the default outstanding statuses when no status is given", async () => {
-      vi.mocked(invoiceRepo.listByOrg).mockResolvedValue([
+      vi.mocked(invoiceRepo.listAllByOrg).mockResolvedValue([
         {
           id: "1",
           number: "INV-0001",
@@ -64,15 +64,15 @@ describe("ask-vela tools", () => {
       const tool = getToolByName("get_outstanding_invoices")!;
       const result = await tool.execute(orgId, {});
 
-      expect(invoiceRepo.listByOrg).toHaveBeenCalledWith(orgId);
+      expect(invoiceRepo.listAllByOrg).toHaveBeenCalledWith(orgId);
       const data = result.data as { count: number; total: number };
       expect(data.count).toBe(2);
       expect(data.total).toBe(1250);
       expect(result.citations).toHaveLength(2);
     });
 
-    it("narrows to a single status when provided, calling listByOrg with that filter", async () => {
-      vi.mocked(invoiceRepo.listByOrg).mockResolvedValue([
+    it("narrows to a single status when provided, calling listAllByOrg with that filter", async () => {
+      vi.mocked(invoiceRepo.listAllByOrg).mockResolvedValue([
         {
           id: "1",
           number: "INV-0001",
@@ -86,11 +86,11 @@ describe("ask-vela tools", () => {
       const tool = getToolByName("get_outstanding_invoices")!;
       await tool.execute(orgId, { status: "paid" });
 
-      expect(invoiceRepo.listByOrg).toHaveBeenCalledWith(orgId, { status: "paid" });
+      expect(invoiceRepo.listAllByOrg).toHaveBeenCalledWith(orgId, { status: "paid" });
     });
 
     it("only ever uses the orgId passed by the caller, never one smuggled in via tool input", async () => {
-      vi.mocked(invoiceRepo.listByOrg).mockResolvedValue([]);
+      vi.mocked(invoiceRepo.listAllByOrg).mockResolvedValue([]);
       const tool = getToolByName("get_outstanding_invoices")!;
       const foreignOrgId = randomUUID();
 
@@ -99,8 +99,8 @@ describe("ask-vela tools", () => {
       // `unknown`, so this is a runtime-only check, not a type-level one.
       await tool.execute(orgId, { orgId: foreignOrgId, status: undefined });
 
-      expect(invoiceRepo.listByOrg).toHaveBeenCalledWith(orgId);
-      expect(invoiceRepo.listByOrg).not.toHaveBeenCalledWith(foreignOrgId);
+      expect(invoiceRepo.listAllByOrg).toHaveBeenCalledWith(orgId);
+      expect(invoiceRepo.listAllByOrg).not.toHaveBeenCalledWith(foreignOrgId);
     });
   });
 

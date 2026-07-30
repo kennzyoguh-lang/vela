@@ -3,6 +3,7 @@ import * as clientRepo from "../repositories/client.repository";
 import { NotFoundError, BusinessRuleViolationError } from "../lib/errors";
 import type { InvoiceStatus } from "@prisma/client";
 import type { CreateInvoiceInput, QuickCreateInvoiceInput } from "../validation/invoice.schema";
+import type { PageParams } from "../lib/pagination";
 
 /**
  * The invoice status-transition state machine (Handbook 16.1) — transitions
@@ -72,8 +73,12 @@ export async function getInvoice(orgId: string, invoiceId: string) {
   return invoice;
 }
 
-export async function listInvoices(orgId: string, status?: InvoiceStatus) {
-  return invoiceRepo.listByOrg(orgId, { status });
+export async function listInvoices(
+  orgId: string,
+  status: InvoiceStatus | undefined,
+  page: PageParams,
+) {
+  return invoiceRepo.listByOrg(orgId, { status }, page);
 }
 
 export async function sendInvoice(orgId: string, invoiceId: string) {

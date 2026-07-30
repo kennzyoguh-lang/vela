@@ -1,6 +1,7 @@
 import * as clientRepo from "../repositories/client.repository";
 import { NotFoundError } from "../lib/errors";
 import type { CreateClientInput, UpdateClientInput } from "../validation/client.schema";
+import type { PageParams } from "../lib/pagination";
 
 export async function createClient(orgId: string, input: CreateClientInput) {
   return clientRepo.createClient(orgId, {
@@ -18,8 +19,8 @@ export async function getClient(orgId: string, clientId: string) {
   return client;
 }
 
-export async function listClients(orgId: string) {
-  return clientRepo.listByOrg(orgId);
+export async function listClients(orgId: string, page: PageParams) {
+  return clientRepo.listByOrg(orgId, page);
 }
 
 export async function updateClient(orgId: string, clientId: string, input: UpdateClientInput) {

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { prisma, withOrgScope } from "../lib/prisma";
 import type { Invoice, InvoiceStatus, Prisma } from "@prisma/client";
+import { toPage, type Page, type PageParams } from "../lib/pagination";
 
 export interface CreateInvoiceData {
   clientId: string;
@@ -80,7 +81,28 @@ export async function findByPaymentPortalToken(token: string): Promise<Invoice |
   );
 }
 
+// Paginated — backs the HTTP list endpoint (GET /invoices) that a human
+// scrolls through. Internal callers that need every matching invoice for a
+// computation (reminder jobs, risk scoring, Ask Vela tools, the accountant
+// dashboard summary) must use listAllByOrg below instead — silently
+// truncating those to one page would produce wrong answers, not just a
+// slow UI.
 export async function listByOrg(
+  orgId: string,
+  filter: { status?: InvoiceStatus } = {},
+  page: PageParams,
+): Promise<Page<Invoice>> {
+  const where = { orgId, ...(filter.status ? { status: filter.status } : {}) };
+  return withOrgScope(orgId, async (tx) => {
+    const [items, total] = await Promise.all([
+      tx.invoice.findMany({ where, orderBy: { dueDate: "asc" }, skip: page.skip, take: page.take }),
+      tx.invoice.count({ where }),
+    ]);
+    return toPage(items, total, page);
+  });
+}
+
+export async function listAllByOrg(
   orgId: string,
   filter: { status?: InvoiceStatus } = {},
 ): Promise<Invoice[]> {

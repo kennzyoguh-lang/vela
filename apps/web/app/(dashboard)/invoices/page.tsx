@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { Client, Invoice, InvoiceStatus } from "@vela/types";
+import type { Client, Invoice, InvoiceStatus, Page } from "@vela/types";
 import { ListTemplate } from "@/components/templates/ListTemplate";
 import { InvoiceCard } from "@/components/modules/InvoiceCard";
 import { Card } from "@/components/ui/Card";
@@ -24,23 +24,27 @@ const FILTERS: { label: string; value: InvoiceStatus | "all" }[] = [
 export default function InvoicesPage() {
   const [status, setStatus] = useState<InvoiceStatus | "all">("all");
 
-  const { data: invoices, isLoading } = useQuery({
+  const { data: invoicePage, isLoading } = useQuery({
     queryKey: ["invoices", status],
-    queryFn: () => api.get<Invoice[]>(`/v1/invoices${status === "all" ? "" : `?status=${status}`}`),
+    queryFn: () =>
+      api.get<Page<Invoice>>(
+        `/v1/invoices?pageSize=100${status === "all" ? "" : `&status=${status}`}`,
+      ),
     staleTime: 30_000,
   });
+  const invoices = invoicePage?.items;
 
-  const { data: clients } = useQuery({
+  const { data: clientPage } = useQuery({
     queryKey: ["clients"],
-    queryFn: () => api.get<Client[]>("/v1/clients"),
+    queryFn: () => api.get<Page<Client>>("/v1/clients?pageSize=100"),
     staleTime: 5 * 60_000,
   });
 
   const clientNameById = useMemo(() => {
     const map = new Map<string, string>();
-    clients?.forEach((c) => map.set(c.id, c.name));
+    clientPage?.items.forEach((c) => map.set(c.id, c.name));
     return map;
-  }, [clients]);
+  }, [clientPage]);
 
   return (
     <ListTemplate
