@@ -18,7 +18,7 @@ vi.mock("../repositories/organisation.repository", () => ({
   findOrganisationById: vi.fn(),
 }));
 vi.mock("../repositories/invoice.repository", () => ({
-  listByOrg: vi.fn(),
+  listAllByOrg: vi.fn(),
 }));
 vi.mock("./compliance.service", () => ({
   listFilings: vi.fn(),
@@ -47,6 +47,35 @@ describe("accountant-portal.service", () => {
     vi.clearAllMocks();
   });
 
+  describe("listMyLinks", () => {
+    it("returns the org-joined rows as-is, without an extra per-row org lookup (N+1 fix)", async () => {
+      const links = [
+        {
+          id: randomUUID(),
+          orgId: clientOrgId,
+          orgName: "Acme Ventures Ltd",
+          status: "active" as const,
+          invitedAt: new Date(),
+          respondedAt: new Date(),
+        },
+        {
+          id: randomUUID(),
+          orgId: randomUUID(),
+          orgName: "Beta Traders",
+          status: "pending" as const,
+          invitedAt: new Date(),
+          respondedAt: null,
+        },
+      ];
+      vi.mocked(accountantLinkRepo.listForAccountant).mockResolvedValue(links);
+
+      const result = await accountantPortalService.listMyLinks(userId, email);
+
+      expect(result).toEqual(links);
+      expect(organisationRepo.findOrganisationById).not.toHaveBeenCalled();
+    });
+  });
+
   describe("acceptLink", () => {
     it("accepts a pending invitation addressed to this user's own email", async () => {
       const linkId = randomUUID();
@@ -54,6 +83,7 @@ describe("accountant-portal.service", () => {
         {
           id: linkId,
           orgId: clientOrgId,
+          orgName: "Acme Ventures Ltd",
           status: "pending",
           invitedAt: new Date(),
           respondedAt: null,
@@ -81,6 +111,7 @@ describe("accountant-portal.service", () => {
         {
           id: linkId,
           orgId: clientOrgId,
+          orgName: "Acme Ventures Ltd",
           status: "active",
           invitedAt: new Date(),
           respondedAt: new Date(),
@@ -99,6 +130,7 @@ describe("accountant-portal.service", () => {
         {
           id: linkId,
           orgId: clientOrgId,
+          orgName: "Acme Ventures Ltd",
           status: "revoked",
           invitedAt: new Date(),
           respondedAt: null,
@@ -118,7 +150,7 @@ describe("accountant-portal.service", () => {
       await expect(
         accountantPortalService.getClientOrgSummary(userId, clientOrgId),
       ).rejects.toThrow(/don't have access/);
-      expect(invoiceRepo.listByOrg).not.toHaveBeenCalled();
+      expect(invoiceRepo.listAllByOrg).not.toHaveBeenCalled();
       expect(complianceService.listFilings).not.toHaveBeenCalled();
       expect(bankAccountRepo.listActiveByOrg).not.toHaveBeenCalled();
       expect(payrollRunRepo.listByOrg).not.toHaveBeenCalled();
@@ -131,7 +163,7 @@ describe("accountant-portal.service", () => {
         name: "Client Co",
         baseCurrency: "NGN",
       } as never);
-      vi.mocked(invoiceRepo.listByOrg).mockResolvedValue([
+      vi.mocked(invoiceRepo.listAllByOrg).mockResolvedValue([
         { status: "overdue", total: "1000" },
         { status: "paid", total: "5000" },
       ] as never);

@@ -78,6 +78,7 @@ export async function revoke(orgId: string, linkId: string): Promise<void> {
 export interface AccountantLinkSummary {
   id: string;
   orgId: string;
+  orgName: string;
   status: AccountantLinkStatus;
   invitedAt: Date;
   respondedAt: Date | null;
@@ -86,7 +87,11 @@ export interface AccountantLinkSummary {
 // The accountant reading their own cross-org link list — no single org
 // context exists yet, so this goes through the SECURITY DEFINER function
 // (list_accountant_links_for_user), the same shape as user.repository.ts's
-// findByEmail for login.
+// findByEmail for login. The function joins organisations directly (added in
+// migration 20260730080000) rather than returning bare org_ids the caller
+// would otherwise have to resolve one at a time — RLS means a normal batched
+// findMany can't do that JOIN itself (one Postgres session only has one
+// app.current_org_id, but this list can span many different client orgs).
 export async function listForAccountant(
   userId: string,
   email: string,
@@ -95,6 +100,7 @@ export async function listForAccountant(
     {
       id: string;
       org_id: string;
+      org_name: string;
       status: AccountantLinkStatus;
       invited_at: Date;
       responded_at: Date | null;
@@ -103,6 +109,7 @@ export async function listForAccountant(
   return rows.map((r) => ({
     id: r.id,
     orgId: r.org_id,
+    orgName: r.org_name,
     status: r.status,
     invitedAt: r.invited_at,
     respondedAt: r.responded_at,
