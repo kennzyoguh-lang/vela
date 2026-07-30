@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import type { Invoice, Client, Organisation } from "@prisma/client";
 import type { LineItem } from "../validation/invoice.schema";
+import { drawVelaMark } from "../lib/vela-mark-pdf";
 
 const MIDNIGHT = "#0D1B2A";
 const GOLD = "#C9A84C";
@@ -116,11 +117,25 @@ export function renderInvoicePdf(
       .text(invoice.notes, 50, y + 14, { width: 500 });
   }
 
+  // Logo Identity System §07: "never the wordmark alone without the mark" —
+  // the footer used to be bare text; the mark now sits beside it, sized and
+  // manually centered as one block (PDFKit can't center an icon+text run
+  // with a single .text() call the way flexbox would).
+  const footerText = "Powered by VELA";
+  const footerMarkSize = 10;
+  const footerGap = 5;
+  doc.font("Helvetica").fontSize(8);
+  const footerTextWidth = doc.widthOfString(footerText);
+  const footerBlockWidth = footerMarkSize + footerGap + footerTextWidth;
+  const footerBlockX = 50 + (500 - footerBlockWidth) / 2;
+  // A few points of headroom above the bottom margin — sitting exactly on it
+  // (the old bare-text footer did) risks PDFKit deciding the line overflows
+  // and silently starting a fresh page for it.
+  const footerY = doc.page.height - doc.page.margins.bottom - 15;
+  drawVelaMark(doc, footerBlockX, footerY - 1, footerMarkSize, "mono-dark");
   doc
-    .font("Helvetica")
-    .fontSize(8)
     .fillColor(TEXT_SECONDARY)
-    .text("Powered by VELA", 50, doc.page.height - 50, { align: "center", width: 500 });
+    .text(footerText, footerBlockX + footerMarkSize + footerGap, footerY);
 
   return doc;
 }
