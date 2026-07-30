@@ -19,6 +19,20 @@ export function loginRateLimit() {
   });
 }
 
+// Per-IP, not per-email like loginRateLimit — signup lets the caller pick the
+// email, so keying on it would let an attacker enumerate accounts (does this
+// email already exist?) at unlimited speed just by varying the address on
+// every request.
+export function signupRateLimit() {
+  return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
+    const key = `ratelimit:signup:${req.ip}`;
+    const { allowed } = await checkAndIncrement(key, 5, 60);
+    if (!allowed)
+      return next(new RateLimitedError("Too many signup attempts — try again shortly", 60));
+    next();
+  });
+}
+
 export function apiRateLimit() {
   return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
     if (!req.orgId) return next(); // unauthenticated routes are covered by their own limiter
