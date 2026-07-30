@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
-    "@prisma/client": "^5.20.0",
+    "@prisma/client": "^7.9.1",
     "@vela/types": "workspace:*",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.28.1",
