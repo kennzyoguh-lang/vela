@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   BankAccount,
   BankTransaction,
+  Page,
   PnlStatement as PnlStatementData,
   TransactionCategory,
 } from "@vela/types";
@@ -50,11 +51,12 @@ export default function MoneyPage() {
     staleTime: 60_000,
   });
 
-  const { data: transactions, isLoading: transactionsLoading } = useQuery({
+  const { data: transactionPage, isLoading: transactionsLoading } = useQuery({
     queryKey: ["bank-transactions"],
-    queryFn: () => api.get<BankTransaction[]>("/v1/bank-transactions"),
+    queryFn: () => api.get<Page<BankTransaction>>("/v1/bank-transactions?pageSize=100"),
     staleTime: 30_000,
   });
+  const transactions = transactionPage?.items;
 
   const recategorizeMutation = useMutation({
     mutationFn: ({ id, category }: { id: string; category: TransactionCategory }) =>

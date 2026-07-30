@@ -4,10 +4,11 @@ import * as pnlService from "../services/pnl.service";
 import { recategorizeSchema, pnlRangeSchema } from "../validation/bank-sync.schema";
 import { sendSuccess } from "../lib/response";
 import { getAuthContext } from "../lib/auth-context";
+import { parsePageParams } from "../lib/pagination";
 
 export async function listTransactions(req: Request, res: Response) {
   const { orgId } = getAuthContext(req);
-  const transactions = await bankTransactionService.listTransactions(orgId);
+  const transactions = await bankTransactionService.listTransactions(orgId, parsePageParams(req));
   sendSuccess(res, transactions);
 }
 

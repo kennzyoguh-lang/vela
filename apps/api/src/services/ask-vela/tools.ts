@@ -73,8 +73,8 @@ export const askVelaTools: AskVelaTool[] = [
     async execute(orgId, rawInput) {
       const input = getOutstandingInvoicesSchema.parse(rawInput ?? {});
       const invoices = input.status
-        ? await invoiceRepo.listByOrg(orgId, { status: input.status })
-        : (await invoiceRepo.listByOrg(orgId)).filter((i) =>
+        ? await invoiceRepo.listAllByOrg(orgId, { status: input.status })
+        : (await invoiceRepo.listAllByOrg(orgId)).filter((i) =>
             OUTSTANDING_INVOICE_STATUSES.includes(
               i.status as (typeof OUTSTANDING_INVOICE_STATUSES)[number],
             ),

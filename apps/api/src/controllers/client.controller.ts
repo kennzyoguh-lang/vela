@@ -3,6 +3,7 @@ import * as clientService from "../services/client.service";
 import { createClientSchema, updateClientSchema } from "../validation/client.schema";
 import { sendSuccess } from "../lib/response";
 import { getAuthContext } from "../lib/auth-context";
+import { parsePageParams } from "../lib/pagination";
 
 export async function create(req: Request, res: Response) {
   const { orgId } = getAuthContext(req);
@@ -13,7 +14,7 @@ export async function create(req: Request, res: Response) {
 
 export async function list(req: Request, res: Response) {
   const { orgId } = getAuthContext(req);
-  const clients = await clientService.listClients(orgId);
+  const clients = await clientService.listClients(orgId, parsePageParams(req));
   sendSuccess(res, clients);
 }
 
