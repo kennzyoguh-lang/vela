@@ -120,7 +120,7 @@ describe("auth.service", () => {
       expect(sessionRepo.createSession).not.toHaveBeenCalled();
     });
 
-    it("rejects a wrong password without issuing a session or a challenge", async () => {
+    it("rejects a wrong password without issuing a session or a challenge, and audit-logs the failure", async () => {
       const user = stubUser();
       vi.mocked(userRepo.findByEmail).mockResolvedValue(user as never);
       vi.mocked(passwordService.verifyPassword).mockResolvedValue(false);
@@ -130,9 +130,16 @@ describe("auth.service", () => {
       ).rejects.toThrow(/invalid email or password/i);
       expect(sessionRepo.createSession).not.toHaveBeenCalled();
       expect(jwtService.signTwoFaChallengeToken).not.toHaveBeenCalled();
+      expect(auditLogRepo.write).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orgId: user.orgId,
+          userId: user.id,
+          action: "auth.login_failed",
+        }),
+      );
     });
 
-    it("rejects a deactivated user", async () => {
+    it("rejects a deactivated user and audit-logs the failure", async () => {
       const user = stubUser({ isActive: false });
       vi.mocked(userRepo.findByEmail).mockResolvedValue(user as never);
 
@@ -140,6 +147,22 @@ describe("auth.service", () => {
         authService.login({ email: "user@example.com", password: "whatever" }, {}),
       ).rejects.toThrow(/invalid email or password/i);
       expect(passwordService.verifyPassword).not.toHaveBeenCalled();
+      expect(auditLogRepo.write).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orgId: user.orgId,
+          userId: user.id,
+          action: "auth.login_failed",
+        }),
+      );
+    });
+
+    it("does not audit-log when the email doesn't resolve to any user (no org to attach it to)", async () => {
+      vi.mocked(userRepo.findByEmail).mockResolvedValue(null as never);
+
+      await expect(
+        authService.login({ email: "nobody@example.com", password: "whatever" }, {}),
+      ).rejects.toThrow(/invalid email or password/i);
+      expect(auditLogRepo.write).not.toHaveBeenCalled();
     });
   });
 

@@ -65,10 +65,37 @@ export async function login(
 ): Promise<LoginResult> {
   const user = await userRepo.findByEmail(input.email);
   // Generic error regardless of which field was wrong — never reveal whether
-  // the email exists (Handbook 3.12 / Design System 6.4).
-  if (!user || !user.isActive) throw new UnauthenticatedError("Invalid email or password");
+  // the email exists (Handbook 3.12 / Design System 6.4). A failure is only
+  // audit-logged once the email resolves to a real user — audit_log requires
+  // an org_id, and there's no org to attach an unknown-email attempt to
+  // anyway; rate limiting (loginRateLimit) is the defense for that case.
+  if (!user || !user.isActive) {
+    if (user) {
+      await auditLogRepo.write({
+        orgId: user.orgId,
+        userId: user.id,
+        action: "auth.login_failed",
+        entityType: "user",
+        entityId: user.id,
+        ipAddress: meta.ipAddress,
+        userAgent: meta.deviceInfo,
+      });
+    }
+    throw new UnauthenticatedError("Invalid email or password");
+  }
   const valid = await verifyPassword(input.password, user.passwordHash);
-  if (!valid) throw new UnauthenticatedError("Invalid email or password");
+  if (!valid) {
+    await auditLogRepo.write({
+      orgId: user.orgId,
+      userId: user.id,
+      action: "auth.login_failed",
+      entityType: "user",
+      entityId: user.id,
+      ipAddress: meta.ipAddress,
+      userAgent: meta.deviceInfo,
+    });
+    throw new UnauthenticatedError("Invalid email or password");
+  }
 
   if (user.twoFaEnabled) {
     // No session is issued yet — issueSession() is not called here. The
