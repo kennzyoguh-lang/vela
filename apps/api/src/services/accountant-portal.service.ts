@@ -21,13 +21,11 @@ function currentPeriodLabel(): string {
 // but every function here operates cross-org, so orgId is never taken from
 // the caller's own auth context (that's always the accountant's OWN org).
 export async function listMyLinks(userId: string, email: string) {
-  const links = await accountantLinkRepo.listForAccountant(userId, email);
-  return Promise.all(
-    links.map(async (link) => {
-      const org = await organisationRepo.findOrganisationById(link.orgId);
-      return { ...link, orgName: org?.name ?? "Unknown organisation" };
-    }),
-  );
+  // orgName now comes joined from the SECURITY DEFINER function itself
+  // (migration 20260730080000) — this used to resolve each link's org name
+  // with a separate findOrganisationById call per row (an N+1 that scaled
+  // with an accountant's client count).
+  return accountantLinkRepo.listForAccountant(userId, email);
 }
 
 export async function acceptLink(userId: string, email: string, linkId: string) {
@@ -54,7 +52,7 @@ export async function getClientOrgSummary(userId: string, clientOrgId: string) {
 
   const [organisation, invoices, filings, accounts, payrollRuns] = await Promise.all([
     organisationRepo.findOrganisationById(clientOrgId),
-    invoiceRepo.listByOrg(clientOrgId),
+    invoiceRepo.listAllByOrg(clientOrgId),
     complianceService.listFilings(clientOrgId),
     bankAccountRepo.listActiveByOrg(clientOrgId),
     payrollRunRepo.listByOrg(clientOrgId),
