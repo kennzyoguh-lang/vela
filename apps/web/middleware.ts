@@ -7,6 +7,12 @@ import type { NextRequest } from "next/server";
 // exists", and is set/cleared alongside it (apps/api/src/controllers/auth.controller.ts).
 const SESSION_MARKER_COOKIE = "vela_has_session";
 const AUTH_PATHS = ["/login", "/signup", "/2fa", "/reset-password"];
+// Genuinely public routes — no session required, and unlike AUTH_PATHS, an
+// already-logged-in visitor is never redirected away from them either. /pay
+// is the invoice payment link an SME's own customer opens; it was missing
+// from any allowlist, so every unauthenticated visitor — the entire intended
+// audience — was being bounced to /login, where they have no account.
+const PUBLIC_PATHS = ["/pay"];
 
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -15,10 +21,21 @@ const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 // dark-mode flash of unstyled content) is the one legitimate inline script in
 // the app, and it reads this nonce back out via next/headers. style-src keeps
 // 'unsafe-inline' since Next.js/Tailwind don't yet support nonced styles.
+//
+// 'unsafe-eval' is added in development ONLY — Next.js's dev-mode webpack
+// bundle uses eval() internally for Fast Refresh/module execution, and
+// without it the entire client bundle silently fails to hydrate (no console
+// error, just a page that looks static and never becomes interactive —
+// found by discovering a useQuery never fired its queryFn). Production
+// builds don't use eval-based devtool, so prod keeps the strict policy.
 function buildCsp(nonce: string): string {
+  const scriptSrc =
+    process.env.NODE_ENV === "development"
+      ? `script-src 'self' 'unsafe-eval' 'nonce-${nonce}' 'strict-dynamic'`
+      : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self' data:",
@@ -41,12 +58,13 @@ export function middleware(req: NextRequest) {
 
   const hasSession = req.cookies.has(SESSION_MARKER_COOKIE);
   const isAuthPath = AUTH_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
+  const isPublicPath = PUBLIC_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-nonce", nonce);
 
   let response: NextResponse;
-  if (!hasSession && !isAuthPath) {
+  if (!hasSession && !isAuthPath && !isPublicPath) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("from", req.nextUrl.pathname);
     response = NextResponse.redirect(loginUrl);
