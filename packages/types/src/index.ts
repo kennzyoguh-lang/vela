@@ -32,7 +32,10 @@ export interface User {
   id: string;
   orgId: string;
   name: string;
-  email: string;
+  // Nullable as of the phone+PIN staff-auth feature — a sales-staff user has
+  // phone instead of email.
+  email: string | null;
+  phone: string | null;
   role: Role;
   twoFaEnabled: boolean;
   isActive: boolean;
@@ -97,6 +100,46 @@ export interface Invoice {
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+// === Anti-theft / Sales Tracking, Piece 1: Simple Sale Logging ===
+
+export interface Product {
+  id: string;
+  orgId: string;
+  name: string;
+  price: string; // Prisma Decimal serializes as a string over JSON
+  currency: string;
+  icon: string;
+  color: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SaleItem {
+  id: string;
+  saleId: string;
+  productId: string | null;
+  productName: string;
+  unitPrice: string;
+  quantity: number;
+  lineTotal: string;
+}
+
+export type SaleStatus = "completed" | "voided";
+
+export interface Sale {
+  id: string;
+  orgId: string;
+  staffUserId: string;
+  total: string;
+  currency: string;
+  customerName: string | null;
+  status: SaleStatus;
+  soldAt: string;
+  createdAt: string;
+  items: SaleItem[];
 }
 
 export interface PublicInvoiceView {

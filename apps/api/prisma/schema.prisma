@@ -65,6 +65,9 @@ model Organisation {
   accountantLinks       AccountantClientLink[]
   askVelaConversations  AskVelaConversation[]
   askVelaMessages       AskVelaMessage[]
+  products              Product[]
+  sales                 Sale[]
+  saleItems             SaleItem[]
 
   @@map("organisations")
 }
@@ -73,8 +76,23 @@ model User {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   orgId           String    @map("org_id") @db.Uuid
   name            String
-  email           String    @unique @db.Citext
-  passwordHash    String    @map("password_hash")
+  // Nullable as of the phone+PIN staff-auth migration — a sales-staff user
+  // has phone+pinHash instead of email+passwordHash. The DB CHECK constraint
+  // (auth_lookup_user_by_phone migration) enforces one identity pair or the
+  // other is always present, never neither.
+  email           String?   @unique @db.Citext
+  passwordHash    String?   @map("password_hash")
+  // Phone+PIN login (anti-theft/POS feature) — a second, alternate
+  // credential on the same identity, same shape as the 2FA fields below.
+  // Normalized to E.164-ish form before storage (lib/phone.ts) so lookups
+  // match regardless of how the number was typed in.
+  phone           String?   @unique @db.Citext
+  pinHash         String?   @map("pin_hash")
+  // Trust-on-first-use device binding — set on the first successful PIN
+  // login, checked (not re-bound) on every login after. Closes the "a
+  // leaked PIN alone is enough" gap without adding friction for the
+  // legitimate device. Cleared via the owner-only reset-device endpoint.
+  pinDeviceId     String?   @map("pin_device_id")
   role            Role      @default(staff)
   // Reversible (AES-256-GCM), not hashed — TOTP verification requires the
   // original secret to recompute the expected code, which a one-way hash
@@ -91,6 +109,7 @@ model User {
   sessions             UserSession[]
   accountantLinks      AccountantClientLink[]
   askVelaConversations AskVelaConversation[]
+  sales                Sale[]
 
   @@index([orgId])
   @@map("users")
@@ -631,4 +650,87 @@ model AskVelaMessage {
 
   @@index([orgId, conversationId])
   @@map("ask_vela_messages")
+}
+
+// === Anti-theft / Sales Tracking, Piece 1: Simple Sale Logging ===
+// Scope: a minimal product catalog (name/price/icon/color, no stock-quantity
+// tracking) and walk-in sale logging by phone+PIN-authenticated sales staff
+// — see prisma/migrations/*_pos_catalog_and_sales_* and the Piece 1 plan.
+// Deliberately separate from Invoice — a market-trader sale has no client,
+// no due date, no formal document; it's an immediate, itemized record.
+
+model Product {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId     String   @map("org_id") @db.Uuid
+  name      String
+  price     Decimal  @db.Decimal(14, 2)
+  currency  String   @default("NGN") @db.Char(3)
+  // Both validated against a fixed allowlist in product.schema.ts, never
+  // free-text — icon is a lucide-react icon name rendered via a lookup map
+  // on the frontend, color is a design-token swatch name, not a raw hex, so
+  // the sale-logging grid stays visually consistent and can't be used to
+  // inject arbitrary content.
+  icon      String
+  color     String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  saleItems    SaleItem[]
+
+  @@index([orgId])
+  @@map("products")
+}
+
+enum SaleStatus {
+  completed
+  voided
+
+  @@map("sale_status")
+}
+
+// One row per sale, one-to-many with SaleItem — the sale-logging UI only
+// ever composes a single-item array today, but the schema shouldn't need a
+// migration when a later piece adds "add another item to this sale."
+model Sale {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId        String     @map("org_id") @db.Uuid
+  staffUserId  String     @map("staff_user_id") @db.Uuid
+  total        Decimal    @db.Decimal(14, 2)
+  currency     String     @default("NGN") @db.Char(3)
+  customerName String?    @map("customer_name")
+  status       SaleStatus @default(completed)
+  soldAt       DateTime   @default(now()) @map("sold_at") @db.Timestamptz
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  staffUser    User         @relation(fields: [staffUserId], references: [id])
+  items        SaleItem[]
+
+  // Piece 2's "today's sales total" query is exactly this index.
+  @@index([orgId, soldAt])
+  @@map("sales")
+}
+
+model SaleItem {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId       String   @map("org_id") @db.Uuid
+  saleId      String   @map("sale_id") @db.Uuid
+  // Nullable + SetNull: a product may later be deactivated/deleted, but the
+  // snapshot columns below are authoritative regardless — a sale's record
+  // of what was sold and for how much must never change retroactively.
+  productId   String?  @map("product_id") @db.Uuid
+  productName String   @map("product_name")
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(14, 2)
+  quantity    Int
+  lineTotal   Decimal  @map("line_total") @db.Decimal(14, 2)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  sale         Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product      Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orgId, saleId])
+  @@map("sale_items")
 }

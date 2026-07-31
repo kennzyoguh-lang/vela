@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authRouter } from "./auth.routes";
+import { staffAuthRouter } from "./staff-auth.routes";
 import { organisationRouter } from "./organisation.routes";
 import { sessionRouter } from "./session.routes";
 import { clientRouter } from "./client.routes";
@@ -14,11 +15,14 @@ import { employeeRouter } from "./employee.routes";
 import { payrollRouter } from "./payroll.routes";
 import { accountantPortalRouter } from "./accountant-portal.routes";
 import { askVelaRouter } from "./ask-vela.routes";
+import { productRouter } from "./product.routes";
+import { saleRouter } from "./sale.routes";
 
 // URL path versioning (Handbook 7.4) — a breaking change gets /v2, never an
 // in-place change to /v1.
 export const v1Router = Router();
 v1Router.use("/auth", authRouter);
+v1Router.use("/auth/staff", staffAuthRouter);
 v1Router.use("/organisation", organisationRouter);
 v1Router.use("/sessions", sessionRouter);
 v1Router.use("/clients", clientRouter);
@@ -32,5 +36,7 @@ v1Router.use("/employees", employeeRouter);
 v1Router.use("/payroll-runs", payrollRouter);
 v1Router.use("/accountant-portal", accountantPortalRouter);
 v1Router.use("/ask-vela", askVelaRouter);
+v1Router.use("/products", productRouter);
+v1Router.use("/sales", saleRouter);
 // Public, unauthenticated — Design System 6.13's payment portal.
 v1Router.use("/pay", paymentPortalRouter);

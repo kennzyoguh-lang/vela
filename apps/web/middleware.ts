@@ -13,6 +13,12 @@ const AUTH_PATHS = ["/login", "/signup", "/2fa", "/reset-password"];
 // from any allowlist, so every unauthenticated visitor — the entire intended
 // audience — was being bounced to /login, where they have no account.
 const PUBLIC_PATHS = ["/pay"];
+// The anti-theft/POS staff area — its own session (phone+PIN login,
+// /v1/auth/staff/login) marked by the same vela_has_session cookie, but its
+// own login page (/pos/login), not the owner /login. An unauthenticated
+// visitor to /pos/* redirects to /pos/login, not /login; an authenticated
+// visitor to /pos/login redirects to /pos/sell, not the owner dashboard.
+const POS_LOGIN_PATH = "/pos/login";
 
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -56,17 +62,24 @@ export function middleware(req: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const csp = buildCsp(nonce);
 
+  const pathname = req.nextUrl.pathname;
   const hasSession = req.cookies.has(SESSION_MARKER_COOKIE);
-  const isAuthPath = AUTH_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
-  const isPublicPath = PUBLIC_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
+  const isAuthPath = AUTH_PATHS.some((p) => pathname.startsWith(p));
+  const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isPosLogin = pathname.startsWith(POS_LOGIN_PATH);
+  const isPosArea = pathname.startsWith("/pos") && !isPosLogin;
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-nonce", nonce);
 
   let response: NextResponse;
-  if (!hasSession && !isAuthPath && !isPublicPath) {
+  if (!hasSession && isPosArea) {
+    response = NextResponse.redirect(new URL(POS_LOGIN_PATH, req.url));
+  } else if (hasSession && isPosLogin) {
+    response = NextResponse.redirect(new URL("/pos/sell", req.url));
+  } else if (!hasSession && !isAuthPath && !isPublicPath && !isPosLogin) {
     const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("from", req.nextUrl.pathname);
+    loginUrl.searchParams.set("from", pathname);
     response = NextResponse.redirect(loginUrl);
   } else if (hasSession && isAuthPath) {
     response = NextResponse.redirect(new URL("/", req.url));

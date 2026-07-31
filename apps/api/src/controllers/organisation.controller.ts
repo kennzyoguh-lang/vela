@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import * as organisationService from "../services/organisation.service";
 import * as accountantLinkService from "../services/accountant-link.service";
-import { inviteSchema } from "../validation/auth.schema";
+import { inviteSchema, createStaffSchema } from "../validation/auth.schema";
 import { inviteAccountantSchema } from "../validation/accountant-link.schema";
 import { sendSuccess } from "../lib/response";
 import { getAuthContext } from "../lib/auth-context";
@@ -39,6 +39,19 @@ export async function deactivateUser(req: Request, res: Response) {
   const { orgId, userId } = getAuthContext(req);
   await organisationService.deactivateUser(orgId, userId, req.params.userId!);
   sendSuccess(res, { deactivated: true });
+}
+
+export async function createStaff(req: Request, res: Response) {
+  const { orgId, userId } = getAuthContext(req);
+  const input = createStaffSchema.parse(req.body);
+  const staff = await organisationService.createStaffUser(orgId, userId, input);
+  sendSuccess(res, staff, 201);
+}
+
+export async function resetStaffDevice(req: Request, res: Response) {
+  const { orgId, userId } = getAuthContext(req);
+  await organisationService.resetStaffDevice(orgId, userId, req.params.userId!);
+  sendSuccess(res, { reset: true });
 }
 
 export async function inviteAccountant(req: Request, res: Response) {
