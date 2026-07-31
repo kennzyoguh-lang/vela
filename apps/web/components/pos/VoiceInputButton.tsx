@@ -31,6 +31,19 @@ function getSpeechRecognition(): (new () => SpeechRecognitionLike) | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+// BCP-47 tags for the Web Speech API's `lang` property. Browser/OS support
+// for these four varies a lot — English is broadly reliable, Igbo/Yoruba/
+// Hausa recognition quality and even availability is inconsistent (some
+// engines silently fall back to a nearby locale or fail outright). That's
+// exactly why this component degrades to a plain text field on any error
+// rather than assuming voice works for every language.
+const SPEECH_LANG_MAP: Record<string, string> = {
+  en: "en-NG",
+  ig: "ig-NG",
+  yo: "yo-NG",
+  ha: "ha-NG",
+};
+
 interface VoiceInputButtonProps {
   value: string;
   onChange: (value: string) => void;
@@ -41,10 +54,10 @@ interface VoiceInputButtonProps {
  * tapped (mic-first, not reveal-a-field-then-tap-a-separate-mic-button), so
  * using it costs exactly one extra tap on top of the default sale-logging
  * path. Feature-detects the Web Speech API and hides the mic entirely if
- * unsupported, falling back to a plain text input — Igbo (ig-NG) speech
- * recognition support is inconsistent across browsers/OS today, this is a
- * real capability risk, not a guarantee, so silent degradation matters more
- * than the voice path itself.
+ * unsupported, falling back to a plain text input — Igbo/Yoruba/Hausa
+ * speech recognition support is inconsistent across browsers/OS today,
+ * this is a real capability risk, not a guarantee, so silent degradation
+ * matters more than the voice path itself.
  */
 export function VoiceInputButton({ value, onChange }: VoiceInputButtonProps) {
   const { t, language } = useTranslation();
@@ -67,7 +80,7 @@ export function VoiceInputButton({ value, onChange }: VoiceInputButtonProps) {
       return;
     }
     const recognition = new SpeechRecognitionCtor();
-    recognition.lang = language === "ig" ? "ig-NG" : "en-NG";
+    recognition.lang = SPEECH_LANG_MAP[language] ?? "en-NG";
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.onresult = (event) => {
