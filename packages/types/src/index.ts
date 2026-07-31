@@ -143,6 +143,20 @@ export interface Sale {
   items: SaleItem[];
 }
 
+// Anti-theft Piece 5 — sanitized shape returned by POST /v1/organisation/staff.
+// generatedPin is present only when the caller omitted a PIN (the visual
+// "Add Sales Staff" flow never collects one) — shown to the owner exactly
+// once, same one-time-reveal treatment as a backup code or API key.
+export interface StaffUserSummary {
+  id: string;
+  name: string;
+  phone: string | null;
+  role: Role;
+  isActive: boolean;
+  createdAt: string;
+  generatedPin?: string;
+}
+
 export type OwnerSummaryStatus = "matched" | "shortfall" | "overage" | "pending";
 
 export interface OwnerDailySummary {

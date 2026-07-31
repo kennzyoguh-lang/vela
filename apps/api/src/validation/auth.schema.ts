@@ -41,12 +41,19 @@ export const phoneLoginSchema = z.object({
 });
 
 // Owner adding a sales-staff member — no email/password by design, matching
-// the phone+PIN login path this account will use.
+// the phone+PIN login path this account will use. `pin` is optional: the
+// anti-theft Piece 5 "visual, not text-heavy" setup flow never shows a PIN
+// field at all (organisation.service.ts#createStaffUser generates one and
+// returns it once) — an owner-chosen PIN stays supported for API callers
+// that want it (existing tests all set one explicitly).
 export const createStaffSchema = z.object({
   name: z.string().min(1).max(120),
   phone: z.string().min(7).max(20),
   role: z.enum(["admin", "accountant", "staff", "view_only"]).default("staff"),
-  pin: z.string().regex(/^\d{4,6}$/, "PIN must be 4-6 digits"),
+  pin: z
+    .string()
+    .regex(/^\d{4,6}$/, "PIN must be 4-6 digits")
+    .optional(),
 });
 
 // Anti-theft Piece 4 — owner/admin sets the org's shared discount-approval PIN.

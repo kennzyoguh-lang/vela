@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ShoppingBag, Briefcase, Check } from "lucide-react";
 import { SettingsTemplate } from "@/components/templates/SettingsTemplate";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
+import { cn } from "@/lib/utils";
+import type { StaffUserSummary } from "@vela/types";
 import { api, ApiError } from "@/lib/api/client";
 
 interface PendingInvite {
@@ -23,6 +26,165 @@ const ROLE_OPTIONS = [
   { value: "staff", label: "Staff — self-service HR" },
   { value: "view_only", label: "View-only — read access" },
 ];
+
+type StaffRole = "staff" | "admin";
+
+const ROLE_CARDS: {
+  role: StaffRole;
+  label: string;
+  description: string;
+  icon: typeof ShoppingBag;
+}[] = [
+  {
+    role: "staff",
+    label: "Sales Staff",
+    description: "Logs sales, checks cash",
+    icon: ShoppingBag,
+  },
+  { role: "admin", label: "Manager", description: "Approves discounts too", icon: Briefcase },
+];
+
+function RoleCard({
+  option,
+  selected,
+  onSelect,
+}: {
+  option: (typeof ROLE_CARDS)[number];
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const Icon = option.icon;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={cn(
+        "flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-transform active:scale-[0.98]",
+        selected ? "border-action-primary bg-action-primary/5" : "border-border bg-surface-raised",
+      )}
+    >
+      <div
+        className={cn(
+          "flex size-14 items-center justify-center rounded-full",
+          selected
+            ? "bg-action-primary text-action-primaryText"
+            : "bg-surface-secondary text-text-secondary",
+        )}
+      >
+        <Icon className="size-7" aria-hidden />
+      </div>
+      <span className="font-ui text-text-primary text-[0.9375rem] font-bold">{option.label}</span>
+      <span className="font-ui text-text-secondary text-[0.75rem]">{option.description}</span>
+      {selected ? (
+        <span className="text-action-primary flex items-center gap-1 text-[0.75rem] font-semibold">
+          <Check className="size-3.5" aria-hidden /> Selected
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+// Anti-theft Piece 5 — "keep it to: name, phone number, and a role picker
+// shown as two big illustrated cards... rather than a technical permissions
+// checklist." No PIN field at all: organisation.service.ts#createStaffUser
+// generates one and returns it once, shown here right after creation.
+function AddSalesStaffCard() {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [role, setRole] = useState<StaffRole | null>(null);
+  const [created, setCreated] = useState<StaffUserSummary | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      api.post<StaffUserSummary>("/v1/organisation/staff", { name, phone, role: role ?? "staff" }),
+    onSuccess: (staff) => {
+      setCreated(staff);
+      setName("");
+      setPhone("");
+      setRole(null);
+      setFormError(null);
+    },
+    onError: (err) =>
+      setFormError(err instanceof ApiError ? err.message : "Couldn't add this staff member."),
+  });
+
+  if (created) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Staff added</CardTitle>
+        </CardHeader>
+        <p className="font-ui text-text-primary text-[0.9375rem]">
+          {created.name} can now log in at the sales screen with their phone number.
+        </p>
+        {created.generatedPin ? (
+          <div className="bg-surface-secondary mt-3 rounded-lg p-4 text-center">
+            <p className="font-ui text-text-secondary text-[0.75rem] font-semibold uppercase tracking-[0.02em]">
+              Their PIN — write it down, this is shown only once
+            </p>
+            <p className="font-data text-text-primary mt-1 text-[2rem] font-bold tracking-widest">
+              {created.generatedPin}
+            </p>
+          </div>
+        ) : null}
+        <Button className="mt-3" onClick={() => setCreated(null)}>
+          Add another
+        </Button>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Add sales staff</CardTitle>
+      </CardHeader>
+      {formError ? <Alert variant="danger" title={formError} /> : null}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          mutation.mutate();
+        }}
+        className="flex flex-col gap-4"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex-1">
+            <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <div className="flex-1">
+            <Input
+              label="Phone number"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {ROLE_CARDS.map((option) => (
+            <RoleCard
+              key={option.role}
+              option={option}
+              selected={role === option.role}
+              onSelect={() => setRole(option.role)}
+            />
+          ))}
+        </div>
+        <Button
+          type="submit"
+          disabled={!name || !phone || !role}
+          loading={mutation.isPending}
+          className="self-start"
+        >
+          Add staff
+        </Button>
+      </form>
+    </Card>
+  );
+}
 
 export default function UsersSettingsPage() {
   const queryClient = useQueryClient();
@@ -102,6 +264,8 @@ export default function UsersSettingsPage() {
             </Button>
           </form>
         </Card>
+
+        <AddSalesStaffCard />
 
         <Card>
           <CardHeader>
