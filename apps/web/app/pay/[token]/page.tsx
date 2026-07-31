@@ -66,7 +66,9 @@ export default function PayInvoicePage() {
 
       <Card className="flex flex-col gap-4">
         <CardHeader>
-          <CardTitle>Invoice {invoice.number}</CardTitle>
+          <CardTitle>
+            {invoice.isQuickSale ? "Payment Request" : `Invoice ${invoice.number}`}
+          </CardTitle>
         </CardHeader>
 
         {isPaid ? (
@@ -76,31 +78,40 @@ export default function PayInvoicePage() {
               Payment received
             </p>
             <p className="font-ui text-text-secondary text-[0.875rem]">
-              {formatMoney(invoice.total, invoice.currency)} was paid on this invoice. Thank you.
+              {formatMoney(invoice.total, invoice.currency)}{" "}
+              {invoice.isQuickSale
+                ? "was paid. Thank you."
+                : "was paid on this invoice. Thank you."}
             </p>
           </div>
         ) : (
           <>
-            <ul className="flex flex-col gap-2">
-              {invoice.lineItems.map((item, i) => (
-                <li
-                  key={i}
-                  className="font-ui text-text-primary flex justify-between text-[0.875rem]"
-                >
-                  <span>{item.description}</span>
-                  <span>{formatMoney(item.quantity * item.unitPrice, invoice.currency)}</span>
-                </li>
-              ))}
-            </ul>
+            {!invoice.isQuickSale ? (
+              <ul className="flex flex-col gap-2">
+                {invoice.lineItems.map((item, i) => (
+                  <li
+                    key={i}
+                    className="font-ui text-text-primary flex justify-between text-[0.875rem]"
+                  >
+                    <span>{item.description}</span>
+                    <span>{formatMoney(item.quantity * item.unitPrice, invoice.currency)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <div className="border-border flex items-center justify-between border-t pt-3">
-              <span className="font-ui text-text-secondary text-[0.875rem]">Total due</span>
+              <span className="font-ui text-text-secondary text-[0.875rem]">
+                {invoice.isQuickSale ? "Amount" : "Total due"}
+              </span>
               <span className="font-ui text-text-primary text-[1.25rem] font-bold">
                 {formatMoney(invoice.total, invoice.currency)}
               </span>
             </div>
-            <p className="font-ui text-text-secondary text-[0.75rem]">
-              Due {new Date(invoice.dueDate).toLocaleDateString()}
-            </p>
+            {!invoice.isQuickSale ? (
+              <p className="font-ui text-text-secondary text-[0.75rem]">
+                Due {new Date(invoice.dueDate).toLocaleDateString()}
+              </p>
+            ) : null}
 
             {payError ? <Alert variant="danger" title={payError} /> : null}
 
