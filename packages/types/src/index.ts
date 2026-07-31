@@ -142,6 +142,16 @@ export interface Sale {
   items: SaleItem[];
 }
 
+export type OwnerSummaryStatus = "matched" | "shortfall" | "overage" | "pending";
+
+export interface OwnerDailySummary {
+  salesCount: number;
+  expectedAmount: number;
+  countedAmount: number | null;
+  difference: number | null;
+  status: OwnerSummaryStatus;
+}
+
 export interface CashReconciliation {
   id: string;
   orgId: string;

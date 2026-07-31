@@ -30,6 +30,22 @@ export async function sumCompletedSalesTotal(
   });
 }
 
+// Piece 3's owner daily summary — the most recent submission for the
+// business date wins if a day was somehow checked more than once (findFirst
+// + orderBy desc, not findUnique — there's no unique constraint forcing one
+// check per day).
+export async function findByOrgAndDate(
+  orgId: string,
+  businessDate: Date,
+): Promise<CashReconciliation | null> {
+  return withOrgScope(orgId, (tx) =>
+    tx.cashReconciliation.findFirst({
+      where: { orgId, businessDate },
+      orderBy: { createdAt: "desc" },
+    }),
+  );
+}
+
 export async function create(
   orgId: string,
   input: CreateCashCheckData,

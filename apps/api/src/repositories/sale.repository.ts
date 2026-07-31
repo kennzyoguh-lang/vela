@@ -48,6 +48,24 @@ export async function createSale(orgId: string, input: CreateSaleData): Promise<
   );
 }
 
+// Piece 3's owner daily summary — count + total in one query. Voided sales
+// are excluded by construction (status is part of the where clause), same
+// reasoning as cash-check.repository.ts's sumCompletedSalesTotal.
+export async function getDailyStats(
+  orgId: string,
+  start: Date,
+  end: Date,
+): Promise<{ count: number; total: number }> {
+  return withOrgScope(orgId, async (tx) => {
+    const result = await tx.sale.aggregate({
+      where: { orgId, status: "completed", soldAt: { gte: start, lt: end } },
+      _count: { _all: true },
+      _sum: { total: true },
+    });
+    return { count: result._count._all, total: Number(result._sum.total ?? 0) };
+  });
+}
+
 // Piece 2's "today's sales" view — paginated for a human, unlike a future
 // cash-reconciliation total which would need every row (not built yet).
 export async function listByOrg(orgId: string, page: PageParams): Promise<Page<SaleWithItems>> {
