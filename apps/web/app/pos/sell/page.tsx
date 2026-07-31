@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { Product, Sale } from "@vela/types";
 import { api, ApiError } from "@/lib/api/client";
@@ -12,7 +13,7 @@ import { VoiceInputButton } from "@/components/pos/VoiceInputButton";
 import { LanguageToggle } from "@/components/pos/LanguageToggle";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Wallet } from "lucide-react";
 
 export default function PosSellPage() {
   const { t } = useTranslation();
@@ -63,7 +64,16 @@ export default function PosSellPage() {
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="font-ui text-[1.5rem] font-bold text-white">{t("pos.sell.title")}</h1>
-        <LanguageToggle />
+        <div className="flex items-center gap-2">
+          <Link
+            href="/pos/cash-check"
+            className="bg-surface-secondary text-text-primary font-ui flex items-center gap-2 rounded-full px-3 py-2 text-[0.8125rem] font-bold"
+          >
+            <Wallet className="size-4" aria-hidden />
+            {t("pos.nav.cashCheck")}
+          </Link>
+          <LanguageToggle />
+        </div>
       </div>
 
       {saleMutation.isError ? (
