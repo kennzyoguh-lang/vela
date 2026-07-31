@@ -41,6 +41,14 @@ organisationRouter.post(
   asyncHandler(organisationController.deactivateUser),
 );
 
+// No generic auditLog() middleware here — organisation.service.ts#setDiscountApprovalPin
+// already writes its own audit entry (same reasoning as cash-check.routes.ts).
+organisationRouter.patch(
+  "/discount-approval-pin",
+  requireRole("owner", "admin"),
+  asyncHandler(organisationController.setDiscountApprovalPin),
+);
+
 organisationRouter.post(
   "/staff",
   requireRole("owner", "admin"),

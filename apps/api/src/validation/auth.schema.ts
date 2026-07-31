@@ -49,6 +49,11 @@ export const createStaffSchema = z.object({
   pin: z.string().regex(/^\d{4,6}$/, "PIN must be 4-6 digits"),
 });
 
+// Anti-theft Piece 4 — owner/admin sets the org's shared discount-approval PIN.
+export const setDiscountApprovalPinSchema = z.object({
+  pin: z.string().regex(/^\d{4,6}$/, "PIN must be 4-6 digits"),
+});
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type PhoneLoginInput = z.infer<typeof phoneLoginSchema>;

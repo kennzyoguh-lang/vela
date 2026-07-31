@@ -11,15 +11,23 @@ import { QuantityStepper } from "@/components/pos/QuantityStepper";
 import { ConfirmSaleButton } from "@/components/pos/ConfirmSaleButton";
 import { VoiceInputButton } from "@/components/pos/VoiceInputButton";
 import { LanguageToggle } from "@/components/pos/LanguageToggle";
+import { NumberPad } from "@/components/pos/NumberPad";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { CheckCircle2, Wallet } from "lucide-react";
+import { CheckCircle2, Wallet, Percent, X } from "lucide-react";
 
 export default function PosSellPage() {
   const { t } = useTranslation();
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [customerName, setCustomerName] = useState("");
+  // Anti-theft Piece 4 — discount is opt-in via the "+ Discount" chip below,
+  // so the default no-discount sale-logging path (product tile → confirm)
+  // stays at 2 taps. discountOpen is its own flag (not derived from
+  // discountDigits) so the panel can be reopened empty after "Remove discount".
+  const [discountOpen, setDiscountOpen] = useState(false);
+  const [discountDigits, setDiscountDigits] = useState("");
+  const [approvalPinDigits, setApprovalPinDigits] = useState("");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
 
   const { data: products, isLoading } = useQuery({
@@ -28,17 +36,29 @@ export default function PosSellPage() {
     staleTime: 60_000,
   });
 
+  function resetDiscount() {
+    setDiscountOpen(false);
+    setDiscountDigits("");
+    setApprovalPinDigits("");
+  }
+
   const saleMutation = useMutation({
     mutationFn: () =>
       api.post<Sale>("/v1/sales", {
         items: [{ productId: selectedProductId, quantity }],
         customerName: customerName || undefined,
+        discountAmount: discountDigits ? Number(discountDigits) : undefined,
+        // Owner/admin don't need this — the server only checks it for the
+        // "staff" role (sale.service.ts#verifyDiscountApproval) — so it's
+        // sent whenever typed, never required client-side.
+        approvalPin: approvalPinDigits || undefined,
       }),
     onSuccess: (sale) => {
       setLastSale(sale);
       setSelectedProductId(null);
       setQuantity(1);
       setCustomerName("");
+      resetDiscount();
     },
   });
 
@@ -118,6 +138,55 @@ export default function PosSellPage() {
           <div className="flex justify-center">
             <VoiceInputButton value={customerName} onChange={setCustomerName} />
           </div>
+
+          {discountOpen ? (
+            <div className="flex flex-col gap-4 rounded-2xl bg-white/5 p-3">
+              <div className="flex items-center justify-between">
+                <p className="font-ui text-[0.875rem] font-semibold text-white/70">
+                  {t("pos.sell.discountAmount")}
+                </p>
+                <button
+                  type="button"
+                  onClick={resetDiscount}
+                  aria-label={t("pos.sell.removeDiscount")}
+                  className="text-white/50"
+                >
+                  <X className="size-5" aria-hidden />
+                </button>
+              </div>
+              <NumberPad
+                digits={discountDigits}
+                onChange={setDiscountDigits}
+                clearLabel={t("pos.cashCheck.clear")}
+              />
+              {discountDigits ? (
+                <>
+                  <p className="font-ui text-center text-[0.8125rem] text-white/70">
+                    {t("pos.sell.discountAskManager")}
+                  </p>
+                  <p className="font-ui text-center text-[0.875rem] font-semibold text-white/70">
+                    {t("pos.sell.approvalPin")}
+                  </p>
+                  <NumberPad
+                    digits={approvalPinDigits}
+                    onChange={setApprovalPinDigits}
+                    clearLabel={t("pos.cashCheck.clear")}
+                    mode="pin"
+                  />
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setDiscountOpen(true)}
+              className="bg-surface-secondary text-text-primary font-ui mx-auto flex items-center gap-2 rounded-full px-4 py-2 text-[0.875rem] font-semibold"
+            >
+              <Percent className="size-4" aria-hidden />
+              {t("pos.sell.discount")}
+            </button>
+          )}
+
           <ConfirmSaleButton
             label={t("pos.sell.confirm")}
             loadingLabel={t("pos.sell.confirming")}
