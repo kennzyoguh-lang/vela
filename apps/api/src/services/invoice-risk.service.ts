@@ -63,7 +63,9 @@ export function riskBand(score: number): RiskBand {
 export async function scoreInvoice(orgId: string, invoiceId: string): Promise<number> {
   const invoice = await invoiceRepo.findById(orgId, invoiceId);
   if (!invoice) throw new Error(`Invoice ${invoiceId} not found for org ${orgId}`);
-  const client = await clientRepo.findById(orgId, invoice.clientId);
+  // Quick Sale invoices have no client — risk scoring is a manual-invoice
+  // concern (payment-history-driven), not applicable to an instant payment.
+  const client = invoice.clientId ? await clientRepo.findById(orgId, invoice.clientId) : null;
 
   const daysOutstanding = Math.max(
     0,

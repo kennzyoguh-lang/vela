@@ -188,6 +188,21 @@ enum PaymentProcessor {
   @@map("payment_processor")
 }
 
+// Quick Sale / Instant Collect — an Invoice row created by the amount-only
+// walk-in-payment flow rather than the manual invoice-builder screen. Reusing
+// Invoice (rather than a parallel model) is deliberate: the payment portal,
+// webhook handler, and TransactionMarkup fee logic all key off an Invoice row
+// already, and duplicating that plumbing for a second "transaction" model
+// would be exactly the "different data model entirely" the feature spec asks
+// to avoid. This field exists purely to let the UI and payment-portal copy
+// tell the two apart.
+enum InvoiceSource {
+  manual
+  quick_sale
+
+  @@map("invoice_source")
+}
+
 model Client {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   orgId          String   @map("org_id") @db.Uuid
@@ -222,7 +237,11 @@ model Invoice {
   id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   orgId              String        @map("org_id") @db.Uuid
   number             String // "INV-0001", unique per org (see @@unique below)
-  clientId           String        @map("client_id") @db.Uuid
+  // Nullable — a Quick Sale has no client relationship at all (walk-in,
+  // no name/contact collected). Every manual-invoice call site still always
+  // supplies one; this is additive, not a loosening of an existing guarantee.
+  clientId           String?       @map("client_id") @db.Uuid
+  source             InvoiceSource @default(manual)
   lineItems          Json          @map("line_items")
   subtotal           Decimal       @db.Decimal(14, 2)
   tax                Decimal       @default(0) @db.Decimal(14, 2)
@@ -242,7 +261,7 @@ model Invoice {
   updatedAt          DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   organisation       Organisation        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  client             Client              @relation(fields: [clientId], references: [id])
+  client             Client?             @relation(fields: [clientId], references: [id])
   transactionMarkups TransactionMarkup[]
 
   @@unique([orgId, number])

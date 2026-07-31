@@ -105,7 +105,7 @@ export async function markPaid(orgId: string, invoiceId: string) {
     0,
     Math.floor((updated.paidAt!.getTime() - updated.dueDate.getTime()) / (1000 * 60 * 60 * 24)),
   );
-  const client = await clientRepo.findById(orgId, updated.clientId);
+  const client = updated.clientId ? await clientRepo.findById(orgId, updated.clientId) : null;
   if (client) {
     const previousAvg = client.avgPaymentDays ?? daysLate;
     const newAvg = previousAvg * 0.7 + daysLate * 0.3; // exponential moving average, not a full recompute

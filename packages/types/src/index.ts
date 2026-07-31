@@ -189,6 +189,10 @@ export interface PublicInvoiceView {
   lineItems: LineItem[];
   businessName?: string;
   clientName?: string;
+  // Quick Sale / Instant Collect — true for an amount-only walk-in payment,
+  // so the public checkout page can drop invoice-shaped copy (see
+  // apps/web/app/pay/[token]/page.tsx).
+  isQuickSale: boolean;
 }
 
 // === ComplianceRadar™ (Phase 3) ===
