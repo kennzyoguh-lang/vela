@@ -174,7 +174,10 @@ export async function verifyTwoFaChallenge(
   return issueSession(user.orgId, user.id, user.role, meta);
 }
 
-async function issueSession(
+// Exported so staff-auth.service.ts's phone+PIN login can mint an identical
+// session/JWT shape without duplicating this logic — it only needs to
+// resolve orgId/userId/role, same as every caller in this file already does.
+export async function issueSession(
   orgId: string,
   userId: string,
   role: string,

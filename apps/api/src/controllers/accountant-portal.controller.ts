@@ -7,10 +7,13 @@ import { UnauthenticatedError } from "../lib/errors";
 
 // The accountant's own email is needed to match pending invites (which have
 // no accountantUserId yet, only the invited email) — not on the JWT, so read
-// from the user row.
+// from the user row. email is nullable as of the phone+PIN staff-auth
+// migration (a phone+PIN-only user has none) — the accountant portal is
+// exclusively an email+password-login surface, so a null email here means
+// this account can never have a pending accountant invite to match anyway.
 async function getAccountantEmail(orgId: string, userId: string): Promise<string> {
   const user = await userRepo.findById(orgId, userId);
-  if (!user) throw new UnauthenticatedError();
+  if (!user || !user.email) throw new UnauthenticatedError();
   return user.email;
 }
 

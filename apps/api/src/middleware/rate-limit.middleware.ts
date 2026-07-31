@@ -19,6 +19,21 @@ export function loginRateLimit() {
   });
 }
 
+// DoS protection only, mirroring loginRateLimit()'s per-IP+identifier shape
+// — the real brute-force control on the PIN itself is the per-userId
+// lockout inside staff-auth.service.ts (isPinLockedOut/recordPinFailure),
+// same layered reasoning as twoFaVerifyRateLimit().
+export function pinLoginRateLimit() {
+  return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
+    const phone = typeof req.body?.phone === "string" ? req.body.phone : "unknown";
+    const key = `ratelimit:pin-login:${req.ip}:${phone}`;
+    const { allowed } = await checkAndIncrement(key, 5, 60);
+    if (!allowed)
+      return next(new RateLimitedError("Too many login attempts — try again shortly", 60));
+    next();
+  });
+}
+
 // Per-IP, not per-email like loginRateLimit — signup lets the caller pick the
 // email, so keying on it would let an attacker enumerate accounts (does this
 // email already exist?) at unlimited speed just by varying the address on

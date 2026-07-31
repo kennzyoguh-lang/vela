@@ -22,6 +22,10 @@ const NO_AUTH_PATHS = [
   "/v1/auth/refresh",
   "/v1/auth/logout",
   "/v1/auth/2fa/verify",
+  // Phone+PIN staff login (anti-theft/POS feature) — same reasoning as
+  // 2fa/verify above: no session exists yet, and a wrong PIN's 401 must not
+  // trigger the refresh-and-retry logic meant for an expired session.
+  "/v1/auth/staff/login",
 ];
 
 export class ApiError extends Error {

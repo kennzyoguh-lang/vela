@@ -42,6 +42,19 @@ organisationRouter.post(
 );
 
 organisationRouter.post(
+  "/staff",
+  requireRole("owner", "admin"),
+  auditLog("staff.create", "user"),
+  asyncHandler(organisationController.createStaff),
+);
+organisationRouter.post(
+  "/staff/:userId/reset-device",
+  requireRole("owner", "admin"),
+  auditLog("staff.device_reset", "user"),
+  asyncHandler(organisationController.resetStaffDevice),
+);
+
+organisationRouter.post(
   "/accountant-links",
   requireRole("owner", "admin"),
   auditLog("accountant_link.create", "accountant_client_link"),

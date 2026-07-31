@@ -123,3 +123,81 @@ export async function countOwners(orgId: string): Promise<number> {
     tx.user.count({ where: { orgId, role: "owner", isActive: true } }),
   );
 }
+
+export interface PinAuthLookupUser {
+  id: string;
+  orgId: string;
+  pinHash: string;
+  pinDeviceId: string | null;
+  role: Role;
+  isActive: boolean;
+}
+
+/**
+ * Phone+PIN staff login's equivalent of findByEmail above — same structural
+ * reason (no org context yet at login time), same SECURITY DEFINER escape
+ * hatch (auth_lookup_user_by_phone), same "RLS on `users` has no exceptions
+ * at the table level" guarantee. Returns null for a user with no PIN set
+ * (an email+password-only user's row has phone/pin_hash both null).
+ */
+export async function findByPhone(phone: string): Promise<PinAuthLookupUser | null> {
+  const rows = await prisma.$queryRaw<
+    {
+      id: string;
+      org_id: string;
+      pin_hash: string | null;
+      pin_device_id: string | null;
+      role: Role;
+      is_active: boolean;
+    }[]
+  >`SELECT * FROM auth_lookup_user_by_phone(${phone}::citext)`;
+  const row = rows[0];
+  if (!row || !row.pin_hash) return null;
+  return {
+    id: row.id,
+    orgId: row.org_id,
+    pinHash: row.pin_hash,
+    pinDeviceId: row.pin_device_id,
+    role: row.role,
+    isActive: row.is_active,
+  };
+}
+
+export async function createStaffUser(
+  orgId: string,
+  input: { name: string; phone: string; role: Role; pinHash: string },
+): Promise<User> {
+  return withOrgScope(orgId, (tx) =>
+    tx.user.create({
+      data: {
+        orgId,
+        name: input.name,
+        phone: input.phone,
+        pinHash: input.pinHash,
+        role: input.role,
+      },
+    }),
+  );
+}
+
+// Trust-on-first-use — called once, the first time a phone+PIN login
+// succeeds from a device with no prior binding. Never called again for that
+// user afterward; a mismatched deviceId on a later login is a rejection,
+// not a re-bind (see staff-auth.service.ts#loginWithPin).
+export async function bindPinDevice(
+  orgId: string,
+  userId: string,
+  deviceId: string,
+): Promise<void> {
+  await withOrgScope(orgId, (tx) =>
+    tx.user.update({ where: { id: userId, orgId }, data: { pinDeviceId: deviceId } }),
+  );
+}
+
+// Owner-side "staff got a new phone" recovery — clears the binding so the
+// next successful login re-binds via trust-on-first-use again.
+export async function resetPinDevice(orgId: string, userId: string): Promise<void> {
+  await withOrgScope(orgId, (tx) =>
+    tx.user.update({ where: { id: userId, orgId }, data: { pinDeviceId: null } }),
+  );
+}

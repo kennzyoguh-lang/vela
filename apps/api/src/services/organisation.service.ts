@@ -1,8 +1,11 @@
 import * as inviteRepo from "../repositories/invite.repository";
 import * as userRepo from "../repositories/user.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import { hashPassword } from "./password.service";
+import { normalizePhoneNumber } from "../lib/phone";
 import { BusinessRuleViolationError, ConflictError } from "../lib/errors";
 import type { Role } from "@prisma/client";
+import type { CreateStaffInput } from "../validation/auth.schema";
 
 const INVITE_TTL_DAYS = 7;
 
@@ -80,6 +83,88 @@ export async function deactivateUser(orgId: string, actorId: string, targetUserI
     orgId,
     userId: actorId,
     action: "user.deactivated",
+    entityType: "user",
+    entityId: targetUserId,
+  });
+}
+
+// Sanitized shape returned to the client — never the raw Prisma User row,
+// which carries pinHash/pinDeviceId. No existing endpoint returns a raw
+// User row today, so there's no shape to reuse here; this is a new,
+// deliberate exclusion.
+export interface StaffUserSummary {
+  id: string;
+  name: string;
+  phone: string | null;
+  role: Role;
+  isActive: boolean;
+  createdAt: Date;
+}
+
+/**
+ * Owner/admin adds a sales-staff member — phone+PIN, not email+password
+ * (Anti-theft/POS feature). Synchronous, unlike inviteUser above: there's
+ * no accept-invite step, since sales staff won't have email-based
+ * onboarding at all.
+ */
+export async function createStaffUser(
+  orgId: string,
+  actorId: string,
+  input: CreateStaffInput,
+): Promise<StaffUserSummary> {
+  const phone = normalizePhoneNumber(input.phone);
+  const existing = await userRepo.findByPhone(phone);
+  if (existing) throw new ConflictError("This phone number is already registered");
+
+  const pinHash = await hashPassword(input.pin);
+  let user;
+  try {
+    user = await userRepo.createStaffUser(orgId, {
+      name: input.name,
+      phone,
+      role: input.role,
+      pinHash,
+    });
+  } catch (err) {
+    // The findByPhone pre-check above only returns a hit for a row that
+    // already has a PIN set — belt-and-suspenders against the (should never
+    // happen) case of a phone stored without one, the DB's own unique
+    // constraint is the real guarantee.
+    if (err instanceof Error && "code" in err && (err as { code?: string }).code === "P2002") {
+      throw new ConflictError("This phone number is already registered");
+    }
+    throw err;
+  }
+
+  await auditLogRepo.write({
+    orgId,
+    userId: actorId,
+    action: "staff.created",
+    entityType: "user",
+    entityId: user.id,
+    newValue: { phone, role: input.role },
+  });
+
+  return {
+    id: user.id,
+    name: user.name,
+    phone: user.phone,
+    role: user.role,
+    isActive: user.isActive,
+    createdAt: user.createdAt,
+  };
+}
+
+// Owner-side "staff got a new phone" recovery — clears the trust-on-first-
+// use device binding so the next successful PIN login re-binds cleanly.
+export async function resetStaffDevice(orgId: string, actorId: string, targetUserId: string) {
+  const target = await userRepo.findById(orgId, targetUserId);
+  if (!target) throw new BusinessRuleViolationError("User not found in this organisation");
+  await userRepo.resetPinDevice(orgId, targetUserId);
+  await auditLogRepo.write({
+    orgId,
+    userId: actorId,
+    action: "staff.device_reset",
     entityType: "user",
     entityId: targetUserId,
   });

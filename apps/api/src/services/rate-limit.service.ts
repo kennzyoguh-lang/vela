@@ -65,3 +65,42 @@ export async function clearTwoFaFailures(userId: string): Promise<void> {
     logger.warn({ err, userId }, "2FA failure counter clear failed");
   }
 }
+
+// Phone+PIN staff login's lockout — own key prefixes so it never collides
+// with 2FA's counters (a user could in principle have both credential types
+// failing independently). Same shape and same fail-open reasoning as the
+// 2FA functions above: brute-force resistance for a 4-6 digit PIN comes
+// entirely from this lockout, not from bcrypt's cost factor, so failing
+// open on a Redis outage is still strictly better than locking every
+// legitimate staff member out of logging a sale until Redis recovers.
+const PIN_LOCKOUT_KEY = (userId: string) => `pin:lockout:${userId}`;
+const PIN_ATTEMPTS_KEY = (userId: string) => `pin:attempts:${userId}`;
+
+export async function isPinLockedOut(userId: string): Promise<boolean> {
+  try {
+    return (await redis.exists(PIN_LOCKOUT_KEY(userId))) === 1;
+  } catch (err) {
+    logger.warn({ err, userId }, "PIN lockout check failed — failing open");
+    return false;
+  }
+}
+
+export async function recordPinFailure(userId: string): Promise<void> {
+  try {
+    const attempts = await redis.incr(PIN_ATTEMPTS_KEY(userId));
+    if (attempts === 1) await redis.expire(PIN_ATTEMPTS_KEY(userId), LOCKOUT_SECONDS);
+    if (attempts >= MAX_ATTEMPTS) {
+      await redis.set(PIN_LOCKOUT_KEY(userId), "1", "EX", LOCKOUT_SECONDS);
+    }
+  } catch (err) {
+    logger.warn({ err, userId }, "PIN failure recording failed — the wrong PIN is still rejected");
+  }
+}
+
+export async function clearPinFailures(userId: string): Promise<void> {
+  try {
+    await redis.del(PIN_ATTEMPTS_KEY(userId), PIN_LOCKOUT_KEY(userId));
+  } catch (err) {
+    logger.warn({ err, userId }, "PIN failure counter clear failed");
+  }
+}
