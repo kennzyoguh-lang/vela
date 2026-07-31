@@ -4,9 +4,10 @@
 // nested objects, so a missing translation falls back to English by simple
 // lookup rather than deep-merging.
 //
-// FLAG: the Igbo strings below are a structurally-drafted placeholder
-// translation, not reviewed by a fluent/native speaker — they should not be
-// treated as production-accurate until that review happens.
+// FLAG: the Igbo/Yoruba/Hausa strings below are structurally-drafted
+// placeholder translations, not reviewed by a fluent/native speaker of any
+// of the three — they should not be treated as production-accurate until
+// that review happens.
 export const TRANSLATION_KEYS = [
   "pos.login.title",
   "pos.login.phone",
@@ -24,11 +25,13 @@ export const TRANSLATION_KEYS = [
   "pos.sell.empty",
   "pos.language.english",
   "pos.language.igbo",
+  "pos.language.yoruba",
+  "pos.language.hausa",
 ] as const;
 
 export type TranslationKey = (typeof TRANSLATION_KEYS)[number];
 
-export const dictionary: Record<"en" | "ig", Record<TranslationKey, string>> = {
+export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey, string>> = {
   en: {
     "pos.login.title": "Staff Login",
     "pos.login.phone": "Phone Number",
@@ -46,6 +49,8 @@ export const dictionary: Record<"en" | "ig", Record<TranslationKey, string>> = {
     "pos.sell.empty": "No products yet — ask your manager to add some",
     "pos.language.english": "English",
     "pos.language.igbo": "Igbo",
+    "pos.language.yoruba": "Yoruba",
+    "pos.language.hausa": "Hausa",
   },
   ig: {
     "pos.login.title": "Nbanye Ndị Ọrụ",
@@ -64,5 +69,47 @@ export const dictionary: Record<"en" | "ig", Record<TranslationKey, string>> = {
     "pos.sell.empty": "Onweghị ngwaahịa ka — gwa onye njikwa ka ọ tinye ụfọdụ",
     "pos.language.english": "Bekee",
     "pos.language.igbo": "Igbo",
+    "pos.language.yoruba": "Yoruba",
+    "pos.language.hausa": "Hausa",
+  },
+  yo: {
+    "pos.login.title": "Wíwọlé Òṣìṣẹ́",
+    "pos.login.phone": "Nọ́mbà Fóònù",
+    "pos.login.pin": "PIN",
+    "pos.login.submit": "Wọlé",
+    "pos.login.error": "Nọ́mbà fóònù tàbí PIN kò tọ́",
+    "pos.sell.title": "Tà",
+    "pos.sell.quantity": "Mélòó?",
+    "pos.sell.addName": "+ Orúkọ",
+    "pos.sell.listening": "Ń gbọ́...",
+    "pos.sell.confirm": "JẸ́RÌÍSÍ TÍTÀ",
+    "pos.sell.confirming": "Ń fi pamọ́...",
+    "pos.sell.success": "A ti fi Títà pamọ́!",
+    "pos.sell.error": "A kò lè fi títà yìí pamọ́ — gbìyànjú lẹ́ẹ̀kansi",
+    "pos.sell.empty": "Kò sí ọjà síbẹ̀ — bèèrè lọ́wọ́ ọ̀gá rẹ láti fi kún",
+    "pos.language.english": "Gẹ̀ẹ́sì",
+    "pos.language.igbo": "Igbo",
+    "pos.language.yoruba": "Yorùbá",
+    "pos.language.hausa": "Hausa",
+  },
+  ha: {
+    "pos.login.title": "Shigar Ma'aikata",
+    "pos.login.phone": "Lambar Waya",
+    "pos.login.pin": "PIN",
+    "pos.login.submit": "Shiga",
+    "pos.login.error": "Lambar waya ko PIN ba daidai ba",
+    "pos.sell.title": "Sayarwa",
+    "pos.sell.quantity": "Nawa?",
+    "pos.sell.addName": "+ Suna",
+    "pos.sell.listening": "Ana saurara...",
+    "pos.sell.confirm": "TABBATAR DA SAYARWA",
+    "pos.sell.confirming": "Ana ajiyewa...",
+    "pos.sell.success": "An Ajiye Sayarwar!",
+    "pos.sell.error": "Ba a iya ajiye wannan sayarwar ba — sake gwadawa",
+    "pos.sell.empty": "Babu kayayyaki tukuna — tambayi shugabanka ya ƙara",
+    "pos.language.english": "Turanci",
+    "pos.language.igbo": "Igbo",
+    "pos.language.yoruba": "Yoruba",
+    "pos.language.hausa": "Hausa",
   },
 };

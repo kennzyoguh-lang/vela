@@ -6,8 +6,9 @@ import { persist } from "zustand/middleware";
 // Server data (anything with an org_id) never lives here — TanStack Query's
 // cache is the only source of truth for that.
 export type ThemeMode = "light" | "dark";
-// Anti-theft/POS feature — English + Igbo toggle for the sale-logging UI.
-export type Language = "en" | "ig";
+// Anti-theft/POS feature — English + Igbo/Yoruba/Hausa toggle for the
+// sale-logging UI.
+export type Language = "en" | "ig" | "yo" | "ha";
 
 interface UiState {
   theme: ThemeMode;
