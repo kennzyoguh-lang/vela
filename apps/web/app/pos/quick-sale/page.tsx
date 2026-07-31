@@ -9,15 +9,15 @@ import { api, ApiError } from "@/lib/api/client";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { NumberPad } from "@/components/pos/NumberPad";
 import { ConfirmSaleButton } from "@/components/pos/ConfirmSaleButton";
+import { PaymentQrCode } from "@/components/pos/PaymentQrCode";
 import { Alert } from "@/components/ui/Alert";
 import { formatMoney } from "@/lib/format";
 
 // Quick Sale / Instant Collect Piece 2 — a separate screen from invoice
 // creation: amount-only entry, one confirm button, no customer name/line
-// items/due date. The collection screen below is deliberately minimal — it
-// shows the raw payment link so a trader isn't left with a dead end today,
-// but QR (Piece 3) and SMS (Piece 4) are what actually make this fast, and
-// will extend this same screen rather than replace it.
+// items/due date. The collection screen shows a scannable QR (Piece 3) plus
+// a copyable link as a fallback for a customer without a scanning banking
+// app; SMS (Piece 4) extends this same screen next.
 export default function PosQuickSalePage() {
   const { t } = useTranslation();
   const [digits, setDigits] = useState("");
@@ -52,6 +52,8 @@ export default function PosQuickSalePage() {
           {formatMoney(result.total, result.currency)}
         </p>
         <p className="font-ui text-[1rem] text-white/70">{t("pos.quickSale.linkReady")}</p>
+
+        <PaymentQrCode value={payUrl} label={t("pos.quickSale.title")} />
 
         <button
           type="button"
