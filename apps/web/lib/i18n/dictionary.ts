@@ -55,6 +55,11 @@ export const TRANSLATION_KEYS = [
   "pos.quickSale.copyLink",
   "pos.quickSale.copied",
   "pos.quickSale.newSale",
+  "pos.quickSale.sendSms",
+  "pos.quickSale.phonePlaceholder",
+  "pos.quickSale.sending",
+  "pos.quickSale.smsSent",
+  "pos.quickSale.smsError",
 ] as const;
 
 export type TranslationKey = (typeof TRANSLATION_KEYS)[number];
@@ -107,6 +112,11 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.quickSale.copyLink": "Copy Payment Link",
     "pos.quickSale.copied": "Copied!",
     "pos.quickSale.newSale": "New Quick Sale",
+    "pos.quickSale.sendSms": "+ Send SMS",
+    "pos.quickSale.phonePlaceholder": "Customer phone number",
+    "pos.quickSale.sending": "Sending...",
+    "pos.quickSale.smsSent": "Sent!",
+    "pos.quickSale.smsError": "Could not send this — try again",
   },
   ig: {
     "pos.login.title": "Nbanye Ndị Ọrụ",
@@ -155,6 +165,11 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.quickSale.copyLink": "Detuo Njikọ Ịkwụ Ụgwọ",
     "pos.quickSale.copied": "Edetuola!",
     "pos.quickSale.newSale": "Ire Ngwa Ngwa Ọzọ",
+    "pos.quickSale.sendSms": "+ Ziga SMS",
+    "pos.quickSale.phonePlaceholder": "Nọmba ekwentị onye ahịa",
+    "pos.quickSale.sending": "Na-eziga...",
+    "pos.quickSale.smsSent": "Ezigala!",
+    "pos.quickSale.smsError": "Enweghị ike iziga nke a — nwaa ọzọ",
   },
   yo: {
     "pos.login.title": "Wíwọlé Òṣìṣẹ́",
@@ -203,6 +218,11 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.quickSale.copyLink": "Daako Ìjápọ̀ Ìsanwó",
     "pos.quickSale.copied": "Ti dàako!",
     "pos.quickSale.newSale": "Tità Kíákíá Tuntun",
+    "pos.quickSale.sendSms": "+ Fi SMS Ránṣẹ́",
+    "pos.quickSale.phonePlaceholder": "Nọ́mbà fóònù oníbàárà",
+    "pos.quickSale.sending": "Ń fi ránṣẹ́...",
+    "pos.quickSale.smsSent": "Ti fi ránṣẹ́!",
+    "pos.quickSale.smsError": "A kò lè fi èyí ránṣẹ́ — gbìyànjú lẹ́ẹ̀kansi",
   },
   ha: {
     "pos.login.title": "Shigar Ma'aikata",
@@ -251,5 +271,10 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.quickSale.copyLink": "Kwafi Hanyar Biya",
     "pos.quickSale.copied": "An kwafa!",
     "pos.quickSale.newSale": "Sabuwar Sayarwa Cikin Gaggawa",
+    "pos.quickSale.sendSms": "+ Aika SMS",
+    "pos.quickSale.phonePlaceholder": "Lambar wayar abokin ciniki",
+    "pos.quickSale.sending": "Ana aikawa...",
+    "pos.quickSale.smsSent": "An aika!",
+    "pos.quickSale.smsError": "Ba a iya aika wannan ba — sake gwadawa",
   },
 };

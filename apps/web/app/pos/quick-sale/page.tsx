@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
-import { ChevronLeft, CheckCircle2, Copy } from "lucide-react";
+import { ChevronLeft, CheckCircle2, Copy, MessageSquare } from "lucide-react";
 import type { QuickSaleResult } from "@vela/types";
 import { api, ApiError } from "@/lib/api/client";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -15,14 +15,17 @@ import { formatMoney } from "@/lib/format";
 
 // Quick Sale / Instant Collect Piece 2 — a separate screen from invoice
 // creation: amount-only entry, one confirm button, no customer name/line
-// items/due date. The collection screen shows a scannable QR (Piece 3) plus
-// a copyable link as a fallback for a customer without a scanning banking
-// app; SMS (Piece 4) extends this same screen next.
+// items/due date. The collection screen shows a scannable QR (Piece 3), a
+// copyable link, and an optional "+ Send SMS" reveal (Piece 4) for a
+// customer who isn't standing close enough to scan or be handed the phone.
 export default function PosQuickSalePage() {
   const { t } = useTranslation();
   const [digits, setDigits] = useState("");
   const [result, setResult] = useState<QuickSaleResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [smsOpen, setSmsOpen] = useState(false);
+  const [smsPhone, setSmsPhone] = useState("");
+  const [smsSent, setSmsSent] = useState(false);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -33,10 +36,18 @@ export default function PosQuickSalePage() {
     onSuccess: (sale) => setResult(sale),
   });
 
+  const smsMutation = useMutation({
+    mutationFn: () => api.post(`/v1/quick-sales/${result!.id}/send-sms`, { phone: smsPhone }),
+    onSuccess: () => setSmsSent(true),
+  });
+
   function reset() {
     setResult(null);
     setDigits("");
     setCopied(false);
+    setSmsOpen(false);
+    setSmsPhone("");
+    setSmsSent(false);
   }
 
   if (result) {
@@ -66,6 +77,50 @@ export default function PosQuickSalePage() {
           <Copy className="size-5" aria-hidden />
           {copied ? t("pos.quickSale.copied") : t("pos.quickSale.copyLink")}
         </button>
+
+        {smsSent ? (
+          <p className="font-ui text-sage text-[0.9375rem] font-semibold">
+            {t("pos.quickSale.smsSent")}
+          </p>
+        ) : smsOpen ? (
+          <div className="flex w-full max-w-xs flex-col gap-2">
+            <input
+              type="tel"
+              value={smsPhone}
+              onChange={(e) => setSmsPhone(e.target.value)}
+              placeholder={t("pos.quickSale.phonePlaceholder")}
+              className="bg-surface-secondary text-text-primary font-ui min-h-[56px] rounded-2xl px-4 text-[1rem]"
+            />
+            {smsMutation.isError ? (
+              <Alert
+                variant="danger"
+                title={
+                  smsMutation.error instanceof ApiError
+                    ? smsMutation.error.message
+                    : t("pos.quickSale.smsError")
+                }
+              />
+            ) : null}
+            <button
+              type="button"
+              onClick={() => smsMutation.mutate()}
+              disabled={smsPhone.trim() === "" || smsMutation.isPending}
+              className="font-ui bg-surface-secondary text-text-primary flex min-h-[56px] items-center justify-center gap-2 rounded-2xl text-[1rem] font-bold disabled:opacity-40"
+            >
+              <MessageSquare className="size-5" aria-hidden />
+              {smsMutation.isPending ? t("pos.quickSale.sending") : t("pos.quickSale.sendSms")}
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setSmsOpen(true)}
+            className="font-ui text-text-secondary flex items-center gap-2 text-[0.9375rem] font-semibold"
+          >
+            <MessageSquare className="size-4" aria-hidden />
+            {t("pos.quickSale.sendSms")}
+          </button>
+        )}
 
         <button
           type="button"

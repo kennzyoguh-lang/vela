@@ -11,3 +11,9 @@ quickSaleRouter.use(requireAuth, apiRateLimit());
 // No generic auditLog() middleware here — quick-sale.service.ts already
 // writes its own audit entry (same reasoning as cash-check.routes.ts).
 quickSaleRouter.post("/", requireRole("owner", "admin"), asyncHandler(quickSaleController.create));
+
+quickSaleRouter.post(
+  "/:id/send-sms",
+  requireRole("owner", "admin"),
+  asyncHandler(quickSaleController.sendSms),
+);
