@@ -195,6 +195,18 @@ export interface PublicInvoiceView {
   isQuickSale: boolean;
 }
 
+// Quick Sale / Instant Collect Piece 2 — the entry-screen response. Narrower
+// than Invoice (whose clientId several already-shipped invoice list/detail
+// pages assume is always a non-null client id) rather than widening a type
+// those screens depend on — transaction-history unification (Piece 5) is
+// where those screens get taught about Quick Sale rows.
+export interface QuickSaleResult {
+  id: string;
+  total: string;
+  currency: string;
+  paymentPortalToken: string;
+}
+
 // === ComplianceRadar™ (Phase 3) ===
 
 export type ComplianceObligationType =
