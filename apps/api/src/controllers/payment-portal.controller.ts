@@ -20,8 +20,10 @@ export async function getPublicInvoice(req: Request, res: Response) {
   const invoice = await invoiceRepo.findByPaymentPortalToken(req.params.token!);
   if (!invoice) throw new NotFoundError("Invoice not found");
 
+  // Quick Sale invoices have no client — skip the lookup entirely rather
+  // than passing null into a repo function typed for a real id.
   const [client, organisation] = await Promise.all([
-    clientRepo.findById(invoice.orgId, invoice.clientId),
+    invoice.clientId ? clientRepo.findById(invoice.orgId, invoice.clientId) : null,
     organisationRepo.findOrganisationById(invoice.orgId),
   ]);
 
@@ -37,6 +39,7 @@ export async function getPublicInvoice(req: Request, res: Response) {
     lineItems: invoice.lineItems,
     businessName: organisation?.name,
     clientName: client?.name,
+    isQuickSale: invoice.source === "quick_sale",
   });
 }
 

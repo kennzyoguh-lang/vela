@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { prisma, withOrgScope } from "../lib/prisma";
-import type { Invoice, InvoiceStatus, Prisma } from "@prisma/client";
+import type { Invoice, InvoiceStatus, InvoiceSource, Prisma } from "@prisma/client";
 import { toPage, type Page, type PageParams } from "../lib/pagination";
 
 export interface CreateInvoiceData {
-  clientId: string;
+  // Nullable — a Quick Sale invoice has no client (see schema.prisma's
+  // InvoiceSource comment). Every manual-invoice caller still always
+  // supplies one.
+  clientId: string | null;
   lineItems: unknown;
   subtotal: number;
   tax: number;
@@ -13,6 +16,10 @@ export interface CreateInvoiceData {
   currency: string;
   dueDate: Date;
   notes?: string;
+  // Both optional and Prisma-defaulted (draft / manual) — omitted by every
+  // existing caller, set explicitly only by quick-sale.service.ts.
+  status?: InvoiceStatus;
+  source?: InvoiceSource;
 }
 
 /**
@@ -50,6 +57,8 @@ export async function createInvoice(orgId: string, input: CreateInvoiceData): Pr
         currency: input.currency,
         dueDate: input.dueDate,
         notes: input.notes,
+        status: input.status,
+        source: input.source,
         paymentPortalToken: randomUUID(),
       },
     });

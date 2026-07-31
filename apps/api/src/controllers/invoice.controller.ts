@@ -63,7 +63,7 @@ export async function voidInvoice(req: Request, res: Response) {
 export async function downloadPdf(req: Request, res: Response) {
   const { orgId } = getAuthContext(req);
   const invoice = await invoiceService.getInvoice(orgId, req.params.invoiceId!);
-  const client = await clientService.getClient(orgId, invoice.clientId);
+  const client = invoice.clientId ? await clientService.getClient(orgId, invoice.clientId) : null;
   const organisation = await organisationRepo.findOrganisationById(orgId);
 
   res.setHeader("Content-Type", "application/pdf");

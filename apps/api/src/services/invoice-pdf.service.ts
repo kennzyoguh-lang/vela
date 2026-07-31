@@ -23,7 +23,9 @@ function formatMoney(value: number | string | { toString(): string }, currency: 
  */
 export function renderInvoicePdf(
   invoice: Invoice,
-  client: Client,
+  // Nullable — a Quick Sale invoice has no client at all (see schema.prisma's
+  // InvoiceSource comment).
+  client: Client | null,
   organisation: Organisation,
 ): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: "A4", margin: 50 });
@@ -52,9 +54,13 @@ export function renderInvoicePdf(
   // Bill-to / meta
   doc.font("Helvetica-Bold").fontSize(11).fillColor(MIDNIGHT).text("Bill to", 50, 120);
   doc.font("Helvetica").fontSize(10).fillColor(TEXT_SECONDARY);
-  doc.text(client.name, 50, 136);
-  if (client.email) doc.text(client.email, 50, 150);
-  if (client.address) doc.text(client.address, 50, 164);
+  if (client) {
+    doc.text(client.name, 50, 136);
+    if (client.email) doc.text(client.email, 50, 150);
+    if (client.address) doc.text(client.address, 50, 164);
+  } else {
+    doc.text("Walk-in customer", 50, 136);
+  }
 
   doc.font("Helvetica-Bold").fontSize(11).fillColor(MIDNIGHT).text("Due date", 350, 120);
   doc
