@@ -68,6 +68,7 @@ model Organisation {
   products              Product[]
   sales                 Sale[]
   saleItems             SaleItem[]
+  cashReconciliations   CashReconciliation[]
 
   @@map("organisations")
 }
@@ -110,6 +111,7 @@ model User {
   accountantLinks      AccountantClientLink[]
   askVelaConversations AskVelaConversation[]
   sales                Sale[]
+  cashReconciliations  CashReconciliation[]
 
   @@index([orgId])
   @@map("users")
@@ -733,4 +735,34 @@ model SaleItem {
 
   @@index([orgId, saleId])
   @@map("sale_items")
+}
+
+// === Anti-theft / Sales Tracking, Piece 2: End-of-Day Cash Check ===
+// One row per check performed (not one-per-day-enforced — a staff/owner can
+// redo a miscounted check; the history is the audit trail, not a single
+// mutable "today" record). expectedAmount/difference/matched are always
+// computed server-side (cash-check.service.ts) from the same completed
+// Sales this table has no direct relation to — recomputed fresh each time
+// rather than snapshotted at Sale-creation time, since a void after the
+// fact must still change what "expected" means for that business day.
+model CashReconciliation {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId          String   @map("org_id") @db.Uuid
+  staffUserId    String   @map("staff_user_id") @db.Uuid
+  // The Nigeria business day this check covers (WAT, not UTC — see
+  // cash-check.service.ts's businessDayRange for why the distinction
+  // matters here specifically). Stored as a plain date, no time component.
+  businessDate   DateTime @map("business_date") @db.Date
+  expectedAmount Decimal  @map("expected_amount") @db.Decimal(14, 2)
+  countedAmount  Decimal  @map("counted_amount") @db.Decimal(14, 2)
+  difference     Decimal  @db.Decimal(14, 2)
+  matched        Boolean
+  currency       String   @default("NGN") @db.Char(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  staffUser    User         @relation(fields: [staffUserId], references: [id])
+
+  @@index([orgId, businessDate])
+  @@map("cash_reconciliations")
 }

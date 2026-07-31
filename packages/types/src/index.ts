@@ -142,6 +142,19 @@ export interface Sale {
   items: SaleItem[];
 }
 
+export interface CashReconciliation {
+  id: string;
+  orgId: string;
+  staffUserId: string;
+  businessDate: string;
+  expectedAmount: string;
+  countedAmount: string;
+  difference: string;
+  matched: boolean;
+  currency: string;
+  createdAt: string;
+}
+
 export interface PublicInvoiceView {
   number: string;
   total: string;

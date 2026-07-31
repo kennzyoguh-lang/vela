@@ -17,6 +17,7 @@ import { accountantPortalRouter } from "./accountant-portal.routes";
 import { askVelaRouter } from "./ask-vela.routes";
 import { productRouter } from "./product.routes";
 import { saleRouter } from "./sale.routes";
+import { cashCheckRouter } from "./cash-check.routes";
 
 // URL path versioning (Handbook 7.4) — a breaking change gets /v2, never an
 // in-place change to /v1.
@@ -38,5 +39,6 @@ v1Router.use("/accountant-portal", accountantPortalRouter);
 v1Router.use("/ask-vela", askVelaRouter);
 v1Router.use("/products", productRouter);
 v1Router.use("/sales", saleRouter);
+v1Router.use("/cash-checks", cashCheckRouter);
 // Public, unauthenticated — Design System 6.13's payment portal.
 v1Router.use("/pay", paymentPortalRouter);
