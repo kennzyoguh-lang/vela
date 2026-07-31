@@ -9,6 +9,7 @@ import { ComplianceWidget } from "@/components/modules/ComplianceWidget";
 import { CashPositionWidget } from "@/components/modules/CashPositionWidget";
 import { UpcomingPayrollWidget } from "@/components/modules/UpcomingPayrollWidget";
 import { AskVelaInsightWidget } from "@/components/modules/AskVelaInsightWidget";
+import { OwnerDailyStatusBanner } from "@/components/modules/OwnerDailyStatusBanner";
 
 const ONBOARDING_STEPS = [
   { label: "Business created", done: true },
@@ -88,6 +89,7 @@ export default function DashboardHomePage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <OwnerDailyStatusBanner />
       <h1 className="font-ui text-text-primary text-[1.5rem] font-bold">Home</h1>
       <DashboardTemplate widgets={widgets} />
     </div>

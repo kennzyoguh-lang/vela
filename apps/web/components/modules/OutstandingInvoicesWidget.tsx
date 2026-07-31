@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
-import type { Invoice } from "@vela/types";
+import type { Invoice, Page } from "@vela/types";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -13,13 +13,17 @@ import { api } from "@/lib/api/client";
 const OUTSTANDING_STATUSES = ["sent", "viewed", "partially_paid", "overdue"];
 
 export function OutstandingInvoicesWidget() {
-  const { data: invoices, isLoading } = useQuery({
+  const { data: invoicePage, isLoading } = useQuery({
     queryKey: ["invoices", "all"],
-    queryFn: () => api.get<Invoice[]>("/v1/invoices"),
+    // Pagination caps a bare GET at 50 by default — this widget only needs
+    // a "how much is outstanding" figure, so pageSize=100 keeps one request
+    // sufficient without needing to page through everything (Handbook 5.9).
+    queryFn: () => api.get<Page<Invoice>>("/v1/invoices?pageSize=100"),
     staleTime: 30_000,
   });
 
-  const outstanding = invoices?.filter((inv) => OUTSTANDING_STATUSES.includes(inv.status)) ?? [];
+  const outstanding =
+    invoicePage?.items.filter((inv) => OUTSTANDING_STATUSES.includes(inv.status)) ?? [];
   const totalOutstanding = outstanding.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
   const currency = outstanding[0]?.currency ?? "NGN";
 
