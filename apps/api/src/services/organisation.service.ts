@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import * as inviteRepo from "../repositories/invite.repository";
 import * as userRepo from "../repositories/user.repository";
 import * as organisationRepo from "../repositories/organisation.repository";
@@ -100,6 +101,15 @@ export interface StaffUserSummary {
   role: Role;
   isActive: boolean;
   createdAt: Date;
+  // Only present when the PIN was server-generated (input.pin omitted) —
+  // this is the ONE moment it's ever visible in plaintext, matching how
+  // backup codes/API keys are shown once at creation and never again. An
+  // owner-supplied PIN is never echoed back — they already know it.
+  generatedPin?: string;
+}
+
+function generateStaffPin(): string {
+  return String(randomInt(1000, 10000)); // 4-digit, "0"-prefixed values excluded on purpose (10000 not 9999)
 }
 
 /**
@@ -107,6 +117,10 @@ export interface StaffUserSummary {
  * (Anti-theft/POS feature). Synchronous, unlike inviteUser above: there's
  * no accept-invite step, since sales staff won't have email-based
  * onboarding at all.
+ *
+ * Anti-theft Piece 5's "visual, not text-heavy" setup flow never shows a
+ * PIN input at all — when input.pin is omitted, one is generated here and
+ * returned once so the owner can hand it to the new staff member.
  */
 export async function createStaffUser(
   orgId: string,
@@ -117,7 +131,8 @@ export async function createStaffUser(
   const existing = await userRepo.findByPhone(phone);
   if (existing) throw new ConflictError("This phone number is already registered");
 
-  const pinHash = await hashPassword(input.pin);
+  const generatedPin = input.pin ? undefined : generateStaffPin();
+  const pinHash = await hashPassword(input.pin ?? generatedPin!);
   let user;
   try {
     user = await userRepo.createStaffUser(orgId, {
@@ -153,6 +168,7 @@ export async function createStaffUser(
     role: user.role,
     isActive: user.isActive,
     createdAt: user.createdAt,
+    generatedPin,
   };
 }
 

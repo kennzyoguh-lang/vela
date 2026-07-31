@@ -136,6 +136,49 @@ describe("organisation.service#createStaffUser", () => {
       }),
     );
   });
+
+  it("generates and returns a 4-digit PIN when the caller omits one (anti-theft Piece 5 visual flow)", async () => {
+    vi.mocked(userRepo.findByPhone).mockResolvedValue(null);
+    vi.mocked(userRepo.createStaffUser).mockResolvedValue({
+      id: randomUUID(),
+      name: "Amaka",
+      phone: "+2348012345678",
+      role: "staff",
+      isActive: true,
+      createdAt: new Date(),
+    } as never);
+
+    const result = await organisationService.createStaffUser(orgId, actorId, {
+      name: "Amaka",
+      phone: "08012345678",
+      role: "staff",
+    });
+
+    expect(result.generatedPin).toMatch(/^\d{4}$/);
+    expect(passwordService.hashPassword).toHaveBeenCalledWith(result.generatedPin);
+  });
+
+  it("never echoes back a PIN the caller supplied themselves", async () => {
+    vi.mocked(userRepo.findByPhone).mockResolvedValue(null);
+    vi.mocked(userRepo.createStaffUser).mockResolvedValue({
+      id: randomUUID(),
+      name: "Amaka",
+      phone: "+2348012345678",
+      role: "staff",
+      isActive: true,
+      createdAt: new Date(),
+    } as never);
+
+    const result = await organisationService.createStaffUser(orgId, actorId, {
+      name: "Amaka",
+      phone: "08012345678",
+      role: "staff",
+      pin: "1234",
+    });
+
+    expect(result.generatedPin).toBeUndefined();
+    expect(passwordService.hashPassword).toHaveBeenCalledWith("1234");
+  });
 });
 
 describe("organisation.service#setDiscountApprovalPin", () => {
