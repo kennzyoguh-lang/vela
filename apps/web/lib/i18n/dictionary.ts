@@ -40,6 +40,11 @@ export const TRANSLATION_KEYS = [
   "pos.cashCheck.difference",
   "pos.cashCheck.done",
   "pos.cashCheck.error",
+  "pos.sell.discount",
+  "pos.sell.discountAmount",
+  "pos.sell.approvalPin",
+  "pos.sell.discountAskManager",
+  "pos.sell.removeDiscount",
 ] as const;
 
 export type TranslationKey = (typeof TRANSLATION_KEYS)[number];
@@ -77,6 +82,11 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.cashCheck.difference": "Difference",
     "pos.cashCheck.done": "Done",
     "pos.cashCheck.error": "Could not check this — try again",
+    "pos.sell.discount": "+ Discount",
+    "pos.sell.discountAmount": "How much off?",
+    "pos.sell.approvalPin": "Manager PIN",
+    "pos.sell.discountAskManager": "Ask your manager to approve this discount",
+    "pos.sell.removeDiscount": "Remove discount",
   },
   ig: {
     "pos.login.title": "Nbanye Ndị Ọrụ",
@@ -110,6 +120,11 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.cashCheck.difference": "Ihe dị iche",
     "pos.cashCheck.done": "Emechaala",
     "pos.cashCheck.error": "Enweghị ike ilele nke a — nwaa ọzọ",
+    "pos.sell.discount": "+ Ndakpọ ọnụahịa",
+    "pos.sell.discountAmount": "Ego ole ka a ga-ewepụ?",
+    "pos.sell.approvalPin": "PIN Onye Njikwa",
+    "pos.sell.discountAskManager": "Gwa onye njikwa ka o kwado ndakpọ ọnụahịa a",
+    "pos.sell.removeDiscount": "Wepụ ndakpọ ọnụahịa",
   },
   yo: {
     "pos.login.title": "Wíwọlé Òṣìṣẹ́",
@@ -143,6 +158,11 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.cashCheck.difference": "Ìyàtọ̀",
     "pos.cashCheck.done": "Ó Parí",
     "pos.cashCheck.error": "A kò lè ṣàyẹ̀wò èyí — gbìyànjú lẹ́ẹ̀kansi",
+    "pos.sell.discount": "+ Ẹ̀dínwó",
+    "pos.sell.discountAmount": "Ẹ̀lọ́ ni a ó dín kù?",
+    "pos.sell.approvalPin": "PIN Alábòójútó",
+    "pos.sell.discountAskManager": "Bèèrè lọ́wọ́ alábòójútó rẹ láti fọwọ́ sí ẹ̀dínwó yìí",
+    "pos.sell.removeDiscount": "Yọ ẹ̀dínwó kúrò",
   },
   ha: {
     "pos.login.title": "Shigar Ma'aikata",
@@ -176,5 +196,10 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.cashCheck.difference": "Bambanci",
     "pos.cashCheck.done": "An Gama",
     "pos.cashCheck.error": "Ba a iya duba wannan ba — sake gwadawa",
+    "pos.sell.discount": "+ Rangwame",
+    "pos.sell.discountAmount": "Nawa za a rage?",
+    "pos.sell.approvalPin": "PIN Manaja",
+    "pos.sell.discountAskManager": "Tambayi manajanka ya amince da wannan rangwamen",
+    "pos.sell.removeDiscount": "Cire rangwame",
   },
 };

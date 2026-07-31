@@ -34,18 +34,22 @@ enum SubscriptionTier {
 }
 
 model Organisation {
-  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name               String
-  industry           String?
-  baseCurrency       String           @default("NGN") @map("base_currency") @db.Char(3)
-  country            String           @default("NG")
-  registrationNumber String?          @map("registration_number")
-  taxId              String?          @map("tax_id")
-  subscriptionTier   SubscriptionTier @default(starter) @map("subscription_tier")
-  subscriptionStatus String           @default("trialing") @map("subscription_status")
-  ownerId            String?          @map("owner_id") @db.Uuid
-  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  id                      String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                    String
+  industry                String?
+  baseCurrency            String           @default("NGN") @map("base_currency") @db.Char(3)
+  country                 String           @default("NG")
+  registrationNumber      String?          @map("registration_number")
+  taxId                   String?          @map("tax_id")
+  subscriptionTier        SubscriptionTier @default(starter) @map("subscription_tier")
+  subscriptionStatus      String           @default("trialing") @map("subscription_status")
+  ownerId                 String?          @map("owner_id") @db.Uuid
+  // Anti-theft Piece 4's staff-proof discount guardrail — org-wide, not
+  // per-user (one manager PIN a staff member asks an owner/admin to type in
+  // on the same device), null until an owner/admin sets one up.
+  discountApprovalPinHash String?          @map("discount_approval_pin_hash")
+  createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   users                 User[]
   sessions              UserSession[]
@@ -74,37 +78,37 @@ model Organisation {
 }
 
 model User {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orgId           String    @map("org_id") @db.Uuid
-  name            String
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId                String    @map("org_id") @db.Uuid
+  name                 String
   // Nullable as of the phone+PIN staff-auth migration — a sales-staff user
   // has phone+pinHash instead of email+passwordHash. The DB CHECK constraint
   // (auth_lookup_user_by_phone migration) enforces one identity pair or the
   // other is always present, never neither.
-  email           String?   @unique @db.Citext
-  passwordHash    String?   @map("password_hash")
+  email                String?   @unique @db.Citext
+  passwordHash         String?   @map("password_hash")
   // Phone+PIN login (anti-theft/POS feature) — a second, alternate
   // credential on the same identity, same shape as the 2FA fields below.
   // Normalized to E.164-ish form before storage (lib/phone.ts) so lookups
   // match regardless of how the number was typed in.
-  phone           String?   @unique @db.Citext
-  pinHash         String?   @map("pin_hash")
+  phone                String?   @unique @db.Citext
+  pinHash              String?   @map("pin_hash")
   // Trust-on-first-use device binding — set on the first successful PIN
   // login, checked (not re-bound) on every login after. Closes the "a
   // leaked PIN alone is enough" gap without adding friction for the
   // legitimate device. Cleared via the owner-only reset-device endpoint.
-  pinDeviceId     String?   @map("pin_device_id")
-  role            Role      @default(staff)
+  pinDeviceId          String?   @map("pin_device_id")
+  role                 Role      @default(staff)
   // Reversible (AES-256-GCM), not hashed — TOTP verification requires the
   // original secret to recompute the expected code, which a one-way hash
   // structurally can never provide. See twofa.service.ts encrypt/decrypt.
-  twoFaSecretEncrypted String? @map("two_fa_secret_encrypted")
-  twoFaEnabled    Boolean   @default(false) @map("two_fa_enabled")
-  backupCodesHash String[]  @map("backup_codes_hash")
-  lastLogin       DateTime? @map("last_login") @db.Timestamptz
-  isActive        Boolean   @default(true) @map("is_active")
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  twoFaSecretEncrypted String?   @map("two_fa_secret_encrypted")
+  twoFaEnabled         Boolean   @default(false) @map("two_fa_enabled")
+  backupCodesHash      String[]  @map("backup_codes_hash")
+  lastLogin            DateTime? @map("last_login") @db.Timestamptz
+  isActive             Boolean   @default(true) @map("is_active")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   organisation         Organisation           @relation(fields: [orgId], references: [id], onDelete: Cascade)
   sessions             UserSession[]
@@ -625,8 +629,8 @@ model AskVelaConversation {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  organisation Organisation      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organisation Organisation     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages     AskVelaMessage[]
 
   @@index([orgId, userId])
@@ -696,15 +700,16 @@ enum SaleStatus {
 // ever composes a single-item array today, but the schema shouldn't need a
 // migration when a later piece adds "add another item to this sale."
 model Sale {
-  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orgId        String     @map("org_id") @db.Uuid
-  staffUserId  String     @map("staff_user_id") @db.Uuid
-  total        Decimal    @db.Decimal(14, 2)
-  currency     String     @default("NGN") @db.Char(3)
-  customerName String?    @map("customer_name")
-  status       SaleStatus @default(completed)
-  soldAt       DateTime   @default(now()) @map("sold_at") @db.Timestamptz
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId          String     @map("org_id") @db.Uuid
+  staffUserId    String     @map("staff_user_id") @db.Uuid
+  total          Decimal    @db.Decimal(14, 2)
+  discountAmount Decimal    @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  currency       String     @default("NGN") @db.Char(3)
+  customerName   String?    @map("customer_name")
+  status         SaleStatus @default(completed)
+  soldAt         DateTime   @default(now()) @map("sold_at") @db.Timestamptz
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz
 
   organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   staffUser    User         @relation(fields: [staffUserId], references: [id])

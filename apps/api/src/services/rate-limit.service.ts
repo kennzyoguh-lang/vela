@@ -104,3 +104,44 @@ export async function clearPinFailures(userId: string): Promise<void> {
     logger.warn({ err, userId }, "PIN failure counter clear failed");
   }
 }
+
+// Anti-theft Piece 4's discount-approval PIN lockout — keyed by orgId, not
+// userId, since the PIN itself is org-wide (one manager PIN, not per-staff).
+// Same shape and fail-open reasoning as the PIN/2FA lockouts above: without
+// this, a staff member has an unthrottled 10,000-combination budget against
+// a 4-digit PIN via apiRateLimit()'s much looser org-wide 100/min ceiling,
+// which defeats the whole point of the guardrail this PIN exists to enforce.
+const DISCOUNT_APPROVAL_LOCKOUT_KEY = (orgId: string) => `discount-approval:lockout:${orgId}`;
+const DISCOUNT_APPROVAL_ATTEMPTS_KEY = (orgId: string) => `discount-approval:attempts:${orgId}`;
+
+export async function isDiscountApprovalLockedOut(orgId: string): Promise<boolean> {
+  try {
+    return (await redis.exists(DISCOUNT_APPROVAL_LOCKOUT_KEY(orgId))) === 1;
+  } catch (err) {
+    logger.warn({ err, orgId }, "Discount approval lockout check failed — failing open");
+    return false;
+  }
+}
+
+export async function recordDiscountApprovalFailure(orgId: string): Promise<void> {
+  try {
+    const attempts = await redis.incr(DISCOUNT_APPROVAL_ATTEMPTS_KEY(orgId));
+    if (attempts === 1) await redis.expire(DISCOUNT_APPROVAL_ATTEMPTS_KEY(orgId), LOCKOUT_SECONDS);
+    if (attempts >= MAX_ATTEMPTS) {
+      await redis.set(DISCOUNT_APPROVAL_LOCKOUT_KEY(orgId), "1", "EX", LOCKOUT_SECONDS);
+    }
+  } catch (err) {
+    logger.warn(
+      { err, orgId },
+      "Discount approval failure recording failed — the wrong PIN is still rejected",
+    );
+  }
+}
+
+export async function clearDiscountApprovalFailures(orgId: string): Promise<void> {
+  try {
+    await redis.del(DISCOUNT_APPROVAL_ATTEMPTS_KEY(orgId), DISCOUNT_APPROVAL_LOCKOUT_KEY(orgId));
+  } catch (err) {
+    logger.warn({ err, orgId }, "Discount approval failure counter clear failed");
+  }
+}

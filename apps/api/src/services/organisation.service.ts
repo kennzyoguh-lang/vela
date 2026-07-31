@@ -1,5 +1,6 @@
 import * as inviteRepo from "../repositories/invite.repository";
 import * as userRepo from "../repositories/user.repository";
+import * as organisationRepo from "../repositories/organisation.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
 import { hashPassword } from "./password.service";
 import { normalizePhoneNumber } from "../lib/phone";
@@ -153,6 +154,24 @@ export async function createStaffUser(
     isActive: user.isActive,
     createdAt: user.createdAt,
   };
+}
+
+/**
+ * Anti-theft Piece 4's discount-approval guardrail — owner/admin sets a
+ * shared PIN a staff member asks them to type in on the same device before
+ * a discount goes through. Reuses hashPassword (same bcrypt cost as staff
+ * login PINs) rather than inventing a separate hashing path.
+ */
+export async function setDiscountApprovalPin(orgId: string, actorId: string, pin: string) {
+  const pinHash = await hashPassword(pin);
+  await organisationRepo.setDiscountApprovalPinHash(orgId, pinHash);
+  await auditLogRepo.write({
+    orgId,
+    userId: actorId,
+    action: "organisation.discount_approval_pin_set",
+    entityType: "organisation",
+    entityId: orgId,
+  });
 }
 
 // Owner-side "staff got a new phone" recovery — clears the trust-on-first-

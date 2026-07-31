@@ -16,6 +16,9 @@ vi.mock("../repositories/user.repository", () => ({
   updateRole: vi.fn(),
   setActive: vi.fn(),
 }));
+vi.mock("../repositories/organisation.repository", () => ({
+  setDiscountApprovalPinHash: vi.fn(),
+}));
 vi.mock("../repositories/audit-log.repository", () => ({
   write: vi.fn(),
 }));
@@ -24,6 +27,7 @@ vi.mock("./password.service", () => ({
 }));
 
 import * as userRepo from "../repositories/user.repository";
+import * as organisationRepo from "../repositories/organisation.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
 import * as passwordService from "./password.service";
 import * as organisationService from "./organisation.service";
@@ -129,6 +133,31 @@ describe("organisation.service#createStaffUser", () => {
         userId: actorId,
         action: "staff.created",
         entityId: createdId,
+      }),
+    );
+  });
+});
+
+describe("organisation.service#setDiscountApprovalPin", () => {
+  const orgId = randomUUID();
+  const actorId = randomUUID();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("hashes the PIN before storage and audit-logs the change", async () => {
+    await organisationService.setDiscountApprovalPin(orgId, actorId, "4321");
+
+    expect(passwordService.hashPassword).toHaveBeenCalledWith("4321");
+    expect(organisationRepo.setDiscountApprovalPinHash).toHaveBeenCalledWith(orgId, "hashed-pin");
+    expect(auditLogRepo.write).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orgId,
+        userId: actorId,
+        action: "organisation.discount_approval_pin_set",
+        entityType: "organisation",
+        entityId: orgId,
       }),
     );
   });

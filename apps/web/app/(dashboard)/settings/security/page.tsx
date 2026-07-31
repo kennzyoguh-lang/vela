@@ -1,11 +1,76 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SettingsTemplate } from "@/components/templates/SettingsTemplate";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Alert } from "@/components/ui/Alert";
 import type { UserSession } from "@vela/types";
-import { api } from "@/lib/api/client";
+import { api, ApiError } from "@/lib/api/client";
+
+// Anti-theft Piece 4's staff-proof discount guardrail — a single PIN shared
+// by owner/admin, not per-user (see apps/api's schema.prisma comment on
+// Organisation.discountApprovalPinHash). A staff member asks whoever's on
+// shift with owner/admin access to type this in on the POS device before a
+// discount goes through.
+function DiscountApprovalPinCard() {
+  const [pin, setPin] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: (value: string) =>
+      api.patch("/v1/organisation/discount-approval-pin", { pin: value }),
+    onSuccess: () => {
+      setPin("");
+      setSaved(true);
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Discount approval PIN</CardTitle>
+      </CardHeader>
+      <p className="font-ui text-text-secondary text-[0.875rem]">
+        Staff need this PIN to apply a discount on the sales screen — set it once, then share it
+        only with the people who can approve a discount.
+      </p>
+      <form
+        className="mt-3 flex items-end gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setSaved(false);
+          mutation.mutate(pin);
+        }}
+      >
+        <Input
+          label="New PIN"
+          type="password"
+          inputMode="numeric"
+          pattern="\d{4,6}"
+          maxLength={6}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+          helperText="4-6 digits"
+        />
+        <Button type="submit" loading={mutation.isPending} disabled={pin.length < 4}>
+          Set PIN
+        </Button>
+      </form>
+      {mutation.isError ? (
+        <Alert
+          variant="danger"
+          title={
+            mutation.error instanceof ApiError ? mutation.error.message : "Couldn't set the PIN"
+          }
+        />
+      ) : null}
+      {saved ? <Alert variant="info" title="Discount approval PIN updated" /> : null}
+    </Card>
+  );
+}
 
 export default function SecuritySettingsPage() {
   const queryClient = useQueryClient();
@@ -33,6 +98,8 @@ export default function SecuritySettingsPage() {
             Security → Enable 2FA.
           </p>
         </Card>
+
+        <DiscountApprovalPinCard />
 
         <Card>
           <CardHeader>

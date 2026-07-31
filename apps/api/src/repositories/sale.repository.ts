@@ -14,6 +14,7 @@ export interface SaleItemInput {
 export interface CreateSaleData {
   staffUserId: string;
   total: number;
+  discountAmount: number;
   currency: string;
   customerName?: string;
   items: SaleItemInput[];
@@ -29,6 +30,7 @@ export async function createSale(orgId: string, input: CreateSaleData): Promise<
         orgId,
         staffUserId: input.staffUserId,
         total: input.total,
+        discountAmount: input.discountAmount,
         currency: input.currency,
         customerName: input.customerName,
         items: {

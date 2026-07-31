@@ -45,3 +45,11 @@ export async function setOrganisationOwner(orgId: string, ownerId: string): Prom
     tx.organisation.update({ where: { id: orgId }, data: { ownerId } }),
   );
 }
+
+// Anti-theft Piece 4's discount-approval guardrail — one PIN per org, not
+// per-user (see schema.prisma's Organisation.discountApprovalPinHash comment).
+export async function setDiscountApprovalPinHash(orgId: string, hash: string): Promise<void> {
+  await withOrgScope(orgId, (tx) =>
+    tx.organisation.update({ where: { id: orgId }, data: { discountApprovalPinHash: hash } }),
+  );
+}

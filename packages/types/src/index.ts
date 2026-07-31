@@ -134,6 +134,7 @@ export interface Sale {
   orgId: string;
   staffUserId: string;
   total: string;
+  discountAmount: string;
   currency: string;
   customerName: string | null;
   status: SaleStatus;

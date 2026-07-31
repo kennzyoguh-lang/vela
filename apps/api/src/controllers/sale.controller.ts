@@ -6,9 +6,9 @@ import { getAuthContext } from "../lib/auth-context";
 import { parsePageParams } from "../lib/pagination";
 
 export async function create(req: Request, res: Response) {
-  const { orgId, userId } = getAuthContext(req);
+  const { orgId, userId, role } = getAuthContext(req);
   const input = createSaleSchema.parse(req.body);
-  const sale = await saleService.logSale(orgId, userId, input);
+  const sale = await saleService.logSale(orgId, userId, role, input);
   sendSuccess(res, sale, 201);
 }
 
