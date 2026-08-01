@@ -22,6 +22,7 @@ import {
   categoryLabel,
 } from "@/lib/transaction-category";
 import { api } from "@/lib/api/client";
+import { useModuleVisibility } from "@/lib/business-profile/useModuleVisibility";
 
 type Period = "this_month" | "last_month";
 
@@ -36,6 +37,7 @@ function periodRange(period: Period): { from: string; to: string } {
 
 export default function MoneyPage() {
   const queryClient = useQueryClient();
+  const { visibility } = useModuleVisibility();
   const [period, setPeriod] = useState<Period>("this_month");
   const { from, to } = periodRange(period);
 
@@ -49,6 +51,9 @@ export default function MoneyPage() {
     queryKey: ["pnl", from, to],
     queryFn: () => api.get<PnlStatementData>(`/v1/pnl?from=${from}&to=${to}`),
     staleTime: 60_000,
+    // Full P&L Intelligence is gated (business profiling) — skip the
+    // request entirely rather than fetching data the page won't render.
+    enabled: visibility.fullPnl,
   });
 
   const { data: transactionPage, isLoading: transactionsLoading } = useQuery({
@@ -104,27 +109,31 @@ export default function MoneyPage() {
         )}
       </Card>
 
-      <div className="flex gap-2">
-        {(["this_month", "last_month"] as const).map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setPeriod(p)}
-            className={`font-ui rounded-pill h-8 px-3 text-[0.8125rem] font-semibold transition-colors ${
-              period === p
-                ? "bg-midnight text-white"
-                : "bg-surface-secondary text-text-secondary hover:bg-surface-raised"
-            }`}
-          >
-            {p === "this_month" ? "This month" : "Last month"}
-          </button>
-        ))}
-      </div>
+      {visibility.fullPnl ? (
+        <>
+          <div className="flex gap-2">
+            {(["this_month", "last_month"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPeriod(p)}
+                className={`font-ui rounded-pill h-8 px-3 text-[0.8125rem] font-semibold transition-colors ${
+                  period === p
+                    ? "bg-midnight text-white"
+                    : "bg-surface-secondary text-text-secondary hover:bg-surface-raised"
+                }`}
+              >
+                {p === "this_month" ? "This month" : "Last month"}
+              </button>
+            ))}
+          </div>
 
-      {statementLoading ? (
-        <Skeleton className="h-64 w-full" />
-      ) : statement ? (
-        <PnlStatement statement={statement} currency={currency} />
+          {statementLoading ? (
+            <Skeleton className="h-64 w-full" />
+          ) : statement ? (
+            <PnlStatement statement={statement} currency={currency} />
+          ) : null}
+        </>
       ) : null}
 
       <Card>

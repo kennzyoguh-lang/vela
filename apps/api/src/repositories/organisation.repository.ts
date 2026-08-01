@@ -53,3 +53,48 @@ export async function setDiscountApprovalPinHash(orgId: string, hash: string): P
     tx.organisation.update({ where: { id: orgId }, data: { discountApprovalPinHash: hash } }),
   );
 }
+
+// Business profiling — the three onboarding factors, set together (they're
+// answered as one short flow). Also stamps profileFactorsConfirmedAt so a
+// deliberate "unsure" to all three is recorded as a completed onboarding,
+// distinct from never having answered at all.
+export async function setBusinessProfileFactors(
+  orgId: string,
+  factors: {
+    customerPattern: "one_time" | "repeat" | "unsure";
+    hasSalesStaff: "yes" | "no" | "unsure";
+    isCacRegistered: "yes" | "no" | "unsure";
+  },
+): Promise<void> {
+  await withOrgScope(orgId, (tx) =>
+    tx.organisation.update({
+      where: { id: orgId },
+      data: { ...factors, profileFactorsConfirmedAt: new Date() },
+    }),
+  );
+}
+
+// A single module's manual override — Requirement 4's "reveal any hidden
+// module" (or hide a shown one). `value: null` clears the override,
+// reverting that module to its computed default. One key at a time (not a
+// bulk replace) so a concurrent toggle of a different module can't clobber
+// this one.
+export async function setModuleOverride(
+  orgId: string,
+  moduleKey: string,
+  value: boolean | null,
+): Promise<Organisation> {
+  return withOrgScope(orgId, async (tx) => {
+    const org = await tx.organisation.findUniqueOrThrow({ where: { id: orgId } });
+    const overrides = { ...(org.moduleOverrides as Record<string, boolean>) };
+    if (value === null) {
+      delete overrides[moduleKey];
+    } else {
+      overrides[moduleKey] = value;
+    }
+    return tx.organisation.update({
+      where: { id: orgId },
+      data: { moduleOverrides: overrides },
+    });
+  });
+}

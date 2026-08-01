@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as organisationController from "../controllers/organisation.controller";
+import * as businessProfileController from "../controllers/business-profile.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/rbac.middleware";
 import { apiRateLimit } from "../middleware/rate-limit.middleware";
@@ -55,6 +56,25 @@ organisationRouter.patch(
   "/notification-phone",
   requireRole("owner", "admin"),
   asyncHandler(organisationController.setNotificationPhone),
+);
+
+// Business profiling — GET is open to every authenticated org member
+// (owner/admin/staff/accountant/view_only), not just owner/admin: module
+// visibility affects what EVERYONE sees in their own UI (e.g. staff need to
+// know whether Quick Sale shows on their own POS screen). Only the two
+// mutations below are owner/admin-gated, same as every other org setting.
+organisationRouter.get("/business-profile", asyncHandler(businessProfileController.getProfile));
+// No generic auditLog() middleware here — business-profile.service.ts
+// already writes its own audit entry (same reasoning as discount-approval-pin).
+organisationRouter.patch(
+  "/business-profile/factors",
+  requireRole("owner", "admin"),
+  asyncHandler(businessProfileController.setFactors),
+);
+organisationRouter.patch(
+  "/business-profile/module-override",
+  requireRole("owner", "admin"),
+  asyncHandler(businessProfileController.setModuleOverride),
 );
 
 organisationRouter.post(

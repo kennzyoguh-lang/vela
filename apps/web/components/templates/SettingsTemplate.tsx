@@ -6,6 +6,7 @@ const SETTINGS_NAV = [
   { label: "Organisation", href: "/settings" },
   { label: "Users", href: "/settings/users" },
   { label: "Products", href: "/settings/products" },
+  { label: "Modules", href: "/settings/modules" },
   { label: "Accountants", href: "/settings/accountants" },
   { label: "Security", href: "/settings/security" },
 ] as const;

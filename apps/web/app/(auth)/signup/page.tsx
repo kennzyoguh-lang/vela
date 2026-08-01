@@ -34,7 +34,7 @@ export default function SignupPage() {
         values,
       );
       useAuthStore.getState().setAccessToken(result.accessToken);
-      router.push("/");
+      router.push("/onboarding");
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Something went wrong. Try again.");
     }

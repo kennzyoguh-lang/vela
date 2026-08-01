@@ -7,6 +7,7 @@ import { NAV_ITEMS } from "./nav-items";
 import { useUiStore } from "@/stores/ui-store";
 import { cn } from "@/lib/utils";
 import { VelaLogo, VelaMark } from "@/components/brand/VelaLogo";
+import { useModuleVisibility } from "@/lib/business-profile/useModuleVisibility";
 
 // Design System 3.2 — fixed 240px expanded / 64px icon rail, user-collapsible,
 // state persisted. Always Midnight (neutral.900) in both themes — the sidebar
@@ -15,6 +16,10 @@ import { VelaLogo, VelaMark } from "@/components/brand/VelaLogo";
 export function Sidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar } = useUiStore();
+  const { visibility } = useModuleVisibility();
+  // Requirement 4 — this only ever changes the DEFAULT rendering; nothing
+  // here blocks direct navigation to a hidden module's URL.
+  const visibleItems = NAV_ITEMS.filter((item) => !item.moduleKey || visibility[item.moduleKey]);
 
   return (
     <nav
@@ -32,7 +37,7 @@ export function Sidebar() {
         )}
       </div>
       <ul className="flex flex-1 flex-col gap-1 p-2">
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const active = pathname === item.href;
           return (
             <li key={item.href}>
