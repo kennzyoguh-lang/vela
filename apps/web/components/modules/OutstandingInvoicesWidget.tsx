@@ -13,7 +13,11 @@ import { api } from "@/lib/api/client";
 const OUTSTANDING_STATUSES = ["sent", "viewed", "partially_paid", "overdue"];
 
 export function OutstandingInvoicesWidget() {
-  const { data: invoicePage, isLoading } = useQuery({
+  const {
+    data: invoicePage,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["invoices", "all"],
     // Pagination caps a bare GET at 50 by default — this widget only needs
     // a "how much is outstanding" figure, so pageSize=100 keeps one request
@@ -36,6 +40,10 @@ export function OutstandingInvoicesWidget() {
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-6 w-2/3" />
+        ) : error ? (
+          <p className="font-ui text-status-danger text-[0.875rem]">
+            Couldn&apos;t load — try again shortly.
+          </p>
         ) : outstanding.length === 0 ? (
           <p className="font-ui text-text-secondary text-[0.875rem]">
             Nothing outstanding — clients are all paid up.

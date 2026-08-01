@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
+import { Skeleton } from "@/components/ui/Skeleton";
 import type { UserSession } from "@vela/types";
 import { api, ApiError } from "@/lib/api/client";
 
@@ -131,7 +132,11 @@ function NotificationPhoneCard() {
 export default function SecuritySettingsPage() {
   const queryClient = useQueryClient();
 
-  const { data: sessions, isLoading } = useQuery({
+  const {
+    data: sessions,
+    isLoading,
+    error: sessionsError,
+  } = useQuery({
     queryKey: ["sessions"],
     queryFn: () => api.get<UserSession[]>("/v1/sessions"),
     staleTime: 30_000, // fast-changing tier (Handbook 4.10)
@@ -164,7 +169,11 @@ export default function SecuritySettingsPage() {
             <CardTitle>Active sessions</CardTitle>
           </CardHeader>
           {isLoading ? (
-            <p className="font-ui text-text-secondary text-[0.875rem]">Loading…</p>
+            <Skeleton className="h-12 w-full" />
+          ) : sessionsError ? (
+            <p className="font-ui text-status-danger text-[0.875rem]">
+              Couldn&apos;t load — try again shortly.
+            </p>
           ) : !sessions || sessions.length === 0 ? (
             <p className="font-ui text-text-secondary text-[0.875rem]">No active sessions.</p>
           ) : (

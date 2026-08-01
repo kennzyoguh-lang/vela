@@ -17,7 +17,11 @@ function currentPeriodLabel(): string {
 
 // Mirrors OutstandingInvoicesWidget.tsx / ComplianceWidget.tsx's shape.
 export function UpcomingPayrollWidget() {
-  const { data: runs, isLoading } = useQuery({
+  const {
+    data: runs,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["payroll-runs"],
     queryFn: () => api.get<PayrollRun[]>("/v1/payroll-runs"),
     staleTime: 30_000,
@@ -34,6 +38,10 @@ export function UpcomingPayrollWidget() {
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-6 w-2/3" />
+        ) : error ? (
+          <p className="font-ui text-status-danger text-[0.875rem]">
+            Couldn&apos;t load — try again shortly.
+          </p>
         ) : !currentRun ? (
           <p className="font-ui text-text-secondary text-[0.875rem]">
             No payroll run yet for {currentPeriodLabel()}.
