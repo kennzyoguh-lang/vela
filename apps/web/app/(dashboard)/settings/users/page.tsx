@@ -24,7 +24,7 @@ interface PendingInvite {
 const ROLE_OPTIONS = [
   { value: "admin", label: "Admin — full access minus billing" },
   { value: "accountant", label: "Accountant — read + export" },
-  { value: "staff", label: "Staff — self-service HR" },
+  { value: "staff", label: "Sales Staff — self-service HR" },
   { value: "view_only", label: "View-only — read access" },
 ];
 

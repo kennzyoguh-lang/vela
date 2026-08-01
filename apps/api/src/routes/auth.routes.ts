@@ -31,17 +31,23 @@ authRouter.post("/logout", asyncHandler(authController.logout));
 // /2fa/confirm below, which is the enrollment-confirmation endpoint (turning
 // 2FA on for the first time, gated by requireAuth since you're already
 // logged in to do that). This route has no session yet, hence no requireAuth.
-authRouter.post(
-  "/2fa/verify",
-  twoFaVerifyRateLimit(),
-  auditLog("auth.2fa_verified", "user"),
-  asyncHandler(authController.verifyTwoFa),
-);
+// No generic auditLog() middleware here — auth.service.ts#verifyTwoFaChallenge
+// already writes its own audit entry (2fa.challenge_succeeded/backup_code_used/
+// challenge_failed); a route-level "auth.2fa_verified" here would double-log
+// every successful verification.
+authRouter.post("/2fa/verify", twoFaVerifyRateLimit(), asyncHandler(authController.verifyTwoFa));
 
 authRouter.post("/2fa/setup", requireAuth, asyncHandler(twoFactorController.beginSetup));
+// No generic auditLog() middleware here — two-factor-enrollment.service.ts's
+// confirmEnrollment already writes its own "2fa.enabled" entry; same
+// double-log reasoning as /2fa/verify above.
+// twoFaVerifyRateLimit() reused here — confirmEnrollment verifies a guessable
+// 6-digit TOTP code with no per-user lockout of its own (unlike
+// verifyTwoFaChallenge's isTwoFaLockedOut), so this is the only brute-force
+// throttle on it.
 authRouter.post(
   "/2fa/confirm",
   requireAuth,
-  auditLog("auth.2fa_enabled", "user"),
+  twoFaVerifyRateLimit(),
   asyncHandler(twoFactorController.confirmSetup),
 );

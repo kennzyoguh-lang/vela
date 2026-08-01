@@ -30,7 +30,7 @@ export function SettingsTemplate({
             href={item.href}
             aria-current={activePath === item.href ? "page" : undefined}
             className={cn(
-              "font-ui whitespace-nowrap rounded-md px-3 py-2 text-[0.875rem]",
+              "font-ui flex min-h-[44px] items-center whitespace-nowrap rounded-md px-3 py-2 text-[0.875rem]",
               activePath === item.href
                 ? "bg-surface-raised text-text-primary font-semibold"
                 : "text-text-secondary hover:bg-surface-raised",

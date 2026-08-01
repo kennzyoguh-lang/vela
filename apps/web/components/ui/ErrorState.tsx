@@ -22,7 +22,7 @@ export function ErrorState({ onRetry }: { onRetry: () => void }) {
         <Button variant="secondary" onClick={onRetry}>
           Try again
         </Button>
-        <Button onClick={() => (window.location.href = "/")}>Go to Home</Button>
+        <Button onClick={() => (window.location.href = "/")}>Go home</Button>
       </div>
     </div>
   );

@@ -121,7 +121,7 @@ export default function MoneyPage() {
                 key={p}
                 type="button"
                 onClick={() => setPeriod(p)}
-                className={`font-ui rounded-pill h-8 px-3 text-[0.8125rem] font-semibold transition-colors ${
+                className={`font-ui rounded-pill h-11 px-3 text-[0.8125rem] font-semibold transition-colors ${
                   period === p
                     ? "bg-midnight text-white"
                     : "bg-surface-secondary text-text-secondary hover:bg-surface-raised"

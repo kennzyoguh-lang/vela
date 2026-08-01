@@ -11,7 +11,7 @@ export function TopBar() {
     <header className="border-border bg-surface-raised flex h-14 shrink-0 items-center justify-between border-b px-4">
       <button
         type="button"
-        className="text-text-secondary hover:bg-surface-canvas flex min-h-[44px] items-center gap-2 rounded-md px-3"
+        className="text-text-secondary hover:bg-surface-canvas flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-md px-3"
         aria-label="Open search"
       >
         <Search className="size-4" aria-hidden />
@@ -28,10 +28,12 @@ export function TopBar() {
         >
           <Bell className="size-5" aria-hidden />
         </button>
+        {/* Decorative user-initial avatar only — not yet wired to a real
+            profile menu (see file comment), so it deliberately carries no
+            accessible name/role implying it's interactive. */}
         <div
           className="bg-cobalt font-ui flex size-9 items-center justify-center rounded-full text-[0.75rem] font-semibold text-white"
-          aria-label="Account menu"
-          role="img"
+          aria-hidden="true"
         >
           V
         </div>

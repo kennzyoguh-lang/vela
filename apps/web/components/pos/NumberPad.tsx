@@ -3,6 +3,7 @@
 import { Delete } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/format";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "backspace"] as const;
 
@@ -30,6 +31,8 @@ export function NumberPad({
   mode = "currency",
   maxLength = mode === "pin" ? 6 : 9,
 }: NumberPadProps) {
+  const { t } = useTranslation();
+
   function press(key: (typeof KEYS)[number]) {
     if (key === "clear") return onChange("");
     if (key === "backspace") return onChange(digits.slice(0, -1));
@@ -52,7 +55,11 @@ export function NumberPad({
             type="button"
             onClick={() => press(key)}
             aria-label={
-              key === "clear" ? clearLabel : key === "backspace" ? "Backspace" : undefined
+              key === "clear"
+                ? clearLabel
+                : key === "backspace"
+                  ? t("pos.numberPad.backspace")
+                  : undefined
             }
             className={cn(
               "font-data flex min-h-[64px] items-center justify-center rounded-2xl text-[1.5rem] font-bold",

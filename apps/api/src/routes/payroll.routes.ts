@@ -15,8 +15,12 @@ payrollRouter.post(
   auditLog("payroll.run", "payroll_run"),
   asyncHandler(payrollController.run),
 );
-payrollRouter.get("/", asyncHandler(payrollController.list));
-payrollRouter.get("/:runId", asyncHandler(payrollController.getOne));
+// Every employee's gross/net/PAYE breakdown for the whole org, unfiltered by
+// requesting user — same sensitivity as the PDF download and mutations
+// below, so owner/admin-gated the same way (employee.routes.ts locks its
+// entire router the same way for the same reason).
+payrollRouter.get("/", requireRole("owner", "admin"), asyncHandler(payrollController.list));
+payrollRouter.get("/:runId", requireRole("owner", "admin"), asyncHandler(payrollController.getOne));
 payrollRouter.post(
   "/:runId/mark-paid",
   requireRole("owner", "admin"),

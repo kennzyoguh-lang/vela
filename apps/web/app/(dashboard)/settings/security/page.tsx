@@ -111,7 +111,7 @@ function NotificationPhoneCard() {
           helperText="e.g. 08012345678"
         />
         <Button type="submit" loading={mutation.isPending} disabled={phone.trim().length < 7}>
-          Save
+          Save phone number
         </Button>
       </form>
       {mutation.isError ? (

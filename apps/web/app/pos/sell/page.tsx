@@ -190,7 +190,7 @@ export default function PosSellPage() {
                   type="button"
                   onClick={resetDiscount}
                   aria-label={t("pos.sell.removeDiscount")}
-                  className="text-white/50"
+                  className="flex min-h-[44px] min-w-[44px] items-center justify-center text-white/50"
                 >
                   <X className="size-5" aria-hidden />
                 </button>

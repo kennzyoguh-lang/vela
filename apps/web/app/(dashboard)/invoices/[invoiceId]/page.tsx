@@ -130,7 +130,7 @@ export default function InvoiceDetailPage() {
                 onClick={handleDownloadPdf}
               >
                 <Download className="size-4" aria-hidden />
-                PDF
+                Download PDF
               </Button>
               {canSend ? (
                 <Button
@@ -153,7 +153,7 @@ export default function InvoiceDetailPage() {
               ) : null}
               {canVoid ? (
                 <Button size="sm" variant="destructive" onClick={() => setVoiding(true)}>
-                  Void
+                  Void invoice
                 </Button>
               ) : null}
             </div>
@@ -192,30 +192,32 @@ export default function InvoiceDetailPage() {
           <CardHeader>
             <CardTitle>Line items</CardTitle>
           </CardHeader>
-          <table className="w-full">
-            <thead>
-              <tr className="border-border font-ui text-text-secondary border-b text-left text-[0.75rem] uppercase tracking-[0.02em]">
-                <th className="pb-2 font-semibold">Description</th>
-                <th className="pb-2 text-right font-semibold">Qty</th>
-                <th className="pb-2 text-right font-semibold">Unit price</th>
-                <th className="pb-2 text-right font-semibold">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lineItems.map((item, i) => (
-                <tr key={i} className="font-ui text-text-primary text-[0.875rem]">
-                  <td className="py-2">{item.description}</td>
-                  <td className="py-2 text-right">{item.quantity}</td>
-                  <td className="py-2 text-right">
-                    {formatMoney(item.unitPrice, invoice.currency)}
-                  </td>
-                  <td className="py-2 text-right">
-                    {formatMoney(item.quantity * item.unitPrice, invoice.currency)}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px]">
+              <thead>
+                <tr className="border-border font-ui text-text-secondary border-b text-left text-[0.75rem] uppercase tracking-[0.02em]">
+                  <th className="pb-2 font-semibold">Description</th>
+                  <th className="pb-2 text-right font-semibold">Qty</th>
+                  <th className="pb-2 text-right font-semibold">Unit price</th>
+                  <th className="pb-2 text-right font-semibold">Amount</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {lineItems.map((item, i) => (
+                  <tr key={i} className="font-ui text-text-primary text-[0.875rem]">
+                    <td className="py-2">{item.description}</td>
+                    <td className="py-2 text-right">{item.quantity}</td>
+                    <td className="py-2 text-right">
+                      {formatMoney(item.unitPrice, invoice.currency)}
+                    </td>
+                    <td className="py-2 text-right">
+                      {formatMoney(item.quantity * item.unitPrice, invoice.currency)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <div className="border-border mt-3 flex flex-col items-end gap-1 border-t pt-3">
             <p className="font-ui text-text-secondary text-[0.875rem]">
               Subtotal {formatMoney(invoice.subtotal, invoice.currency)}

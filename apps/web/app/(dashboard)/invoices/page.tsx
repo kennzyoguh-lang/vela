@@ -59,7 +59,7 @@ export default function InvoicesPage() {
           key={f.value}
           type="button"
           onClick={() => setStatus(f.value)}
-          className={`font-ui rounded-pill h-8 px-3 text-[0.8125rem] font-semibold transition-colors ${
+          className={`font-ui rounded-pill h-11 px-3 text-[0.8125rem] font-semibold transition-colors ${
             status === f.value
               ? "bg-midnight text-white"
               : "bg-surface-secondary text-text-secondary hover:bg-surface-raised"
