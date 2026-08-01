@@ -10,10 +10,18 @@ vi.mock("../repositories/cash-check.repository", () => ({
 vi.mock("../repositories/audit-log.repository", () => ({
   write: vi.fn(),
 }));
+vi.mock("../repositories/user.repository", () => ({
+  findNotifiablePhones: vi.fn(),
+}));
+vi.mock("./sms/termii.gateway", () => ({
+  sendSms: vi.fn(),
+}));
 
 import * as saleRepo from "../repositories/sale.repository";
 import * as cashCheckRepo from "../repositories/cash-check.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import * as userRepo from "../repositories/user.repository";
+import * as smsGateway from "./sms/termii.gateway";
 import * as ownerSummaryService from "./owner-summary.service";
 
 describe("owner-summary.service#getTodaySummary", () => {
@@ -128,8 +136,15 @@ describe("owner-summary.service#composeSummaryMessage", () => {
 });
 
 describe("owner-summary.service#sendDailySummary", () => {
-  it("audit-logs the composed message and status (stub delivery)", async () => {
-    const orgId = randomUUID();
+  const orgId = randomUUID();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(userRepo.findNotifiablePhones).mockResolvedValue([]);
+    vi.mocked(smsGateway.sendSms).mockResolvedValue(undefined);
+  });
+
+  it("audit-logs the composed message and status", async () => {
     vi.mocked(saleRepo.getDailyStats).mockResolvedValue({ count: 5, total: 10_000 });
     vi.mocked(cashCheckRepo.findByOrgAndDate).mockResolvedValue(null);
 
@@ -144,5 +159,42 @@ describe("owner-summary.service#sendDailySummary", () => {
         newValue: expect.objectContaining({ status: "pending" }),
       }),
     );
+  });
+
+  it("sends the composed message to every owner/admin notification phone", async () => {
+    vi.mocked(saleRepo.getDailyStats).mockResolvedValue({ count: 5, total: 10_000 });
+    vi.mocked(cashCheckRepo.findByOrgAndDate).mockResolvedValue(null);
+    vi.mocked(userRepo.findNotifiablePhones).mockResolvedValue([
+      "+2348011111111",
+      "+2348022222222",
+    ]);
+
+    await ownerSummaryService.sendDailySummary(orgId, new Date());
+
+    expect(smsGateway.sendSms).toHaveBeenCalledTimes(2);
+    expect(smsGateway.sendSms).toHaveBeenCalledWith(
+      "+2348011111111",
+      expect.stringContaining("No cash count yet"),
+    );
+  });
+
+  it("still audit-logs even when no notification phone is configured", async () => {
+    vi.mocked(saleRepo.getDailyStats).mockResolvedValue({ count: 5, total: 10_000 });
+    vi.mocked(cashCheckRepo.findByOrgAndDate).mockResolvedValue(null);
+
+    await ownerSummaryService.sendDailySummary(orgId, new Date());
+
+    expect(smsGateway.sendSms).not.toHaveBeenCalled();
+    expect(auditLogRepo.write).toHaveBeenCalled();
+  });
+
+  it("still audit-logs even when every SMS send fails", async () => {
+    vi.mocked(saleRepo.getDailyStats).mockResolvedValue({ count: 5, total: 10_000 });
+    vi.mocked(cashCheckRepo.findByOrgAndDate).mockResolvedValue(null);
+    vi.mocked(userRepo.findNotifiablePhones).mockResolvedValue(["+2348011111111"]);
+    vi.mocked(smsGateway.sendSms).mockRejectedValue(new Error("Termii is down"));
+
+    await expect(ownerSummaryService.sendDailySummary(orgId, new Date())).resolves.toBeUndefined();
+    expect(auditLogRepo.write).toHaveBeenCalled();
   });
 });

@@ -14,9 +14,13 @@ vi.mock("../repositories/audit-log.repository", () => ({
 vi.mock("../lib/env", () => ({
   env: { WEB_APP_URL: "https://app.vela.test" },
 }));
+vi.mock("./sms/termii.gateway", () => ({
+  sendSms: vi.fn(),
+}));
 
 import * as invoiceRepo from "../repositories/invoice.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import * as smsGateway from "./sms/termii.gateway";
 import { NotFoundError } from "../lib/errors";
 import * as quickSaleService from "./quick-sale.service";
 
@@ -79,9 +83,10 @@ describe("quick-sale.service#sendPaymentLinkSms", () => {
       total: "3200",
       paymentPortalToken: "abc-token",
     } as never);
+    vi.mocked(smsGateway.sendSms).mockResolvedValue(undefined);
   });
 
-  it("normalizes the phone, composes a 'Pay ₦X now' message with the real link, and returns sent: true", async () => {
+  it("normalizes the phone, composes a 'Pay ₦X now' message with the real link, sends it, and returns sent: true", async () => {
     const result = await quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, {
       phone: "08012345678",
     });
@@ -89,6 +94,18 @@ describe("quick-sale.service#sendPaymentLinkSms", () => {
     expect(result.sent).toBe(true);
     expect(result.message).toContain("Pay ₦3,200 now:");
     expect(result.message).toContain("/pay/abc-token");
+    expect(smsGateway.sendSms).toHaveBeenCalledWith("+2348012345678", result.message);
+  });
+
+  it("propagates a real send failure to the caller instead of swallowing it", async () => {
+    vi.mocked(smsGateway.sendSms).mockRejectedValue(
+      new Error("Termii SMS send failed: bad number"),
+    );
+
+    await expect(
+      quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, { phone: "08012345678" }),
+    ).rejects.toThrow(/Termii SMS send failed/);
+    expect(auditLogRepo.write).not.toHaveBeenCalled();
   });
 
   it("audit-logs the send with the normalized phone", async () => {

@@ -1,7 +1,15 @@
 import * as cashCheckRepo from "../repositories/cash-check.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import * as userRepo from "../repositories/user.repository";
+import * as smsGateway from "./sms/termii.gateway";
 import { logger } from "../lib/logger";
 import type { PageParams } from "../lib/pagination";
+
+// Mirrors owner-summary.service.ts's local formatNaira — no shared currency
+// formatter exists on the API side (see that file's comment).
+function formatNaira(amount: number): string {
+  return `₦${Math.round(amount).toLocaleString("en-NG")}`;
+}
 
 // Deliberate divergence from the rest of the codebase's plain-UTC
 // startOfDay convention (compliance-obligation-rules.ts, compliance.service.ts)
@@ -32,19 +40,38 @@ export async function getExpectedForToday(orgId: string, now: Date) {
 }
 
 /**
- * Notification delivery isn't wired up yet (same honestly-a-stub status as
- * reminder.service.ts's email reminders) — this still does the real work of
- * deciding a mismatch needs flagging and audit-logs it so the owner can see
- * it on the dashboard/audit trail today, ahead of a real push/SMS integration.
+ * Notifies every owner/admin who's set a notification phone (Settings →
+ * Security, organisation.service.ts#setNotificationPhone) via Termii SMS.
+ * Attached to submitCashCheck (a staff member finishing their count) rather
+ * than a standalone action, so a bad number or provider outage must never
+ * block that submission — every send is its own try/catch, and this
+ * function itself never throws.
  */
 async function flagMismatchToOwner(
   orgId: string,
   staffUserId: string,
   difference: number,
 ): Promise<void> {
-  logger.info(
-    { orgId, staffUserId, difference },
-    "[stub] would notify owner of cash check mismatch — push/SMS integration not yet wired up",
+  const phones = await userRepo.findNotifiablePhones(orgId);
+  if (phones.length === 0) {
+    logger.info(
+      { orgId, staffUserId, difference },
+      "Cash check mismatch — no owner/admin notification phone configured, nothing sent",
+    );
+    return;
+  }
+
+  const diffWord = difference < 0 ? "short" : "over";
+  const message = `Cash check mismatch: ${formatNaira(Math.abs(difference))} ${diffWord} today. Check the app for details.`;
+
+  await Promise.all(
+    phones.map(async (phone) => {
+      try {
+        await smsGateway.sendSms(phone, message);
+      } catch (err) {
+        logger.error({ err, orgId, phone }, "Failed to send cash check mismatch SMS");
+      }
+    }),
   );
 }
 

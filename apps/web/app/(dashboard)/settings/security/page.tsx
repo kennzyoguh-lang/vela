@@ -72,6 +72,62 @@ function DiscountApprovalPinCard() {
   );
 }
 
+// Where the owner daily summary and cash-check mismatch alerts actually get
+// sent (owner-summary.service.ts, cash-check.service.ts) — distinct from a
+// staff member's phone+PIN login credential (Piece 1), this is just contact
+// info for whoever's currently logged in as owner/admin.
+function NotificationPhoneCard() {
+  const [phone, setPhone] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: (value: string) =>
+      api.patch("/v1/organisation/notification-phone", { phone: value }),
+    onSuccess: () => setSaved(true),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Notification phone number</CardTitle>
+      </CardHeader>
+      <p className="font-ui text-text-secondary text-[0.875rem]">
+        Where your daily sales summary and cash-check mismatch alerts get sent by SMS.
+      </p>
+      <form
+        className="mt-3 flex items-end gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setSaved(false);
+          mutation.mutate(phone);
+        }}
+      >
+        <Input
+          label="Phone number"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          helperText="e.g. 08012345678"
+        />
+        <Button type="submit" loading={mutation.isPending} disabled={phone.trim().length < 7}>
+          Save
+        </Button>
+      </form>
+      {mutation.isError ? (
+        <Alert
+          variant="danger"
+          title={
+            mutation.error instanceof ApiError
+              ? mutation.error.message
+              : "Couldn't save this number"
+          }
+        />
+      ) : null}
+      {saved ? <Alert variant="info" title="Notification phone number updated" /> : null}
+    </Card>
+  );
+}
+
 export default function SecuritySettingsPage() {
   const queryClient = useQueryClient();
 
@@ -98,6 +154,8 @@ export default function SecuritySettingsPage() {
             Security → Enable 2FA.
           </p>
         </Card>
+
+        <NotificationPhoneCard />
 
         <DiscountApprovalPinCard />
 

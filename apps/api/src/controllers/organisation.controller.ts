@@ -5,6 +5,7 @@ import {
   inviteSchema,
   createStaffSchema,
   setDiscountApprovalPinSchema,
+  setNotificationPhoneSchema,
 } from "../validation/auth.schema";
 import { inviteAccountantSchema } from "../validation/accountant-link.schema";
 import { sendSuccess } from "../lib/response";
@@ -56,6 +57,13 @@ export async function setDiscountApprovalPin(req: Request, res: Response) {
   const { orgId, userId } = getAuthContext(req);
   const { pin } = setDiscountApprovalPinSchema.parse(req.body);
   await organisationService.setDiscountApprovalPin(orgId, userId, pin);
+  sendSuccess(res, { updated: true });
+}
+
+export async function setNotificationPhone(req: Request, res: Response) {
+  const { orgId, userId } = getAuthContext(req);
+  const { phone } = setNotificationPhoneSchema.parse(req.body);
+  await organisationService.setNotificationPhone(orgId, userId, phone);
   sendSuccess(res, { updated: true });
 }
 

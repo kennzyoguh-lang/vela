@@ -190,6 +190,38 @@ export async function setDiscountApprovalPin(orgId: string, actorId: string, pin
   });
 }
 
+/**
+ * The current owner/admin's own SMS notification number — where the daily
+ * summary and cash-check mismatch alerts (owner-summary.service.ts,
+ * cash-check.service.ts) actually get sent. Distinct from a staff member's
+ * phone+PIN login credential (Piece 1): this never touches pinHash, so
+ * setting it can't accidentally grant or alter PIN login for the caller.
+ */
+export async function setNotificationPhone(orgId: string, actorId: string, rawPhone: string) {
+  const phone = normalizePhoneNumber(rawPhone);
+  const existing = await userRepo.findByPhone(phone);
+  if (existing && existing.id !== actorId) {
+    throw new ConflictError("This phone number is already registered to another account");
+  }
+
+  try {
+    await userRepo.updateNotificationPhone(orgId, actorId, phone);
+  } catch (err) {
+    if (err instanceof Error && "code" in err && (err as { code?: string }).code === "P2002") {
+      throw new ConflictError("This phone number is already registered to another account");
+    }
+    throw err;
+  }
+
+  await auditLogRepo.write({
+    orgId,
+    userId: actorId,
+    action: "user.notification_phone_set",
+    entityType: "user",
+    entityId: actorId,
+  });
+}
+
 // Owner-side "staff got a new phone" recovery — clears the trust-on-first-
 // use device binding so the next successful PIN login re-binds cleanly.
 export async function resetStaffDevice(orgId: string, actorId: string, targetUserId: string) {
