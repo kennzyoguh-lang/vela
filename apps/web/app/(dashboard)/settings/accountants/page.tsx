@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 import { Badge, type BadgeStatus } from "@/components/ui/Badge";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { api, ApiError } from "@/lib/api/client";
 
 interface AccountantLink {
@@ -29,7 +30,11 @@ export default function AccountantsSettingsPage() {
   const [email, setEmail] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
-  const { data: links, isLoading } = useQuery({
+  const {
+    data: links,
+    isLoading,
+    error: linksError,
+  } = useQuery({
     queryKey: ["organisation", "accountant-links"],
     queryFn: () => api.get<AccountantLink[]>("/v1/organisation/accountant-links"),
     staleTime: 5 * 60_000,
@@ -91,7 +96,11 @@ export default function AccountantsSettingsPage() {
             <CardTitle>Linked accountants</CardTitle>
           </CardHeader>
           {isLoading ? (
-            <p className="font-ui text-text-secondary text-[0.875rem]">Loading…</p>
+            <Skeleton className="h-12 w-full" />
+          ) : linksError ? (
+            <p className="font-ui text-status-danger text-[0.875rem]">
+              Couldn&apos;t load — try again shortly.
+            </p>
           ) : !links || links.length === 0 ? (
             <p className="font-ui text-text-secondary text-[0.875rem]">
               No accountants invited yet.

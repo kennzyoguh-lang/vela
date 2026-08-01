@@ -13,7 +13,11 @@ import { api } from "@/lib/api/client";
 // opted into stock tracking (Settings -> Products), so an org that never
 // sets a stock count just sees the empty state, never a false alarm.
 export function LowStockWidget() {
-  const { data: lowStock, isLoading } = useQuery({
+  const {
+    data: lowStock,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["products", "low-stock"],
     queryFn: () => api.get<Product[]>("/v1/products/low-stock"),
     staleTime: 30_000,
@@ -28,6 +32,10 @@ export function LowStockWidget() {
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-6 w-2/3" />
+        ) : error ? (
+          <p className="font-ui text-status-danger text-[0.875rem]">
+            Couldn&apos;t load — try again shortly.
+          </p>
         ) : !lowStock || lowStock.length === 0 ? (
           <p className="font-ui text-text-secondary text-[0.875rem]">
             Nothing running low — or stock tracking isn&apos;t set up yet.

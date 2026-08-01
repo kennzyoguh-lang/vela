@@ -47,7 +47,11 @@ export default function MoneyPage() {
     staleTime: 60_000,
   });
 
-  const { data: statement, isLoading: statementLoading } = useQuery({
+  const {
+    data: statement,
+    isLoading: statementLoading,
+    error: statementError,
+  } = useQuery({
     queryKey: ["pnl", from, to],
     queryFn: () => api.get<PnlStatementData>(`/v1/pnl?from=${from}&to=${to}`),
     staleTime: 60_000,
@@ -130,9 +134,17 @@ export default function MoneyPage() {
 
           {statementLoading ? (
             <Skeleton className="h-64 w-full" />
+          ) : statementError ? (
+            <p className="font-ui text-status-danger text-[0.875rem]">
+              Couldn&apos;t load your P&amp;L — try again shortly.
+            </p>
           ) : statement ? (
             <PnlStatement statement={statement} currency={currency} />
-          ) : null}
+          ) : (
+            <p className="font-ui text-text-secondary text-[0.875rem]">
+              No P&amp;L data for this period yet.
+            </p>
+          )}
         </>
       ) : null}
 

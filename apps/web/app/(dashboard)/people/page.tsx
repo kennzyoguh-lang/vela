@@ -82,7 +82,7 @@ export default function PeoplePage() {
         primaryAction={
           <Button
             onClick={() => runPayrollMutation.mutate()}
-            loading={runPayrollMutation.isPending}
+            loading={employeesLoading || runPayrollMutation.isPending}
             disabled={!employees || employees.length === 0}
           >
             Run payroll for {currentPeriodLabel()}

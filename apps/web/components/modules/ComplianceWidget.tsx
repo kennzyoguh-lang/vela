@@ -14,7 +14,11 @@ import { api } from "@/lib/api/client";
 // due date rather than a count, since "what's next" is the question this
 // widget answers (Design System 6.5).
 export function ComplianceWidget() {
-  const { data: filings, isLoading } = useQuery({
+  const {
+    data: filings,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["compliance", "filings"],
     queryFn: () => api.get<ComplianceFiling[]>("/v1/compliance/filings"),
     staleTime: 30_000,
@@ -43,6 +47,10 @@ export function ComplianceWidget() {
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-6 w-2/3" />
+        ) : error ? (
+          <p className="font-ui text-status-danger text-[0.875rem]">
+            Couldn&apos;t load — try again shortly.
+          </p>
         ) : !next ? (
           <p className="font-ui text-text-secondary text-[0.875rem]">
             Nothing due — you're all caught up.

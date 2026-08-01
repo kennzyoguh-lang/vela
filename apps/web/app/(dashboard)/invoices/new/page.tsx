@@ -15,6 +15,7 @@ import { FlowTemplate } from "@/components/templates/FlowTemplate";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { api, ApiError } from "@/lib/api/client";
 
 // Design System 5.7's 3-field progressive flow — client, amount, due date.
@@ -67,7 +68,19 @@ function NewInvoiceForm() {
       setFormError(err instanceof ApiError ? err.message : "Couldn't create the invoice."),
   });
 
-  if (!clientsLoading && (!clients || clients.length === 0)) {
+  if (clientsLoading) {
+    return (
+      <FlowTemplate step={1} totalSteps={1} title="New invoice" footer={null}>
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </FlowTemplate>
+    );
+  }
+
+  if (!clients || clients.length === 0) {
     return (
       <FlowTemplate step={1} totalSteps={1} title="New invoice" footer={null}>
         <Alert variant="info" title="Add a client first">

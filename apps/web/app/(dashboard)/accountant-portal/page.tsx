@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Alert } from "@/components/ui/Alert";
+import { Skeleton } from "@/components/ui/Skeleton";
 import {
   AccountantLinkCard,
   type AccountantLinkSummary,
@@ -14,7 +15,11 @@ export default function AccountantPortalPage() {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
-  const { data: links, isLoading } = useQuery({
+  const {
+    data: links,
+    isLoading,
+    error: linksError,
+  } = useQuery({
     queryKey: ["accountant-portal", "links"],
     queryFn: () => api.get<AccountantLinkSummary[]>("/v1/accountant-portal/links"),
     staleTime: 30_000,
@@ -45,13 +50,16 @@ export default function AccountantPortalPage() {
       </div>
 
       {error ? <Alert variant="danger" title={error} /> : null}
+      {linksError ? (
+        <Alert variant="danger" title="Couldn't load your accountant links — try again shortly." />
+      ) : null}
 
       <Card>
         <CardHeader>
           <CardTitle>Pending invitations</CardTitle>
         </CardHeader>
         {isLoading ? (
-          <p className="font-ui text-text-secondary text-[0.875rem]">Loading…</p>
+          <Skeleton className="h-12 w-full" />
         ) : pending.length === 0 ? (
           <p className="font-ui text-text-secondary text-[0.875rem]">No pending invitations.</p>
         ) : (
@@ -73,7 +81,7 @@ export default function AccountantPortalPage() {
           <CardTitle>Your clients</CardTitle>
         </CardHeader>
         {isLoading ? (
-          <p className="font-ui text-text-secondary text-[0.875rem]">Loading…</p>
+          <Skeleton className="h-12 w-full" />
         ) : active.length === 0 ? (
           <p className="font-ui text-text-secondary text-[0.875rem]">
             No linked client organisations yet.

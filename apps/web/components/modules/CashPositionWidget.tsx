@@ -12,7 +12,11 @@ import { api } from "@/lib/api/client";
 
 // Mirrors OutstandingInvoicesWidget.tsx / ComplianceWidget.tsx's shape.
 export function CashPositionWidget() {
-  const { data: accounts, isLoading } = useQuery({
+  const {
+    data: accounts,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["bank-accounts"],
     queryFn: () => api.get<BankAccount[]>("/v1/bank-accounts"),
     staleTime: 60_000,
@@ -30,6 +34,10 @@ export function CashPositionWidget() {
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-6 w-2/3" />
+        ) : error ? (
+          <p className="font-ui text-status-danger text-[0.875rem]">
+            Couldn&apos;t load — try again shortly.
+          </p>
         ) : !accounts || accounts.length === 0 ? (
           <p className="font-ui text-text-secondary text-[0.875rem]">
             Connect a bank account to see your balance here.

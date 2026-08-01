@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { api, ApiError } from "@/lib/api/client";
 import { formatMoney } from "@/lib/format";
 
@@ -54,7 +55,11 @@ export default function ProductsSettingsPage() {
   const [color, setColor] = useState<(typeof PRODUCT_COLORS)[number]>(PRODUCT_COLORS[0]);
   const [stockQuantity, setStockQuantity] = useState("");
 
-  const { data: products, isLoading } = useQuery({
+  const {
+    data: products,
+    isLoading,
+    error: productsError,
+  } = useQuery({
     queryKey: ["settings-products"],
     queryFn: () => api.get<Product[]>("/v1/products"),
   });
@@ -174,7 +179,11 @@ export default function ProductsSettingsPage() {
             <CardTitle>Catalog</CardTitle>
           </CardHeader>
           {isLoading ? (
-            <p className="font-ui text-text-secondary text-[0.875rem]">Loading…</p>
+            <Skeleton className="h-12 w-full" />
+          ) : productsError ? (
+            <p className="font-ui text-status-danger text-[0.875rem]">
+              Couldn&apos;t load — try again shortly.
+            </p>
           ) : !products || products.length === 0 ? (
             <p className="font-ui text-text-secondary text-[0.875rem]">
               No products yet — add one above.

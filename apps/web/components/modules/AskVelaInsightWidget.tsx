@@ -18,7 +18,11 @@ interface InsightFact {
 // already-computed facts (insight.service.ts) — never an LLM call, so this
 // card is free, instant, and testable the same way invoice risk scoring is.
 export function AskVelaInsightWidget() {
-  const { data: insight, isLoading } = useQuery({
+  const {
+    data: insight,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["ask-vela", "insight"],
     queryFn: () => api.get<InsightFact | null>("/v1/ask-vela/insight"),
     staleTime: 5 * 60_000,
@@ -33,6 +37,10 @@ export function AskVelaInsightWidget() {
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-6 w-2/3" />
+        ) : error ? (
+          <p className="font-ui text-status-danger text-[0.875rem]">
+            Couldn&apos;t load — try again shortly.
+          </p>
         ) : (
           <p className="font-ui text-text-primary text-[0.875rem]">
             {insight?.message ?? "You're all caught up."}

@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 import type { StaffUserSummary } from "@vela/types";
 import { api, ApiError } from "@/lib/api/client";
@@ -193,7 +194,11 @@ export default function UsersSettingsPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   // Slow-changing data — 5 minute stale time (Handbook 4.10's tiering).
-  const { data: invites, isLoading } = useQuery({
+  const {
+    data: invites,
+    isLoading,
+    error: invitesError,
+  } = useQuery({
     queryKey: ["organisation", "invites"],
     queryFn: () => api.get<PendingInvite[]>("/v1/organisation/invites"),
     staleTime: 5 * 60_000,
@@ -272,7 +277,11 @@ export default function UsersSettingsPage() {
             <CardTitle>Pending invites</CardTitle>
           </CardHeader>
           {isLoading ? (
-            <p className="font-ui text-text-secondary text-[0.875rem]">Loading…</p>
+            <Skeleton className="h-12 w-full" />
+          ) : invitesError ? (
+            <p className="font-ui text-status-danger text-[0.875rem]">
+              Couldn&apos;t load — try again shortly.
+            </p>
           ) : !invites || invites.length === 0 ? (
             <p className="font-ui text-text-secondary text-[0.875rem]">No pending invites.</p>
           ) : (
