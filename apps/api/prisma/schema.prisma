@@ -33,6 +33,27 @@ enum SubscriptionTier {
   @@map("subscription_tier")
 }
 
+// Business profiling (onboarding factor capture) — three independent
+// signals, each with a genuine third "unsure/mixed" state, not a boolean
+// or a single formality tier. See packages/types/src/business-profile.ts
+// for how these three raw factors compute per-module default visibility;
+// never gate anything directly off these enums outside that shared logic.
+enum CustomerPattern {
+  one_time
+  repeat
+  unsure
+
+  @@map("customer_pattern")
+}
+
+enum YesNoUnsure {
+  yes
+  no
+  unsure
+
+  @@map("yes_no_unsure")
+}
+
 model Organisation {
   id                      String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                    String
@@ -48,6 +69,25 @@ model Organisation {
   // per-user (one manager PIN a staff member asks an owner/admin to type in
   // on the same device), null until an owner/admin sets one up.
   discountApprovalPinHash String?          @map("discount_approval_pin_hash")
+  // Business profiling — the three independent onboarding factors (never a
+  // single tier). Each defaults to "unsure" so an org that hasn't been
+  // through onboarding yet gets the safe, inclusive-middle-ground module
+  // defaults (see business-profile.ts's computeModuleDefaults), not an
+  // accidental "everything hidden" or "everything shown" state.
+  customerPattern         CustomerPattern  @default(unsure) @map("customer_pattern")
+  hasSalesStaff           YesNoUnsure      @default(unsure) @map("has_sales_staff")
+  isCacRegistered         YesNoUnsure      @default(unsure) @map("is_cac_registered")
+  // Per-module manual overrides (Requirement 4 — module visibility is
+  // always a default, never a hard restriction). Keys are ModuleKey values
+  // from business-profile.ts; a present key always wins over the computed
+  // default regardless of direction (reveal OR hide). Empty object, not
+  // null, so callers never need a null-check before spreading it.
+  moduleOverrides         Json             @default("{}") @map("module_overrides")
+  // Null means this org has never been through the onboarding questions —
+  // distinct from having deliberately answered "unsure" to all three, which
+  // is also a legitimate, real completed state. Drives whether the
+  // onboarding prompt still shows.
+  profileFactorsConfirmedAt DateTime?      @map("profile_factors_confirmed_at") @db.Timestamptz
   createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamptz
   updatedAt               DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 

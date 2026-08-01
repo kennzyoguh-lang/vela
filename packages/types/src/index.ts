@@ -5,6 +5,12 @@
 
 export type Role = "owner" | "admin" | "accountant" | "staff" | "view_only";
 
+// Business profiling — onboarding factor capture and per-module default
+// visibility. Pure functions, not just types; see business-profile.ts for
+// the full reasoning (why this is three independent factors, not a single
+// formality tier).
+export * from "./business-profile";
+
 // Shared envelope for paginated list endpoints (invoices, clients, bank
 // transactions) — a bare array response was returning every row in the org
 // unbounded; every paginated list endpoint now returns this shape instead.

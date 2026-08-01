@@ -17,6 +17,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { CheckCircle2, CloudOff, Wallet, Percent, X, Zap } from "lucide-react";
 import { useOfflineQueueStore } from "@/stores/offline-queue-store";
+import { useModuleVisibility } from "@/lib/business-profile/useModuleVisibility";
 
 interface SaleSubmission {
   items: { productId: string | null; quantity: number }[];
@@ -27,6 +28,7 @@ interface SaleSubmission {
 
 export default function PosSellPage() {
   const { t } = useTranslation();
+  const { visibility } = useModuleVisibility();
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [customerName, setCustomerName] = useState("");
@@ -111,25 +113,29 @@ export default function PosSellPage() {
       <div className="flex items-center justify-between">
         <h1 className="font-ui text-[1.5rem] font-bold text-white">{t("pos.sell.title")}</h1>
         <div className="flex items-center gap-2">
-          <Link
-            href="/pos/quick-sale"
-            className="bg-gold text-midnight font-ui flex items-center gap-2 rounded-full px-3 py-2 text-[0.8125rem] font-bold"
-          >
-            <Zap className="size-4" aria-hidden />
-            {t("pos.nav.quickSale")}
-          </Link>
-          <Link
-            href="/pos/cash-check"
-            className="bg-surface-secondary text-text-primary font-ui flex items-center gap-2 rounded-full px-3 py-2 text-[0.8125rem] font-bold"
-          >
-            <Wallet className="size-4" aria-hidden />
-            {t("pos.nav.cashCheck")}
-          </Link>
+          {visibility.quickSale ? (
+            <Link
+              href="/pos/quick-sale"
+              className="bg-gold text-midnight font-ui flex items-center gap-2 rounded-full px-3 py-2 text-[0.8125rem] font-bold"
+            >
+              <Zap className="size-4" aria-hidden />
+              {t("pos.nav.quickSale")}
+            </Link>
+          ) : null}
+          {visibility.cashReconciliation ? (
+            <Link
+              href="/pos/cash-check"
+              className="bg-surface-secondary text-text-primary font-ui flex items-center gap-2 rounded-full px-3 py-2 text-[0.8125rem] font-bold"
+            >
+              <Wallet className="size-4" aria-hidden />
+              {t("pos.nav.cashCheck")}
+            </Link>
+          ) : null}
           <LanguageToggle />
         </div>
       </div>
 
-      <CashCheckNudgeBanner />
+      {visibility.cashReconciliation ? <CashCheckNudgeBanner /> : null}
 
       {saleMutation.isError ? (
         <Alert
