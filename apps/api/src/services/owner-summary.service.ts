@@ -3,8 +3,11 @@ import * as cashCheckRepo from "../repositories/cash-check.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
 import * as userRepo from "../repositories/user.repository";
 import * as smsGateway from "./sms/termii.gateway";
+import * as emailGateway from "./email/email.gateway";
 import { logger } from "../lib/logger";
 import { businessDayRange } from "./cash-check.service";
+import { getBusinessProfile } from "./business-profile.service";
+import { computeNotificationChannelDefault } from "@vela/types";
 
 export type SummaryStatus = "matched" | "shortfall" | "overage" | "pending";
 
@@ -80,32 +83,61 @@ export function composeSummaryMessage(summary: OwnerDailySummary): string {
 }
 
 /**
- * Sends the composed summary via Termii SMS to every owner/admin who's set a
- * notification phone (Settings → Security). Called from a scheduled job
- * that already isolates per-org failures (owner-summary.job.ts), but a bad
- * number for ONE owner/admin still must not stop the summary reaching
- * another one at the same org, hence the per-phone try/catch here too.
+ * Sends the composed summary to every owner/admin at the org, via whichever
+ * channel business profiling's notification-channel default picks
+ * (computeNotificationChannelDefault, @vela/types) — email for a formal or
+ * CAC-registered org, WhatsApp/SMS (Termii, unchanged from before business
+ * profiling) otherwise. Called from a scheduled job that already isolates
+ * per-org failures (owner-summary.job.ts), but a bad number/address for ONE
+ * owner/admin still must not stop the summary reaching another one at the
+ * same org, hence the per-recipient try/catch here too.
  */
 export async function sendDailySummary(orgId: string, now: Date): Promise<void> {
   const summary = await getTodaySummary(orgId, now);
   const message = composeSummaryMessage(summary);
 
-  const phones = await userRepo.findNotifiablePhones(orgId);
-  if (phones.length === 0) {
-    logger.info(
-      { orgId, message, status: summary.status },
-      "Owner daily summary — no owner/admin notification phone configured, nothing sent",
-    );
+  const [factors, recipients] = await Promise.all([
+    getBusinessProfile(orgId),
+    userRepo.findNotifiableRecipients(orgId),
+  ]);
+  const channel = computeNotificationChannelDefault(factors);
+
+  if (channel === "email") {
+    const emails = recipients.map((r) => r.email).filter((e): e is string => e !== null);
+    if (emails.length === 0) {
+      logger.info(
+        { orgId, message, status: summary.status },
+        "Owner daily summary — no owner/admin email configured, nothing sent",
+      );
+    } else {
+      await Promise.all(
+        emails.map(async (email) => {
+          try {
+            await emailGateway.sendEmail(email, "Your VELA daily summary", message);
+          } catch (err) {
+            logger.error({ err, orgId, email }, "Failed to send owner daily summary email");
+          }
+        }),
+      );
+    }
   } else {
-    await Promise.all(
-      phones.map(async (phone) => {
-        try {
-          await smsGateway.sendSms(phone, message);
-        } catch (err) {
-          logger.error({ err, orgId, phone }, "Failed to send owner daily summary SMS");
-        }
-      }),
-    );
+    const phones = recipients.map((r) => r.phone).filter((p): p is string => p !== null);
+    if (phones.length === 0) {
+      logger.info(
+        { orgId, message, status: summary.status },
+        "Owner daily summary — no owner/admin notification phone configured, nothing sent",
+      );
+    } else {
+      await Promise.all(
+        phones.map(async (phone) => {
+          try {
+            await smsGateway.sendSms(phone, message);
+          } catch (err) {
+            logger.error({ err, orgId, phone }, "Failed to send owner daily summary SMS");
+          }
+        }),
+      );
+    }
   }
 
   await auditLogRepo.write({
@@ -113,6 +145,6 @@ export async function sendDailySummary(orgId: string, now: Date): Promise<void> 
     action: "owner_summary.sent",
     entityType: "organisation",
     entityId: orgId,
-    newValue: { message, status: summary.status },
+    newValue: { message, status: summary.status, channel },
   });
 }
