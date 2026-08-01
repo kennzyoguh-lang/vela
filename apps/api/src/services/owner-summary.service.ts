@@ -1,6 +1,8 @@
 import * as saleRepo from "../repositories/sale.repository";
 import * as cashCheckRepo from "../repositories/cash-check.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import * as userRepo from "../repositories/user.repository";
+import * as smsGateway from "./sms/termii.gateway";
 import { logger } from "../lib/logger";
 import { businessDayRange } from "./cash-check.service";
 
@@ -78,19 +80,33 @@ export function composeSummaryMessage(summary: OwnerDailySummary): string {
 }
 
 /**
- * WhatsApp/SMS delivery isn't wired up yet — same honestly-a-stub status as
- * reminder.service.ts's email reminders and cash-check.service.ts's mismatch
- * notification. Still does the real work of computing and composing the
- * message, and audit-logs it, ahead of a real provider integration landing.
+ * Sends the composed summary via Termii SMS to every owner/admin who's set a
+ * notification phone (Settings → Security). Called from a scheduled job
+ * that already isolates per-org failures (owner-summary.job.ts), but a bad
+ * number for ONE owner/admin still must not stop the summary reaching
+ * another one at the same org, hence the per-phone try/catch here too.
  */
 export async function sendDailySummary(orgId: string, now: Date): Promise<void> {
   const summary = await getTodaySummary(orgId, now);
   const message = composeSummaryMessage(summary);
 
-  logger.info(
-    { orgId, message, status: summary.status },
-    "[stub] would send WhatsApp/SMS daily summary — provider not yet wired up",
-  );
+  const phones = await userRepo.findNotifiablePhones(orgId);
+  if (phones.length === 0) {
+    logger.info(
+      { orgId, message, status: summary.status },
+      "Owner daily summary — no owner/admin notification phone configured, nothing sent",
+    );
+  } else {
+    await Promise.all(
+      phones.map(async (phone) => {
+        try {
+          await smsGateway.sendSms(phone, message);
+        } catch (err) {
+          logger.error({ err, orgId, phone }, "Failed to send owner daily summary SMS");
+        }
+      }),
+    );
+  }
 
   await auditLogRepo.write({
     orgId,

@@ -49,6 +49,14 @@ organisationRouter.patch(
   asyncHandler(organisationController.setDiscountApprovalPin),
 );
 
+// No generic auditLog() middleware here — organisation.service.ts#setNotificationPhone
+// already writes its own audit entry (same reasoning as discount-approval-pin above).
+organisationRouter.patch(
+  "/notification-phone",
+  requireRole("owner", "admin"),
+  asyncHandler(organisationController.setNotificationPhone),
+);
+
 organisationRouter.post(
   "/staff",
   requireRole("owner", "admin"),

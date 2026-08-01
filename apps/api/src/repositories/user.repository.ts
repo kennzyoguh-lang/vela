@@ -124,6 +124,32 @@ export async function countOwners(orgId: string): Promise<number> {
   );
 }
 
+// Owner-summary/cash-check SMS notifications go to every owner/admin who's
+// bothered to set a notification phone — not just Organisation.ownerId — so
+// a shop where an admin handles day-to-day operations still gets alerted.
+export async function findNotifiablePhones(orgId: string): Promise<string[]> {
+  const users = await withOrgScope(orgId, (tx) =>
+    tx.user.findMany({
+      where: { orgId, role: { in: ["owner", "admin"] }, isActive: true, phone: { not: null } },
+      select: { phone: true },
+    }),
+  );
+  return users.map((u) => u.phone as string);
+}
+
+// The current owner/admin's own SMS notification number — distinct from a
+// staff member's phone+PIN login credential (Piece 1). Setting this never
+// touches pinHash, so it can't accidentally grant or alter PIN login.
+export async function updateNotificationPhone(
+  orgId: string,
+  userId: string,
+  phone: string,
+): Promise<void> {
+  await withOrgScope(orgId, (tx) =>
+    tx.user.update({ where: { id: userId, orgId }, data: { phone } }),
+  );
+}
+
 export interface PinAuthLookupUser {
   id: string;
   orgId: string;

@@ -61,6 +61,14 @@ export const setDiscountApprovalPinSchema = z.object({
   pin: z.string().regex(/^\d{4,6}$/, "PIN must be 4-6 digits"),
 });
 
+// The current owner/admin's own SMS notification number (daily summary,
+// cash-check mismatch alerts) — distinct from a staff member's phone+PIN
+// login credential, hence "notification" in the name and route rather than
+// a generic "phone" that could be confused with the auth field.
+export const setNotificationPhoneSchema = z.object({
+  phone: z.string().min(7).max(20),
+});
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type PhoneLoginInput = z.infer<typeof phoneLoginSchema>;

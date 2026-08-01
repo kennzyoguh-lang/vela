@@ -1,9 +1,9 @@
 import * as invoiceRepo from "../repositories/invoice.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import * as smsGateway from "./sms/termii.gateway";
 import { normalizePhoneNumber } from "../lib/phone";
 import { NotFoundError } from "../lib/errors";
 import { env } from "../lib/env";
-import { logger } from "../lib/logger";
 import type {
   CreateQuickSaleInput,
   SendQuickSalePaymentLinkSmsInput,
@@ -53,12 +53,13 @@ function formatNaira(amount: number): string {
 }
 
 /**
- * Quick Sale / Instant Collect Piece 4 — SMS delivery isn't wired up yet
- * (same honestly-a-stub status as owner-summary.service.ts's daily summary
- * and cash-check.service.ts's mismatch notification). Still does the real
- * work: validates the invoice belongs to this org, normalizes the phone,
- * composes the exact "Pay ₦X now" message against the real payment link,
- * and audit-logs it, ahead of a real SMS provider integration landing.
+ * Quick Sale / Instant Collect Piece 4 — the trader taps "Send SMS" and
+ * expects to know whether it actually worked, so a real Termii send failure
+ * propagates to the caller (controller → 4xx/5xx → frontend's existing
+ * "Could not send this — try again" alert) rather than being swallowed.
+ * Termii itself still degrades to an honest "[stub] would send" log when
+ * TERMII_API_KEY isn't configured (termii.gateway.ts), so this never blocks
+ * development or a deployment without SMS credentials yet.
  */
 export async function sendPaymentLinkSms(
   orgId: string,
@@ -73,10 +74,7 @@ export async function sendPaymentLinkSms(
   const payUrl = `${env.WEB_APP_URL}/pay/${invoice.paymentPortalToken}`;
   const message = `Pay ${formatNaira(Number(invoice.total))} now: ${payUrl}`;
 
-  logger.info(
-    { orgId, invoiceId, phone, message },
-    "[stub] would send Quick Sale payment link SMS — provider not yet wired up",
-  );
+  await smsGateway.sendSms(phone, message);
 
   await auditLogRepo.write({
     orgId,

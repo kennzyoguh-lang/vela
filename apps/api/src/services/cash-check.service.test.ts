@@ -9,9 +9,17 @@ vi.mock("../repositories/cash-check.repository", () => ({
 vi.mock("../repositories/audit-log.repository", () => ({
   write: vi.fn(),
 }));
+vi.mock("../repositories/user.repository", () => ({
+  findNotifiablePhones: vi.fn(),
+}));
+vi.mock("./sms/termii.gateway", () => ({
+  sendSms: vi.fn(),
+}));
 
 import * as cashCheckRepo from "../repositories/cash-check.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import * as userRepo from "../repositories/user.repository";
+import * as smsGateway from "./sms/termii.gateway";
 import * as cashCheckService from "./cash-check.service";
 
 describe("cash-check.service#businessDayRange (WAT, UTC+1)", () => {
@@ -51,6 +59,8 @@ describe("cash-check.service#submitCashCheck", () => {
           ...input,
         }) as never,
     );
+    vi.mocked(userRepo.findNotifiablePhones).mockResolvedValue([]);
+    vi.mocked(smsGateway.sendSms).mockResolvedValue(undefined);
   });
 
   it("matches when the counted amount equals the expected total and audit-logs the match", async () => {
@@ -96,5 +106,44 @@ describe("cash-check.service#submitCashCheck", () => {
     const record = await cashCheckService.submitCashCheck(orgId, staffUserId, 0.3);
 
     expect(record).toMatchObject({ difference: 0, matched: true });
+  });
+
+  it("sends an SMS to every owner/admin notification phone on a mismatch", async () => {
+    vi.mocked(cashCheckRepo.sumCompletedSalesTotal).mockResolvedValue(15000);
+    vi.mocked(userRepo.findNotifiablePhones).mockResolvedValue([
+      "+2348011111111",
+      "+2348022222222",
+    ]);
+
+    await cashCheckService.submitCashCheck(orgId, staffUserId, 12000);
+
+    expect(smsGateway.sendSms).toHaveBeenCalledTimes(2);
+    expect(smsGateway.sendSms).toHaveBeenCalledWith(
+      "+2348011111111",
+      expect.stringContaining("₦3,000 short"),
+    );
+    expect(smsGateway.sendSms).toHaveBeenCalledWith(
+      "+2348022222222",
+      expect.stringContaining("₦3,000 short"),
+    );
+  });
+
+  it("does not send any SMS on a match", async () => {
+    vi.mocked(cashCheckRepo.sumCompletedSalesTotal).mockResolvedValue(15000);
+    vi.mocked(userRepo.findNotifiablePhones).mockResolvedValue(["+2348011111111"]);
+
+    await cashCheckService.submitCashCheck(orgId, staffUserId, 15000);
+
+    expect(smsGateway.sendSms).not.toHaveBeenCalled();
+  });
+
+  it("still succeeds and returns the record even when every SMS send fails", async () => {
+    vi.mocked(cashCheckRepo.sumCompletedSalesTotal).mockResolvedValue(15000);
+    vi.mocked(userRepo.findNotifiablePhones).mockResolvedValue(["+2348011111111"]);
+    vi.mocked(smsGateway.sendSms).mockRejectedValue(new Error("Termii is down"));
+
+    const record = await cashCheckService.submitCashCheck(orgId, staffUserId, 12000);
+
+    expect(record.matched).toBe(false);
   });
 });

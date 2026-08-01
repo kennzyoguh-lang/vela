@@ -15,6 +15,7 @@ vi.mock("../repositories/user.repository", () => ({
   countOwners: vi.fn(),
   updateRole: vi.fn(),
   setActive: vi.fn(),
+  updateNotificationPhone: vi.fn(),
 }));
 vi.mock("../repositories/organisation.repository", () => ({
   setDiscountApprovalPinHash: vi.fn(),
@@ -233,5 +234,42 @@ describe("organisation.service#resetStaffDevice", () => {
       organisationService.resetStaffDevice(orgId, actorId, randomUUID()),
     ).rejects.toThrow(/not found/i);
     expect(userRepo.resetPinDevice).not.toHaveBeenCalled();
+  });
+});
+
+describe("organisation.service#setNotificationPhone", () => {
+  const orgId = randomUUID();
+  const actorId = randomUUID();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(userRepo.findByPhone).mockResolvedValue(null);
+  });
+
+  it("normalizes the phone and persists it against the caller's own user id", async () => {
+    await organisationService.setNotificationPhone(orgId, actorId, "08012345678");
+
+    expect(userRepo.updateNotificationPhone).toHaveBeenCalledWith(orgId, actorId, "+2348012345678");
+    expect(auditLogRepo.write).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "user.notification_phone_set", entityId: actorId }),
+    );
+  });
+
+  it("allows re-saving the caller's own already-registered phone (no-op conflict)", async () => {
+    vi.mocked(userRepo.findByPhone).mockResolvedValue({ id: actorId } as never);
+
+    await expect(
+      organisationService.setNotificationPhone(orgId, actorId, "08012345678"),
+    ).resolves.toBeUndefined();
+    expect(userRepo.updateNotificationPhone).toHaveBeenCalled();
+  });
+
+  it("rejects a phone number already registered to a different user", async () => {
+    vi.mocked(userRepo.findByPhone).mockResolvedValue({ id: randomUUID() } as never);
+
+    await expect(
+      organisationService.setNotificationPhone(orgId, actorId, "08012345678"),
+    ).rejects.toThrow(/already registered/i);
+    expect(userRepo.updateNotificationPhone).not.toHaveBeenCalled();
   });
 });

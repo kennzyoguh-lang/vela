@@ -30,6 +30,15 @@ const envSchema = z.object({
   // module works, but Ask Vela itself fails loudly at the call site
   // (Handbook 1.4 — "AI is a feature, not a foundation").
   ANTHROPIC_API_KEY: z.string().optional(),
+  // Optional — Termii (SMS/WhatsApp provider, Nigeria-focused). Same "never
+  // blocks anything else" contract: unset means owner-summary/cash-check/
+  // Quick-Sale-SMS notifications log an honest "[stub] would send" instead
+  // of a real API call, they never fail loudly or block the primary action
+  // that triggered them (submitting a cash check, creating a Quick Sale).
+  TERMII_API_KEY: z.string().optional(),
+  // Termii requires a registered alphanumeric sender ID for production SMS —
+  // this default is a placeholder until the account owner registers one.
+  TERMII_SENDER_ID: z.string().default("Vela"),
   WEB_APP_URL: z.string().default("http://localhost:3000"),
 });
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ForceDarkTheme } from "./ForceDarkTheme";
+import { PosRoleGate } from "./PosRoleGate";
 import { VelaLogo } from "@/components/brand/VelaLogo";
 
 // Anti-theft/POS staff area — full-bleed, no sidebar/topbar, own phone+PIN
@@ -11,6 +12,7 @@ export default function PosLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <ForceDarkTheme />
+      <PosRoleGate />
       <div className="bg-surface-canvas flex min-h-dvh flex-col">
         <header className="flex justify-center px-4 py-6">
           <VelaLogo variant="primary-dark" />
