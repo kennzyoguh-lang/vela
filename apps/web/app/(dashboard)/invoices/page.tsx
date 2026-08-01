@@ -87,7 +87,12 @@ export default function InvoicesPage() {
             <InvoiceCard
               key={invoice.id}
               invoice={invoice}
-              clientName={clientNameById.get(invoice.clientId) ?? "Unknown client"}
+              clientName={
+                invoice.source === "quick_sale"
+                  ? "Quick Sale"
+                  : ((invoice.clientId ? clientNameById.get(invoice.clientId) : undefined) ??
+                    "Unknown client")
+              }
             />
           ))}
         </div>

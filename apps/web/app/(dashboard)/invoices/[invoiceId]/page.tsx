@@ -46,7 +46,7 @@ export default function InvoiceDetailPage() {
   const { data: client } = useQuery({
     queryKey: ["clients", invoice?.clientId],
     queryFn: () => api.get<Client>(`/v1/clients/${invoice!.clientId}`),
-    enabled: !!invoice,
+    enabled: !!invoice?.clientId,
   });
 
   function invalidate() {
@@ -116,7 +116,10 @@ export default function InvoiceDetailPage() {
                 />
               </div>
               <p className="font-ui text-text-secondary text-[0.875rem]">
-                {client?.name ?? "…"} · {formatDuePhrase(invoice.dueDate, invoice.status)}
+                {invoice.source === "quick_sale"
+                  ? "Quick Sale — Walk-in customer"
+                  : (client?.name ?? "…")}{" "}
+                · {formatDuePhrase(invoice.dueDate, invoice.status)}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
