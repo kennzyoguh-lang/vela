@@ -113,4 +113,73 @@ describe("POS sale logging (real DB, real HTTP layer)", () => {
     },
     TEST_TIMEOUT_MS,
   );
+
+  it(
+    "decrements stockQuantity by the sold quantity, clamped at 0, when the product opted into stock tracking",
+    async () => {
+      const stockedProductRes = await request(app)
+        .post("/v1/products")
+        .set("Authorization", `Bearer ${ownerAccessToken}`)
+        .send({
+          name: "USB Cable",
+          price: 500,
+          currency: "NGN",
+          icon: "zap",
+          color: "amber",
+          stockQuantity: 5,
+        });
+      expect(stockedProductRes.status).toBe(201);
+      const stockedProductId = stockedProductRes.body.data.id;
+
+      const saleRes = await request(app)
+        .post("/v1/sales")
+        .set("Authorization", `Bearer ${staffAccessToken}`)
+        .send({ items: [{ productId: stockedProductId, quantity: 2 }] });
+      expect(saleRes.status).toBe(201);
+
+      const afterFirstSale = await request(app)
+        .get("/v1/products")
+        .set("Authorization", `Bearer ${staffAccessToken}`);
+      const productAfterFirstSale = afterFirstSale.body.data.find(
+        (p: { id: string }) => p.id === stockedProductId,
+      );
+      expect(productAfterFirstSale.stockQuantity).toBe(3);
+
+      // Oversell the remaining stock (3 left, sell 10) — must clamp at 0,
+      // never go negative.
+      const oversellRes = await request(app)
+        .post("/v1/sales")
+        .set("Authorization", `Bearer ${staffAccessToken}`)
+        .send({ items: [{ productId: stockedProductId, quantity: 10 }] });
+      expect(oversellRes.status).toBe(201);
+
+      const afterOversell = await request(app)
+        .get("/v1/products")
+        .set("Authorization", `Bearer ${staffAccessToken}`);
+      const productAfterOversell = afterOversell.body.data.find(
+        (p: { id: string }) => p.id === stockedProductId,
+      );
+      expect(productAfterOversell.stockQuantity).toBe(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "never sets stockQuantity on a product that didn't opt into stock tracking",
+    async () => {
+      // productId (Phone case, created in beforeAll) never had stockQuantity set.
+      const saleRes = await request(app)
+        .post("/v1/sales")
+        .set("Authorization", `Bearer ${staffAccessToken}`)
+        .send({ items: [{ productId, quantity: 1 }] });
+      expect(saleRes.status).toBe(201);
+
+      const res = await request(app)
+        .get("/v1/products")
+        .set("Authorization", `Bearer ${staffAccessToken}`);
+      const product = res.body.data.find((p: { id: string }) => p.id === productId);
+      expect(product.stockQuantity).toBeNull();
+    },
+    TEST_TIMEOUT_MS,
+  );
 });

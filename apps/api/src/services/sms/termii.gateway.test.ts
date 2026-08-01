@@ -67,4 +67,44 @@ describe("termii.gateway#sendSms", () => {
 
     await expect(sendSms("bad-number", "Pay ₦150 now")).rejects.toThrow(/Invalid phone number/);
   });
+
+  it("sends via the whatsapp channel when explicitly requested", async () => {
+    process.env.TERMII_API_KEY = "test-key";
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ code: "ok", message_id: "abc123" }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+    const { sendSms } = await import("./termii.gateway");
+
+    await sendSms("+2348012345678", "Pay ₦150 now", "whatsapp");
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://api.ng.termii.com/api/sms/send",
+      expect.objectContaining({
+        body: JSON.stringify({
+          api_key: "test-key",
+          to: "+2348012345678",
+          from: "Vela",
+          sms: "Pay ₦150 now",
+          type: "plain",
+          channel: "whatsapp",
+        }),
+      }),
+    );
+  });
+
+  it("labels a whatsapp send failure distinctly from an SMS failure", async () => {
+    process.env.TERMII_API_KEY = "test-key";
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ code: "error", message: "Sender not approved" }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+    const { sendSms } = await import("./termii.gateway");
+
+    await expect(sendSms("+2348012345678", "Pay ₦150 now", "whatsapp")).rejects.toThrow(
+      /Termii WhatsApp send failed: Sender not approved/,
+    );
+  });
 });

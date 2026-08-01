@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { ForceDarkTheme } from "./ForceDarkTheme";
 import { PosRoleGate } from "./PosRoleGate";
 import { VelaLogo } from "@/components/brand/VelaLogo";
+import { OfflineQueueBanner } from "@/components/pos/OfflineQueueBanner";
 
 // Anti-theft/POS staff area — full-bleed, no sidebar/topbar, own phone+PIN
 // login (/pos/login) separate from the owner/admin email+password login.
@@ -17,7 +18,10 @@ export default function PosLayout({ children }: { children: ReactNode }) {
         <header className="flex justify-center px-4 py-6">
           <VelaLogo variant="primary-dark" />
         </header>
-        <main className="flex flex-1 flex-col px-4 pb-8">{children}</main>
+        <main className="flex flex-1 flex-col gap-4 px-4 pb-8">
+          <OfflineQueueBanner />
+          {children}
+        </main>
       </div>
     </>
   );

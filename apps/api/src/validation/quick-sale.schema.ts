@@ -10,11 +10,14 @@ export const createQuickSaleSchema = z.object({
 
 export type CreateQuickSaleInput = z.infer<typeof createQuickSaleSchema>;
 
-// Piece 4 — the "Pay ₦X now" SMS link flow. Just a destination phone number;
-// the amount and link are derived server-side from the Quick Sale invoice
-// itself, never re-entered.
+// Piece 4 — the "Pay ₦X now" SMS/WhatsApp link flow. Just a destination
+// phone number and channel; the amount and link are derived server-side
+// from the Quick Sale invoice itself, never re-entered. "sms" is the
+// default so every existing caller (including the tests) keeps working
+// unchanged.
 export const sendQuickSalePaymentLinkSmsSchema = z.object({
   phone: z.string().min(7),
+  channel: z.enum(["sms", "whatsapp"]).default("sms"),
 });
 
 export type SendQuickSalePaymentLinkSmsInput = z.infer<typeof sendQuickSalePaymentLinkSmsSchema>;

@@ -23,8 +23,8 @@ export interface CreateSaleData {
 export type SaleWithItems = Sale & { items: SaleItem[] };
 
 export async function createSale(orgId: string, input: CreateSaleData): Promise<SaleWithItems> {
-  return withOrgScope(orgId, (tx) =>
-    tx.sale.create({
+  return withOrgScope(orgId, async (tx) => {
+    const sale = await tx.sale.create({
       data: {
         id: randomUUID(),
         orgId,
@@ -46,8 +46,22 @@ export async function createSale(orgId: string, input: CreateSaleData): Promise<
         },
       },
       include: { items: true },
-    }),
-  );
+    });
+
+    // Low-stock alerts (value-add follow-up) — decrements atomically in the
+    // same transaction as the sale itself, clamped at 0 via GREATEST so an
+    // oversold item never goes negative. A no-op for any product that
+    // hasn't opted into stock tracking (stock_quantity IS NULL).
+    for (const item of input.items) {
+      await tx.$executeRaw`
+        UPDATE products
+        SET stock_quantity = GREATEST(stock_quantity - ${item.quantity}, 0)
+        WHERE id = ${item.productId}::uuid AND org_id = ${orgId}::uuid AND stock_quantity IS NOT NULL
+      `;
+    }
+
+    return sale;
+  });
 }
 
 // Piece 3's owner daily summary — count + total in one query. Voided sales

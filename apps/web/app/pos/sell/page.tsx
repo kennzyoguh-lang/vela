@@ -11,10 +11,19 @@ import { QuantityStepper } from "@/components/pos/QuantityStepper";
 import { ConfirmSaleButton } from "@/components/pos/ConfirmSaleButton";
 import { VoiceInputButton } from "@/components/pos/VoiceInputButton";
 import { LanguageToggle } from "@/components/pos/LanguageToggle";
+import { CashCheckNudgeBanner } from "@/components/pos/CashCheckNudgeBanner";
 import { NumberPad } from "@/components/pos/NumberPad";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { CheckCircle2, Wallet, Percent, X, Zap } from "lucide-react";
+import { CheckCircle2, CloudOff, Wallet, Percent, X, Zap } from "lucide-react";
+import { useOfflineQueueStore } from "@/stores/offline-queue-store";
+
+interface SaleSubmission {
+  items: { productId: string | null; quantity: number }[];
+  customerName?: string;
+  discountAmount?: number;
+  approvalPin?: string;
+}
 
 export default function PosSellPage() {
   const { t } = useTranslation();
@@ -29,6 +38,8 @@ export default function PosSellPage() {
   const [discountDigits, setDiscountDigits] = useState("");
   const [approvalPinDigits, setApprovalPinDigits] = useState("");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
+  const [savedOffline, setSavedOffline] = useState(false);
+  const enqueue = useOfflineQueueStore((s) => s.enqueue);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["pos-products"],
@@ -42,36 +53,51 @@ export default function PosSellPage() {
     setApprovalPinDigits("");
   }
 
+  function resetSaleForm() {
+    setSelectedProductId(null);
+    setQuantity(1);
+    setCustomerName("");
+    resetDiscount();
+  }
+
   const saleMutation = useMutation({
-    mutationFn: () =>
-      api.post<Sale>("/v1/sales", {
-        items: [{ productId: selectedProductId, quantity }],
-        customerName: customerName || undefined,
-        discountAmount: discountDigits ? Number(discountDigits) : undefined,
-        // Owner/admin don't need this — the server only checks it for the
-        // "staff" role (sale.service.ts#verifyDiscountApproval) — so it's
-        // sent whenever typed, never required client-side.
-        approvalPin: approvalPinDigits || undefined,
-      }),
+    mutationFn: (input: SaleSubmission) => api.post<Sale>("/v1/sales", input),
     onSuccess: (sale) => {
       setLastSale(sale);
-      setSelectedProductId(null);
-      setQuantity(1);
-      setCustomerName("");
-      resetDiscount();
+      resetSaleForm();
+    },
+    onError: (err, input) => {
+      // A real ApiError (wrong PIN, unknown product, etc.) is the caller's
+      // own mistake — surface it via the Alert below, never queue it. Any
+      // other error means the request never reached the server at all
+      // (offline, DNS failure, timeout) — the sale itself is still good, so
+      // save it locally rather than losing the trader's work.
+      if (err instanceof ApiError) return;
+      enqueue("/v1/sales", input);
+      setSavedOffline(true);
+      resetSaleForm();
     },
   });
 
   const selectedProduct = products?.find((p) => p.id === selectedProductId) ?? null;
 
-  if (lastSale) {
+  if (lastSale || savedOffline) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
-        <CheckCircle2 className="text-sage size-24" aria-hidden />
-        <p className="font-ui text-[1.75rem] font-bold text-white">{t("pos.sell.success")}</p>
+        {savedOffline ? (
+          <CloudOff className="text-cobalt size-24" aria-hidden />
+        ) : (
+          <CheckCircle2 className="text-sage size-24" aria-hidden />
+        )}
+        <p className="font-ui text-[1.75rem] font-bold text-white">
+          {savedOffline ? t("pos.sell.savedOffline") : t("pos.sell.success")}
+        </p>
         <button
           type="button"
-          onClick={() => setLastSale(null)}
+          onClick={() => {
+            setLastSale(null);
+            setSavedOffline(false);
+          }}
           className="font-ui bg-gold text-midnight mt-4 min-h-[64px] rounded-2xl px-10 text-[1.25rem] font-bold active:scale-95"
         >
           {t("pos.sell.title")}
@@ -102,6 +128,8 @@ export default function PosSellPage() {
           <LanguageToggle />
         </div>
       </div>
+
+      <CashCheckNudgeBanner />
 
       {saleMutation.isError ? (
         <Alert
@@ -199,7 +227,17 @@ export default function PosSellPage() {
             loadingLabel={t("pos.sell.confirming")}
             loading={saleMutation.isPending}
             disabled={quantity < 1}
-            onClick={() => saleMutation.mutate()}
+            onClick={() =>
+              saleMutation.mutate({
+                items: [{ productId: selectedProductId, quantity }],
+                customerName: customerName || undefined,
+                discountAmount: discountDigits ? Number(discountDigits) : undefined,
+                // Owner/admin don't need this — the server only checks it
+                // for the "staff" role (sale.service.ts#verifyDiscountApproval)
+                // — so it's sent whenever typed, never required client-side.
+                approvalPin: approvalPinDigits || undefined,
+              })
+            }
           />
         </div>
       ) : null}

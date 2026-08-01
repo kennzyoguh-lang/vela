@@ -8,6 +8,7 @@ export interface ProductInput {
   currency: string;
   icon: string;
   color: string;
+  stockQuantity?: number;
 }
 
 export async function create(orgId: string, input: ProductInput): Promise<Product> {
@@ -21,7 +22,25 @@ export async function create(orgId: string, input: ProductInput): Promise<Produc
         currency: input.currency,
         icon: input.icon,
         color: input.color,
+        stockQuantity: input.stockQuantity,
       },
+    }),
+  );
+}
+
+// Low-stock alerts (value-add follow-up) — only products that have opted
+// into stock tracking (stockQuantity not null) are ever candidates.
+const LOW_STOCK_THRESHOLD = 3;
+
+export async function listLowStockByOrg(orgId: string): Promise<Product[]> {
+  return withOrgScope(orgId, (tx) =>
+    tx.product.findMany({
+      where: {
+        orgId,
+        isActive: true,
+        stockQuantity: { not: null, lte: LOW_STOCK_THRESHOLD },
+      },
+      orderBy: { stockQuantity: "asc" },
     }),
   );
 }

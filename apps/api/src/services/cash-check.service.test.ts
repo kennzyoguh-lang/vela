@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../repositories/cash-check.repository", () => ({
   sumCompletedSalesTotal: vi.fn(),
+  findByOrgAndDate: vi.fn(),
   create: vi.fn(),
   listByOrg: vi.fn(),
 }));
@@ -42,6 +43,31 @@ describe("cash-check.service#businessDayRange (WAT, UTC+1)", () => {
     expect(start.toISOString()).toBe("2026-07-31T23:00:00.000Z"); // 2026-08-01 00:00 WAT
     expect(end.toISOString()).toBe("2026-08-01T23:00:00.000Z");
     expect(businessDate.toISOString()).toBe("2026-08-01T00:00:00.000Z");
+  });
+});
+
+describe("cash-check.service#getExpectedForToday", () => {
+  const orgId = randomUUID();
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it("reports checked: false when no cash check has been submitted for today's business day", async () => {
+    vi.mocked(cashCheckRepo.sumCompletedSalesTotal).mockResolvedValue(15000);
+    vi.mocked(cashCheckRepo.findByOrgAndDate).mockResolvedValue(null);
+
+    const result = await cashCheckService.getExpectedForToday(orgId, new Date());
+
+    expect(result.expectedAmount).toBe(15000);
+    expect(result.checked).toBe(false);
+  });
+
+  it("reports checked: true once a cash check exists for today's business day", async () => {
+    vi.mocked(cashCheckRepo.sumCompletedSalesTotal).mockResolvedValue(15000);
+    vi.mocked(cashCheckRepo.findByOrgAndDate).mockResolvedValue({ id: randomUUID() } as never);
+
+    const result = await cashCheckService.getExpectedForToday(orgId, new Date());
+
+    expect(result.checked).toBe(true);
   });
 });
 

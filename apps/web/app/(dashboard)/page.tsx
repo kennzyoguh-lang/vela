@@ -5,6 +5,7 @@ import {
 } from "@/components/templates/DashboardTemplate";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { OutstandingInvoicesWidget } from "@/components/modules/OutstandingInvoicesWidget";
+import { LowStockWidget } from "@/components/modules/LowStockWidget";
 import { ComplianceWidget } from "@/components/modules/ComplianceWidget";
 import { CashPositionWidget } from "@/components/modules/CashPositionWidget";
 import { UpcomingPayrollWidget } from "@/components/modules/UpcomingPayrollWidget";
@@ -84,6 +85,12 @@ export default function DashboardHomePage() {
       span: 1,
       mobilePriority: 6,
       children: <AskVelaInsightWidget />,
+    },
+    {
+      id: "low-stock",
+      span: 1,
+      mobilePriority: 7,
+      children: <LowStockWidget />,
     },
   ];
 

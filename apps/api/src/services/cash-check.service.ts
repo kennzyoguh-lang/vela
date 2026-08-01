@@ -35,8 +35,15 @@ export function businessDayRange(now: Date): { start: Date; end: Date; businessD
 
 export async function getExpectedForToday(orgId: string, now: Date) {
   const { start, end, businessDate } = businessDayRange(now);
-  const expectedAmount = await cashCheckRepo.sumCompletedSalesTotal(orgId, start, end);
-  return { expectedAmount, businessDate };
+  const [expectedAmount, existingCheck] = await Promise.all([
+    cashCheckRepo.sumCompletedSalesTotal(orgId, start, end),
+    cashCheckRepo.findByOrgAndDate(orgId, businessDate),
+  ]);
+  // `checked` backs the /pos/sell nudge banner (Piece 2 follow-up) — a
+  // non-blocking reminder for a business day with sales but no cash check
+  // submitted yet, closing the gap where the anti-theft loop is opt-in and
+  // silently never gets done.
+  return { expectedAmount, businessDate, checked: existingCheck !== null };
 }
 
 /**

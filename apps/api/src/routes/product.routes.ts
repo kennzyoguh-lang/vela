@@ -22,6 +22,16 @@ productRouter.get(
   requireRole("owner", "admin", "staff"),
   asyncHandler(productController.list),
 );
+// Low-stock alerts (value-add follow-up) — owner/admin dashboard reporting
+// surface, same tier as sale/cash-check history views. Registered before
+// "/:productId" routes purely for readability; Express wouldn't confuse the
+// two regardless since "/low-stock" only matches GET / exactly, not the
+// param route.
+productRouter.get(
+  "/low-stock",
+  requireRole("owner", "admin"),
+  asyncHandler(productController.lowStock),
+);
 productRouter.patch(
   "/:productId",
   requireRole("owner", "admin"),

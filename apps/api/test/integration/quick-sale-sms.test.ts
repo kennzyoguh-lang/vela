@@ -67,6 +67,27 @@ describe("Quick Sale SMS payment link (real DB, real HTTP layer)", () => {
   );
 
   it(
+    "sends the same link over WhatsApp when channel: 'whatsapp' is requested",
+    async () => {
+      const createRes = await request(app)
+        .post("/v1/quick-sales")
+        .set("Authorization", `Bearer ${ownerAccessToken}`)
+        .send({ amount: 1500, currency: "NGN" });
+      expect(createRes.status).toBe(201);
+      const invoiceId = createRes.body.data.id;
+
+      const smsRes = await request(app)
+        .post(`/v1/quick-sales/${invoiceId}/send-sms`)
+        .set("Authorization", `Bearer ${ownerAccessToken}`)
+        .send({ phone: "08012345678", channel: "whatsapp" });
+
+      expect(smsRes.status).toBe(200);
+      expect(smsRes.body.data.sent).toBe(true);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
     "returns 404 for a Quick Sale that doesn't exist",
     async () => {
       const smsRes = await request(app)

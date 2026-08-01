@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { CashReconciliation } from "@vela/types";
-import { ChevronLeft, CheckCircle2, TriangleAlert } from "lucide-react";
+import { ChevronLeft, CheckCircle2, TriangleAlert, CloudOff } from "lucide-react";
 import { api, ApiError } from "@/lib/api/client";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { NumberPad } from "@/components/pos/NumberPad";
@@ -12,10 +12,12 @@ import { ConfirmSaleButton } from "@/components/pos/ConfirmSaleButton";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { formatMoney } from "@/lib/format";
+import { useOfflineQueueStore } from "@/stores/offline-queue-store";
 
 interface TodayExpected {
   expectedAmount: number;
   businessDate: string;
+  checked: boolean;
 }
 
 // Short celebratory beep on a match — Web Audio, feature-detected and
@@ -47,6 +49,8 @@ export default function PosCashCheckPage() {
   const { t } = useTranslation();
   const [digits, setDigits] = useState("");
   const [result, setResult] = useState<CashReconciliation | null>(null);
+  const [savedOffline, setSavedOffline] = useState(false);
+  const enqueue = useOfflineQueueStore((s) => s.enqueue);
 
   const { data: today, isLoading } = useQuery({
     queryKey: ["cash-check-today"],
@@ -54,20 +58,37 @@ export default function PosCashCheckPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: () =>
-      api.post<CashReconciliation>("/v1/cash-checks", { countedAmount: Number(digits || "0") }),
+    mutationFn: (input: { countedAmount: number }) =>
+      api.post<CashReconciliation>("/v1/cash-checks", input),
     onSuccess: (record) => {
       setResult(record);
       if (record.matched) playMatchBeep();
+    },
+    onError: (err, input) => {
+      // A real ApiError is the caller's own mistake — surface it via the
+      // Alert below. Anything else means this never reached the server, so
+      // there's no way to know match/mismatch yet — that's exactly why the
+      // saved-offline state below never claims a checkmark or a difference
+      // it doesn't actually have.
+      if (err instanceof ApiError) return;
+      enqueue("/v1/cash-checks", input);
+      setSavedOffline(true);
     },
   });
 
   const currency = "NGN";
 
-  if (result) {
+  if (result || savedOffline) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-        {result.matched ? (
+        {savedOffline ? (
+          <>
+            <CloudOff className="text-cobalt size-24" aria-hidden />
+            <p className="font-ui text-[1.75rem] font-bold text-white">
+              {t("pos.cashCheck.savedOffline")}
+            </p>
+          </>
+        ) : result?.matched ? (
           <>
             <CheckCircle2 className="text-sage size-24" aria-hidden />
             <p className="font-ui text-[1.75rem] font-bold text-white">
@@ -81,7 +102,7 @@ export default function PosCashCheckPage() {
               {t("pos.cashCheck.mismatchTitle")}
             </p>
             <p className="font-data text-rust text-[2rem] font-bold">
-              {formatMoney(Math.abs(Number(result.difference)), result.currency)}
+              {formatMoney(Math.abs(Number(result?.difference)), result?.currency ?? currency)}
             </p>
             <p className="font-ui text-[0.9375rem] text-white/70">
               {t("pos.cashCheck.difference")}
@@ -145,7 +166,7 @@ export default function PosCashCheckPage() {
         loadingLabel={t("pos.cashCheck.submitting")}
         loading={mutation.isPending}
         disabled={digits === ""}
-        onClick={() => mutation.mutate()}
+        onClick={() => mutation.mutate({ countedAmount: Number(digits || "0") })}
       />
     </div>
   );

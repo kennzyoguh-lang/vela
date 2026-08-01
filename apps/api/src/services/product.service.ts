@@ -16,6 +16,13 @@ export async function listProducts(orgId: string) {
   return productRepo.listActiveByOrg(orgId);
 }
 
+// Low-stock alerts (value-add follow-up) — the dashboard widget's data
+// source; owner/admin reporting surface, same tier as sale/cash-check
+// history views elsewhere in this codebase.
+export async function listLowStockProducts(orgId: string) {
+  return productRepo.listLowStockByOrg(orgId);
+}
+
 export async function updateProduct(
   orgId: string,
   productId: string,
