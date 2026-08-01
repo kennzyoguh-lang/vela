@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { Client, Invoice } from "@vela/types";
+import type { Client, Invoice, Page } from "@vela/types";
 import {
   quickCreateInvoiceSchema,
   type QuickCreateInvoiceFormValues,
@@ -22,7 +22,7 @@ import { api, ApiError } from "@/lib/api/client";
 // detail view afterwards, never demanded upfront.
 export default function NewInvoicePage() {
   return (
-    <Suspense>
+    <Suspense fallback={null}>
       <NewInvoiceForm />
     </Suspense>
   );
@@ -35,11 +35,12 @@ function NewInvoiceForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const preselectedClientId = searchParams.get("clientId") ?? undefined;
 
-  const { data: clients, isLoading: clientsLoading } = useQuery({
+  const { data: clientPage, isLoading: clientsLoading } = useQuery({
     queryKey: ["clients"],
-    queryFn: () => api.get<Client[]>("/v1/clients"),
+    queryFn: () => api.get<Page<Client>>("/v1/clients?pageSize=100"),
     staleTime: 5 * 60_000,
   });
+  const clients = clientPage?.items;
 
   const {
     register,
