@@ -5,6 +5,7 @@ vi.mock("../repositories/product.repository", () => ({
   create: vi.fn(),
   findById: vi.fn(),
   listActiveByOrg: vi.fn(),
+  listLowStockByOrg: vi.fn(),
   update: vi.fn(),
   deactivate: vi.fn(),
 }));
@@ -47,6 +48,16 @@ describe("product.service", () => {
       productService.updateProduct(orgId, randomUUID(), { price: 2000 }),
     ).rejects.toThrow(/not found/i);
     expect(productRepo.update).not.toHaveBeenCalled();
+  });
+
+  it("lists low-stock products by delegating to the repository", async () => {
+    const lowStockProducts = [{ id: randomUUID(), name: "USB Cable", stockQuantity: 1 }];
+    vi.mocked(productRepo.listLowStockByOrg).mockResolvedValue(lowStockProducts as never);
+
+    const result = await productService.listLowStockProducts(orgId);
+
+    expect(productRepo.listLowStockByOrg).toHaveBeenCalledWith(orgId);
+    expect(result).toBe(lowStockProducts);
   });
 
   it("deactivates an existing product", async () => {

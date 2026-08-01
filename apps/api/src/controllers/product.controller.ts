@@ -17,6 +17,12 @@ export async function list(req: Request, res: Response) {
   sendSuccess(res, products);
 }
 
+export async function lowStock(req: Request, res: Response) {
+  const { orgId } = getAuthContext(req);
+  const products = await productService.listLowStockProducts(orgId);
+  sendSuccess(res, products);
+}
+
 export async function update(req: Request, res: Response) {
   const { orgId } = getAuthContext(req);
   const input = updateProductSchema.parse(req.body);

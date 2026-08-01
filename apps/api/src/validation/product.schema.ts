@@ -37,6 +37,9 @@ export const createProductSchema = z.object({
   currency: z.string().length(3).default("NGN"),
   icon: z.enum(PRODUCT_ICONS),
   color: z.enum(PRODUCT_COLORS),
+  // Opt-in inventory tracking (value-add follow-up) — omitted means "don't
+  // track stock for this product," not zero.
+  stockQuantity: z.number().int().nonnegative().optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();

@@ -60,6 +60,12 @@ export const TRANSLATION_KEYS = [
   "pos.quickSale.sending",
   "pos.quickSale.smsSent",
   "pos.quickSale.smsError",
+  "pos.sell.cashCheckReminder",
+  "pos.quickSale.sendLink",
+  "pos.offline.pendingOne",
+  "pos.offline.pendingMany",
+  "pos.sell.savedOffline",
+  "pos.cashCheck.savedOffline",
 ] as const;
 
 export type TranslationKey = (typeof TRANSLATION_KEYS)[number];
@@ -117,6 +123,12 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.quickSale.sending": "Sending...",
     "pos.quickSale.smsSent": "Sent!",
     "pos.quickSale.smsError": "Could not send this — try again",
+    "pos.sell.cashCheckReminder": "Don't forget today's cash check",
+    "pos.quickSale.sendLink": "+ Send Link",
+    "pos.offline.pendingOne": "1 sale saved offline — will sync when back online",
+    "pos.offline.pendingMany": "{count} sales saved offline — will sync when back online",
+    "pos.sell.savedOffline": "Saved Offline!",
+    "pos.cashCheck.savedOffline": "Saved Offline!",
   },
   ig: {
     "pos.login.title": "Nbanye Ndị Ọrụ",
@@ -170,6 +182,13 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.quickSale.sending": "Na-eziga...",
     "pos.quickSale.smsSent": "Ezigala!",
     "pos.quickSale.smsError": "Enweghị ike iziga nke a — nwaa ọzọ",
+    "pos.sell.cashCheckReminder": "Echefula nyocha ego taa",
+    "pos.quickSale.sendLink": "+ Ziga Njikọ",
+    "pos.offline.pendingOne": "Echekwara ire 1 n'ọfụn — ọ ga-eziga mgbe intanetị dịghachiri",
+    "pos.offline.pendingMany":
+      "Echekwara ire {count} n'ọfụn — ha ga-eziga mgbe intanetị dịghachiri",
+    "pos.sell.savedOffline": "Echekwala n'ọfụn!",
+    "pos.cashCheck.savedOffline": "Echekwala n'ọfụn!",
   },
   yo: {
     "pos.login.title": "Wíwọlé Òṣìṣẹ́",
@@ -223,6 +242,14 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.quickSale.sending": "Ń fi ránṣẹ́...",
     "pos.quickSale.smsSent": "Ti fi ránṣẹ́!",
     "pos.quickSale.smsError": "A kò lè fi èyí ránṣẹ́ — gbìyànjú lẹ́ẹ̀kansi",
+    "pos.sell.cashCheckReminder": "Má gbàgbé ìṣàyẹ̀wò owó òní",
+    "pos.quickSale.sendLink": "+ Fi Ìjápọ̀ Ránṣẹ́",
+    "pos.offline.pendingOne":
+      "Títà 1 ti wà ní ìpamọ́ láìsí ẹ̀rọ ayélujára — yóò fi ránṣẹ́ nígbà tí ó bá padà",
+    "pos.offline.pendingMany":
+      "Títà {count} ti wà ní ìpamọ́ láìsí ẹ̀rọ ayélujára — yóò fi ránṣẹ́ nígbà tí ó bá padà",
+    "pos.sell.savedOffline": "Ti fi pamọ́ láìsí ẹ̀rọ ayélujára!",
+    "pos.cashCheck.savedOffline": "Ti fi pamọ́ láìsí ẹ̀rọ ayélujára!",
   },
   ha: {
     "pos.login.title": "Shigar Ma'aikata",
@@ -276,5 +303,13 @@ export const dictionary: Record<"en" | "ig" | "yo" | "ha", Record<TranslationKey
     "pos.quickSale.sending": "Ana aikawa...",
     "pos.quickSale.smsSent": "An aika!",
     "pos.quickSale.smsError": "Ba a iya aika wannan ba — sake gwadawa",
+    "pos.sell.cashCheckReminder": "Kada ka manta duba kudi na yau",
+    "pos.quickSale.sendLink": "+ Aika Hanya",
+    "pos.offline.pendingOne":
+      "An ajiye sayarwa 1 ba tare da intanet ba — za a aika idan intanet ya dawo",
+    "pos.offline.pendingMany":
+      "An ajiye sayarwa {count} ba tare da intanet ba — za a aika idan intanet ya dawo",
+    "pos.sell.savedOffline": "An Ajiye Ba Tare Da Intanet Ba!",
+    "pos.cashCheck.savedOffline": "An Ajiye Ba Tare Da Intanet Ba!",
   },
 };

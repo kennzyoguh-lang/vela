@@ -89,12 +89,26 @@ describe("quick-sale.service#sendPaymentLinkSms", () => {
   it("normalizes the phone, composes a 'Pay ₦X now' message with the real link, sends it, and returns sent: true", async () => {
     const result = await quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, {
       phone: "08012345678",
+      channel: "sms",
     });
 
     expect(result.sent).toBe(true);
     expect(result.message).toContain("Pay ₦3,200 now:");
     expect(result.message).toContain("/pay/abc-token");
-    expect(smsGateway.sendSms).toHaveBeenCalledWith("+2348012345678", result.message);
+    expect(smsGateway.sendSms).toHaveBeenCalledWith("+2348012345678", result.message, "generic");
+  });
+
+  it("sends via the whatsapp channel when requested", async () => {
+    await quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, {
+      phone: "08012345678",
+      channel: "whatsapp",
+    });
+
+    expect(smsGateway.sendSms).toHaveBeenCalledWith(
+      "+2348012345678",
+      expect.any(String),
+      "whatsapp",
+    );
   });
 
   it("propagates a real send failure to the caller instead of swallowing it", async () => {
@@ -103,13 +117,19 @@ describe("quick-sale.service#sendPaymentLinkSms", () => {
     );
 
     await expect(
-      quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, { phone: "08012345678" }),
+      quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, {
+        phone: "08012345678",
+        channel: "sms",
+      }),
     ).rejects.toThrow(/Termii SMS send failed/);
     expect(auditLogRepo.write).not.toHaveBeenCalled();
   });
 
-  it("audit-logs the send with the normalized phone", async () => {
-    await quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, { phone: "08012345678" });
+  it("audit-logs the send with the normalized phone and channel", async () => {
+    await quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, {
+      phone: "08012345678",
+      channel: "sms",
+    });
 
     expect(auditLogRepo.write).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -118,7 +138,7 @@ describe("quick-sale.service#sendPaymentLinkSms", () => {
         action: "quick_sale.sms_sent",
         entityType: "invoice",
         entityId: invoiceId,
-        newValue: { phone: "+2348012345678" },
+        newValue: { phone: "+2348012345678", channel: "sms" },
       }),
     );
   });
@@ -127,14 +147,20 @@ describe("quick-sale.service#sendPaymentLinkSms", () => {
     vi.mocked(invoiceRepo.findById).mockResolvedValue(null);
 
     await expect(
-      quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, { phone: "08012345678" }),
+      quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, {
+        phone: "08012345678",
+        channel: "sms",
+      }),
     ).rejects.toThrow(NotFoundError);
     expect(auditLogRepo.write).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid phone number before any audit log is written", async () => {
     await expect(
-      quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, { phone: "123" }),
+      quickSaleService.sendPaymentLinkSms(orgId, actorId, invoiceId, {
+        phone: "123",
+        channel: "sms",
+      }),
     ).rejects.toThrow();
     expect(auditLogRepo.write).not.toHaveBeenCalled();
   });

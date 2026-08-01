@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
-import { ChevronLeft, CheckCircle2, Copy, MessageSquare } from "lucide-react";
+import { ChevronLeft, CheckCircle2, Copy, MessageSquare, MessageCircle } from "lucide-react";
 import type { QuickSaleResult } from "@vela/types";
 import { api, ApiError } from "@/lib/api/client";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -37,7 +37,8 @@ export default function PosQuickSalePage() {
   });
 
   const smsMutation = useMutation({
-    mutationFn: () => api.post(`/v1/quick-sales/${result!.id}/send-sms`, { phone: smsPhone }),
+    mutationFn: (channel: "sms" | "whatsapp") =>
+      api.post(`/v1/quick-sales/${result!.id}/send-sms`, { phone: smsPhone, channel }),
     onSuccess: () => setSmsSent(true),
   });
 
@@ -101,15 +102,26 @@ export default function PosQuickSalePage() {
                 }
               />
             ) : null}
-            <button
-              type="button"
-              onClick={() => smsMutation.mutate()}
-              disabled={smsPhone.trim() === "" || smsMutation.isPending}
-              className="font-ui bg-surface-secondary text-text-primary flex min-h-[56px] items-center justify-center gap-2 rounded-2xl text-[1rem] font-bold disabled:opacity-40"
-            >
-              <MessageSquare className="size-5" aria-hidden />
-              {smsMutation.isPending ? t("pos.quickSale.sending") : t("pos.quickSale.sendSms")}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => smsMutation.mutate("sms")}
+                disabled={smsPhone.trim() === "" || smsMutation.isPending}
+                className="font-ui bg-surface-secondary text-text-primary flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl text-[1rem] font-bold disabled:opacity-40"
+              >
+                <MessageSquare className="size-5" aria-hidden />
+                {smsMutation.isPending ? t("pos.quickSale.sending") : t("pos.quickSale.sendSms")}
+              </button>
+              <button
+                type="button"
+                onClick={() => smsMutation.mutate("whatsapp")}
+                disabled={smsPhone.trim() === "" || smsMutation.isPending}
+                className="font-ui bg-sage flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl text-[1rem] font-bold text-white disabled:opacity-40"
+              >
+                <MessageCircle className="size-5" aria-hidden />
+                WhatsApp
+              </button>
+            </div>
           </div>
         ) : (
           <button
@@ -118,7 +130,7 @@ export default function PosQuickSalePage() {
             className="font-ui text-text-secondary flex items-center gap-2 text-[0.9375rem] font-semibold"
           >
             <MessageSquare className="size-4" aria-hidden />
-            {t("pos.quickSale.sendSms")}
+            {t("pos.quickSale.sendLink")}
           </button>
         )}
 

@@ -121,6 +121,9 @@ export interface Product {
   currency: string;
   icon: string;
   color: string;
+  // Opt-in inventory tracking (value-add follow-up) — null means "not
+  // tracked for this product," not zero stock.
+  stockQuantity: number | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

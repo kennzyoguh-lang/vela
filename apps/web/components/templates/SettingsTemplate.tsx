@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 const SETTINGS_NAV = [
   { label: "Organisation", href: "/settings" },
   { label: "Users", href: "/settings/users" },
+  { label: "Products", href: "/settings/products" },
   { label: "Accountants", href: "/settings/accountants" },
   { label: "Security", href: "/settings/security" },
 ] as const;

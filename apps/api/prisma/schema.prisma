@@ -697,6 +697,13 @@ model Product {
   // inject arbitrary content.
   icon      String
   color     String
+  // Nullable — stock tracking is opt-in (Handbook-style "minimal viable
+  // scope," matching Piece 1's original "no stock-quantity tracking"
+  // decision: a trader who doesn't want to count inventory just leaves this
+  // unset and nothing changes). When set, sale.repository.ts#createSale
+  // decrements it atomically alongside the sale, clamped at 0 — never goes
+  // negative even if oversold.
+  stockQuantity Int?     @map("stock_quantity")
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz

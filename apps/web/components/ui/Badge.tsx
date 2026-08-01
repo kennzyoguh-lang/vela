@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 // Design System 4.14 — canonical, product-wide status map. Never colour-only:
 // label is always present alongside the colour.
 export type BadgeStatus =
-  "draft" | "sent" | "viewed" | "active" | "partial" | "overdue" | "archived";
+  "draft" | "sent" | "viewed" | "active" | "partial" | "overdue" | "archived" | "low-stock";
 
 const STATUS_STYLES: Record<BadgeStatus, string> = {
   draft: "bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200",
@@ -13,6 +13,7 @@ const STATUS_STYLES: Record<BadgeStatus, string> = {
   partial: "bg-gold/20 text-gold-dark",
   overdue: "bg-rust/20 text-rust",
   archived: "bg-neutral-300/40 text-neutral-500",
+  "low-stock": "bg-rust/20 text-rust",
 };
 
 export function Badge({ status, label }: { status: BadgeStatus; label: string }) {

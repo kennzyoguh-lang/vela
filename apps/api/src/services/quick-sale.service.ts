@@ -53,13 +53,13 @@ function formatNaira(amount: number): string {
 }
 
 /**
- * Quick Sale / Instant Collect Piece 4 — the trader taps "Send SMS" and
- * expects to know whether it actually worked, so a real Termii send failure
- * propagates to the caller (controller → 4xx/5xx → frontend's existing
- * "Could not send this — try again" alert) rather than being swallowed.
- * Termii itself still degrades to an honest "[stub] would send" log when
- * TERMII_API_KEY isn't configured (termii.gateway.ts), so this never blocks
- * development or a deployment without SMS credentials yet.
+ * Quick Sale / Instant Collect Piece 4 — the trader taps "Send SMS" or
+ * "Send WhatsApp" and expects to know whether it actually worked, so a real
+ * Termii send failure propagates to the caller (controller → 4xx/5xx →
+ * frontend's existing "Could not send this — try again" alert) rather than
+ * being swallowed. Termii itself still degrades to an honest "[stub] would
+ * send" log when TERMII_API_KEY isn't configured (termii.gateway.ts), so
+ * this never blocks development or a deployment without SMS credentials yet.
  */
 export async function sendPaymentLinkSms(
   orgId: string,
@@ -73,8 +73,9 @@ export async function sendPaymentLinkSms(
   const phone = normalizePhoneNumber(input.phone);
   const payUrl = `${env.WEB_APP_URL}/pay/${invoice.paymentPortalToken}`;
   const message = `Pay ${formatNaira(Number(invoice.total))} now: ${payUrl}`;
+  const gatewayChannel = input.channel === "whatsapp" ? "whatsapp" : "generic";
 
-  await smsGateway.sendSms(phone, message);
+  await smsGateway.sendSms(phone, message, gatewayChannel);
 
   await auditLogRepo.write({
     orgId,
@@ -82,7 +83,7 @@ export async function sendPaymentLinkSms(
     action: "quick_sale.sms_sent",
     entityType: "invoice",
     entityId: invoice.id,
-    newValue: { phone },
+    newValue: { phone, channel: input.channel },
   });
 
   return { sent: true, message };
