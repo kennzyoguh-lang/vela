@@ -39,6 +39,13 @@ const envSchema = z.object({
   // Termii requires a registered alphanumeric sender ID for production SMS —
   // this default is a placeholder until the account owner registers one.
   TERMII_SENDER_ID: z.string().default("Vela"),
+  // Optional — Resend (email provider), same "never blocks anything else"
+  // contract as TERMII_API_KEY: unset means owner-summary/cash-check
+  // notifications routed to email (business profiling's notification-channel
+  // default, formal/semi-formal orgs) log an honest "[stub] would send"
+  // instead of a real API call.
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().default("Vela <notifications@vela.app>"),
   WEB_APP_URL: z.string().default("http://localhost:3000"),
 });
 

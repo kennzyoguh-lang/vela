@@ -137,6 +137,25 @@ export async function findNotifiablePhones(orgId: string): Promise<string[]> {
   return users.map((u) => u.phone as string);
 }
 
+export interface NotifiableRecipient {
+  phone: string | null;
+  email: string | null;
+}
+
+// Business profiling's notification-channel default (computeNotificationChannelDefault
+// in @vela/types) picks email vs. WhatsApp/SMS per org — callers that need to
+// route accordingly (owner-summary, cash-check alerts) use this instead of
+// findNotifiablePhones, so a formal/CAC-registered org's owner/admin without a
+// notification phone set still gets reached via their signup email.
+export async function findNotifiableRecipients(orgId: string): Promise<NotifiableRecipient[]> {
+  return withOrgScope(orgId, (tx) =>
+    tx.user.findMany({
+      where: { orgId, role: { in: ["owner", "admin"] }, isActive: true },
+      select: { phone: true, email: true },
+    }),
+  );
+}
+
 // The current owner/admin's own SMS notification number — distinct from a
 // staff member's phone+PIN login credential (Piece 1). Setting this never
 // touches pinHash, so it can't accidentally grant or alter PIN login.

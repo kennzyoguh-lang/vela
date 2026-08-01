@@ -12,16 +12,33 @@ vi.mock("../repositories/audit-log.repository", () => ({
 }));
 vi.mock("../repositories/user.repository", () => ({
   findNotifiablePhones: vi.fn(),
+  findNotifiableRecipients: vi.fn(),
 }));
 vi.mock("./sms/termii.gateway", () => ({
   sendSms: vi.fn(),
+}));
+vi.mock("./email/email.gateway", () => ({
+  sendEmail: vi.fn(),
+}));
+vi.mock("./business-profile.service", () => ({
+  getBusinessProfile: vi.fn(),
 }));
 
 import * as cashCheckRepo from "../repositories/cash-check.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
 import * as userRepo from "../repositories/user.repository";
 import * as smsGateway from "./sms/termii.gateway";
+import * as emailGateway from "./email/email.gateway";
+import * as businessProfileService from "./business-profile.service";
 import * as cashCheckService from "./cash-check.service";
+
+const UNSURE_FACTORS = {
+  customerPattern: "unsure" as const,
+  hasSalesStaff: "unsure" as const,
+  isCacRegistered: "unsure" as const,
+  moduleOverrides: {},
+  profileFactorsConfirmedAt: null,
+};
 
 describe("cash-check.service#businessDayRange (WAT, UTC+1)", () => {
   it("keeps a UTC evening instant within the same WAT business day", () => {
@@ -85,8 +102,10 @@ describe("cash-check.service#submitCashCheck", () => {
           ...input,
         }) as never,
     );
-    vi.mocked(userRepo.findNotifiablePhones).mockResolvedValue([]);
+    vi.mocked(userRepo.findNotifiableRecipients).mockResolvedValue([]);
     vi.mocked(smsGateway.sendSms).mockResolvedValue(undefined);
+    vi.mocked(emailGateway.sendEmail).mockResolvedValue(undefined);
+    vi.mocked(businessProfileService.getBusinessProfile).mockResolvedValue(UNSURE_FACTORS as never);
   });
 
   it("matches when the counted amount equals the expected total and audit-logs the match", async () => {
@@ -134,11 +153,11 @@ describe("cash-check.service#submitCashCheck", () => {
     expect(record).toMatchObject({ difference: 0, matched: true });
   });
 
-  it("sends an SMS to every owner/admin notification phone on a mismatch", async () => {
+  it("sends an SMS to every owner/admin notification phone on a mismatch (informal org)", async () => {
     vi.mocked(cashCheckRepo.sumCompletedSalesTotal).mockResolvedValue(15000);
-    vi.mocked(userRepo.findNotifiablePhones).mockResolvedValue([
-      "+2348011111111",
-      "+2348022222222",
+    vi.mocked(userRepo.findNotifiableRecipients).mockResolvedValue([
+      { phone: "+2348011111111", email: "owner1@example.com" },
+      { phone: "+2348022222222", email: null },
     ]);
 
     await cashCheckService.submitCashCheck(orgId, staffUserId, 12000);
@@ -152,11 +171,34 @@ describe("cash-check.service#submitCashCheck", () => {
       "+2348022222222",
       expect.stringContaining("₦3,000 short"),
     );
+    expect(emailGateway.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("sends an email to every owner/admin on a mismatch for a CAC-registered org", async () => {
+    vi.mocked(cashCheckRepo.sumCompletedSalesTotal).mockResolvedValue(15000);
+    vi.mocked(businessProfileService.getBusinessProfile).mockResolvedValue({
+      ...UNSURE_FACTORS,
+      isCacRegistered: "yes",
+    } as never);
+    vi.mocked(userRepo.findNotifiableRecipients).mockResolvedValue([
+      { phone: "+2348011111111", email: "owner1@example.com" },
+    ]);
+
+    await cashCheckService.submitCashCheck(orgId, staffUserId, 12000);
+
+    expect(emailGateway.sendEmail).toHaveBeenCalledWith(
+      "owner1@example.com",
+      "VELA cash check mismatch",
+      expect.stringContaining("₦3,000 short"),
+    );
+    expect(smsGateway.sendSms).not.toHaveBeenCalled();
   });
 
   it("does not send any SMS on a match", async () => {
     vi.mocked(cashCheckRepo.sumCompletedSalesTotal).mockResolvedValue(15000);
-    vi.mocked(userRepo.findNotifiablePhones).mockResolvedValue(["+2348011111111"]);
+    vi.mocked(userRepo.findNotifiableRecipients).mockResolvedValue([
+      { phone: "+2348011111111", email: null },
+    ]);
 
     await cashCheckService.submitCashCheck(orgId, staffUserId, 15000);
 
@@ -165,7 +207,9 @@ describe("cash-check.service#submitCashCheck", () => {
 
   it("still succeeds and returns the record even when every SMS send fails", async () => {
     vi.mocked(cashCheckRepo.sumCompletedSalesTotal).mockResolvedValue(15000);
-    vi.mocked(userRepo.findNotifiablePhones).mockResolvedValue(["+2348011111111"]);
+    vi.mocked(userRepo.findNotifiableRecipients).mockResolvedValue([
+      { phone: "+2348011111111", email: null },
+    ]);
     vi.mocked(smsGateway.sendSms).mockRejectedValue(new Error("Termii is down"));
 
     const record = await cashCheckService.submitCashCheck(orgId, staffUserId, 12000);

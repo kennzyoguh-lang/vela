@@ -2,8 +2,11 @@ import * as cashCheckRepo from "../repositories/cash-check.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
 import * as userRepo from "../repositories/user.repository";
 import * as smsGateway from "./sms/termii.gateway";
+import * as emailGateway from "./email/email.gateway";
 import { logger } from "../lib/logger";
 import type { PageParams } from "../lib/pagination";
+import { getBusinessProfile } from "./business-profile.service";
+import { computeNotificationChannelDefault } from "@vela/types";
 
 // Mirrors owner-summary.service.ts's local formatNaira — no shared currency
 // formatter exists on the API side (see that file's comment).
@@ -47,19 +50,50 @@ export async function getExpectedForToday(orgId: string, now: Date) {
 }
 
 /**
- * Notifies every owner/admin who's set a notification phone (Settings →
- * Security, organisation.service.ts#setNotificationPhone) via Termii SMS.
- * Attached to submitCashCheck (a staff member finishing their count) rather
- * than a standalone action, so a bad number or provider outage must never
- * block that submission — every send is its own try/catch, and this
- * function itself never throws.
+ * Notifies every owner/admin at the org, via whichever channel business
+ * profiling's notification-channel default picks
+ * (computeNotificationChannelDefault, @vela/types) — email for a formal or
+ * CAC-registered org, WhatsApp/SMS (Termii, unchanged from before business
+ * profiling) otherwise. Attached to submitCashCheck (a staff member
+ * finishing their count) rather than a standalone action, so a bad number/
+ * address or provider outage must never block that submission — every send
+ * is its own try/catch, and this function itself never throws.
  */
 async function flagMismatchToOwner(
   orgId: string,
   staffUserId: string,
   difference: number,
 ): Promise<void> {
-  const phones = await userRepo.findNotifiablePhones(orgId);
+  const [factors, recipients] = await Promise.all([
+    getBusinessProfile(orgId),
+    userRepo.findNotifiableRecipients(orgId),
+  ]);
+  const channel = computeNotificationChannelDefault(factors);
+  const diffWord = difference < 0 ? "short" : "over";
+  const message = `Cash check mismatch: ${formatNaira(Math.abs(difference))} ${diffWord} today. Check the app for details.`;
+
+  if (channel === "email") {
+    const emails = recipients.map((r) => r.email).filter((e): e is string => e !== null);
+    if (emails.length === 0) {
+      logger.info(
+        { orgId, staffUserId, difference },
+        "Cash check mismatch — no owner/admin email configured, nothing sent",
+      );
+      return;
+    }
+    await Promise.all(
+      emails.map(async (email) => {
+        try {
+          await emailGateway.sendEmail(email, "VELA cash check mismatch", message);
+        } catch (err) {
+          logger.error({ err, orgId, email }, "Failed to send cash check mismatch email");
+        }
+      }),
+    );
+    return;
+  }
+
+  const phones = recipients.map((r) => r.phone).filter((p): p is string => p !== null);
   if (phones.length === 0) {
     logger.info(
       { orgId, staffUserId, difference },
@@ -67,9 +101,6 @@ async function flagMismatchToOwner(
     );
     return;
   }
-
-  const diffWord = difference < 0 ? "short" : "over";
-  const message = `Cash check mismatch: ${formatNaira(Math.abs(difference))} ${diffWord} today. Check the app for details.`;
 
   await Promise.all(
     phones.map(async (phone) => {

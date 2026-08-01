@@ -42,6 +42,20 @@ vi.mock("../../repositories/ask-vela.repository", () => ({
   touchConversation: vi.fn(),
 }));
 
+// Business profiling (Factor C) picks the system prompt/token budget —
+// unrelated to what these tests exercise (tool-loop behavior), so it's
+// stubbed to the same "unsure" defaults every org starts with rather than
+// hitting the real service's DB call.
+vi.mock("../business-profile.service", () => ({
+  getBusinessProfile: vi.fn().mockResolvedValue({
+    customerPattern: "unsure",
+    hasSalesStaff: "unsure",
+    isCacRegistered: "unsure",
+    moduleOverrides: {},
+    profileFactorsConfirmedAt: null,
+  }),
+}));
+
 import * as askVelaRepo from "../../repositories/ask-vela.repository";
 
 function streamEvent(isForcedTextOnly: boolean, toolInput: unknown = {}) {
