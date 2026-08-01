@@ -76,6 +76,19 @@ organisationRouter.patch(
   requireRole("owner", "admin"),
   asyncHandler(businessProfileController.setModuleOverride),
 );
+// Graduation prompts (piece 4) — owner/admin only, unlike the GET above:
+// these surface a suggested FACTOR change for the owner to confirm, not
+// something every role's own UI needs to know about.
+organisationRouter.get(
+  "/business-profile/graduation-prompts",
+  requireRole("owner", "admin"),
+  asyncHandler(businessProfileController.getGraduationPrompts),
+);
+organisationRouter.patch(
+  "/business-profile/graduation-prompt",
+  requireRole("owner", "admin"),
+  asyncHandler(businessProfileController.confirmGraduationPrompt),
+);
 
 organisationRouter.post(
   "/staff",

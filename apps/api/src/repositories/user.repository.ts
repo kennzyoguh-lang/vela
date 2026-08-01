@@ -124,6 +124,17 @@ export async function countOwners(orgId: string): Promise<number> {
   );
 }
 
+// Business profiling's graduation prompts (piece 4) — "a 2nd staff account
+// created while hasSalesStaff=no" specifically means POS staff (role
+// "staff"), not admin/accountant/view_only — those roles don't hand out
+// PIN logins for cash-handling, so their presence doesn't contradict a
+// "no sales staff" answer the way a staff account does.
+export async function countActiveStaffRole(orgId: string): Promise<number> {
+  return withOrgScope(orgId, (tx) =>
+    tx.user.count({ where: { orgId, role: "staff", isActive: true } }),
+  );
+}
+
 // Owner-summary/cash-check SMS notifications go to every owner/admin who's
 // bothered to set a notification phone — not just Organisation.ownerId — so
 // a shop where an admin handles day-to-day operations still gets alerted.

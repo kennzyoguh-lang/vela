@@ -13,6 +13,7 @@ import { CashPositionWidget } from "@/components/modules/CashPositionWidget";
 import { UpcomingPayrollWidget } from "@/components/modules/UpcomingPayrollWidget";
 import { AskVelaInsightWidget } from "@/components/modules/AskVelaInsightWidget";
 import { OwnerDailyStatusBanner } from "@/components/modules/OwnerDailyStatusBanner";
+import { GraduationPromptBanner } from "@/components/modules/GraduationPromptBanner";
 import { useModuleVisibility } from "@/lib/business-profile/useModuleVisibility";
 
 const ONBOARDING_STEPS = [
@@ -111,6 +112,7 @@ export default function DashboardHomePage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <GraduationPromptBanner />
       {visibility.cashReconciliation ? <OwnerDailyStatusBanner /> : null}
       <h1 className="font-ui text-text-primary text-[1.5rem] font-bold">Home</h1>
       <DashboardTemplate widgets={widgets} />
