@@ -82,6 +82,24 @@ export async function getDailyStats(
   });
 }
 
+// Business profiling's graduation prompts (piece 4) — detects a customer
+// name that recurs at least `minCount` times, the closest proxy for "this
+// customer keeps coming back" available today: no phone/customer-identity
+// field exists on Sale (or Quick Sale/Invoice) yet, so customerName is the
+// only persisted, queryable signal — a deliberate proxy for the "same
+// customer phone" the spec describes, not a literal phone match.
+export async function hasRepeatCustomer(orgId: string, minCount: number): Promise<boolean> {
+  return withOrgScope(orgId, async (tx) => {
+    const groups = await tx.sale.groupBy({
+      by: ["customerName"],
+      where: { orgId, customerName: { not: null } },
+      _count: { customerName: true },
+      having: { customerName: { _count: { gte: minCount } } },
+    });
+    return groups.length > 0;
+  });
+}
+
 // Piece 2's "today's sales" view — paginated for a human, unlike a future
 // cash-reconciliation total which would need every row (not built yet).
 export async function listByOrg(orgId: string, page: PageParams): Promise<Page<SaleWithItems>> {

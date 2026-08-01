@@ -19,3 +19,16 @@ export const setModuleOverrideSchema = z.object({
 });
 
 export type SetModuleOverrideInput = z.infer<typeof setModuleOverrideSchema>;
+
+// Graduation prompts (piece 4) — confirming ONE suggested factor update at a
+// time, never a full re-onboarding. The factor/value pairing is validated
+// again in the service (business-profile.service.ts#confirmGraduationPrompt)
+// since a discriminated union here would still let a client send a
+// mismatched pair (e.g. factor "hasSalesStaff" with value "repeat") that
+// zod's own type-checking can't catch from these two independent enums.
+export const confirmGraduationPromptSchema = z.object({
+  factor: z.enum(["hasSalesStaff", "customerPattern"]),
+  value: z.enum(["yes", "repeat"]),
+});
+
+export type ConfirmGraduationPromptInput = z.infer<typeof confirmGraduationPromptSchema>;

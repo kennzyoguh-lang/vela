@@ -3,6 +3,7 @@ import * as businessProfileService from "../services/business-profile.service";
 import {
   setBusinessProfileFactorsSchema,
   setModuleOverrideSchema,
+  confirmGraduationPromptSchema,
 } from "../validation/business-profile.schema";
 import { sendSuccess } from "../lib/response";
 import { getAuthContext } from "../lib/auth-context";
@@ -24,5 +25,18 @@ export async function setModuleOverride(req: Request, res: Response) {
   const { orgId, userId } = getAuthContext(req);
   const { moduleKey, value } = setModuleOverrideSchema.parse(req.body);
   await businessProfileService.setModuleOverride(orgId, userId, moduleKey, value);
+  sendSuccess(res, { updated: true });
+}
+
+export async function getGraduationPrompts(req: Request, res: Response) {
+  const { orgId } = getAuthContext(req);
+  const prompts = await businessProfileService.getGraduationPrompts(orgId);
+  sendSuccess(res, prompts);
+}
+
+export async function confirmGraduationPrompt(req: Request, res: Response) {
+  const { orgId, userId } = getAuthContext(req);
+  const input = confirmGraduationPromptSchema.parse(req.body);
+  await businessProfileService.confirmGraduationPrompt(orgId, userId, input);
   sendSuccess(res, { updated: true });
 }
