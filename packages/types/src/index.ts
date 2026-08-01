@@ -79,11 +79,20 @@ export interface LineItem {
   unitPrice: number;
 }
 
+// Quick Sale / Instant Collect — an Invoice created by the amount-only
+// walk-in-payment flow (see apps/api/prisma/schema.prisma's InvoiceSource
+// comment) rather than the manual invoice-builder screen.
+export type InvoiceSource = "manual" | "quick_sale";
+
 export interface Invoice {
   id: string;
   orgId: string;
   number: string;
-  clientId: string;
+  // Nullable because a Quick Sale invoice has no client relationship at all
+  // (see quick-sale.service.ts#createQuickSale) — every call site reading
+  // this field must handle the walk-in-customer case.
+  clientId: string | null;
+  source: InvoiceSource;
   lineItems: LineItem[];
   subtotal: string; // Prisma Decimal serializes as a string over JSON
   tax: string;
