@@ -80,7 +80,7 @@ describe("Quick Sale SMS payment link (real DB, real HTTP layer)", () => {
   );
 
   it(
-    "rejects a staff-role caller (owner/admin only)",
+    "allows a staff-role caller to create a Quick Sale and send its SMS link — trader-facing, not an owner/admin-only control",
     async () => {
       const phone = `081${String(Math.floor(10_000_000 + Math.random() * 89_999_999))}`;
       const staffRes = await request(app)
@@ -97,8 +97,9 @@ describe("Quick Sale SMS payment link (real DB, real HTTP layer)", () => {
 
       const createRes = await request(app)
         .post("/v1/quick-sales")
-        .set("Authorization", `Bearer ${ownerAccessToken}`)
+        .set("Authorization", `Bearer ${staffAccessToken}`)
         .send({ amount: 1000, currency: "NGN" });
+      expect(createRes.status).toBe(201);
       const invoiceId = createRes.body.data.id;
 
       const smsRes = await request(app)
@@ -106,7 +107,8 @@ describe("Quick Sale SMS payment link (real DB, real HTTP layer)", () => {
         .set("Authorization", `Bearer ${staffAccessToken}`)
         .send({ phone: "08012345678" });
 
-      expect(smsRes.status).toBe(403);
+      expect(smsRes.status).toBe(200);
+      expect(smsRes.body.data.sent).toBe(true);
     },
     SETUP_TIMEOUT_MS,
   );
