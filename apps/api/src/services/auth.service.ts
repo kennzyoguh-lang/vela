@@ -48,12 +48,24 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
     country: input.country,
   });
   const passwordHash = await hashPassword(input.password);
-  const user = await userRepo.createUser(org.id, {
-    name: input.name,
-    email: input.email,
-    passwordHash,
-    role: "owner",
-  });
+  let user;
+  try {
+    user = await userRepo.createUser(org.id, {
+      name: input.name,
+      email: input.email,
+      passwordHash,
+      role: "owner",
+    });
+  } catch (err) {
+    // The findByEmail pre-check above only closes the common case — two
+    // concurrent signups with the same email can both pass it and race to
+    // the email @unique constraint, same belt-and-suspenders pattern as
+    // organisation.service.ts#createStaffUser's phone uniqueness check.
+    if (err instanceof Error && "code" in err && (err as { code?: string }).code === "P2002") {
+      throw new ConflictError("An account with this email already exists");
+    }
+    throw err;
+  }
   await organisationRepo.setOrganisationOwner(org.id, user.id);
 
   return issueSession(org.id, user.id, "owner", {});

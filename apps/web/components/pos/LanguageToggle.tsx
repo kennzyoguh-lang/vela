@@ -24,7 +24,7 @@ export function LanguageToggle() {
           onClick={() => setLanguage(option.value)}
           aria-pressed={language === option.value}
           className={cn(
-            "font-ui rounded-full px-3 py-2 text-[0.8125rem] font-bold",
+            "font-ui flex min-h-[44px] items-center rounded-full px-3 text-[0.8125rem] font-bold",
             language === option.value ? "bg-gold text-midnight" : "text-text-secondary",
           )}
         >

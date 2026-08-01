@@ -46,7 +46,11 @@ export default function PosLoginPage() {
       </h1>
       {formError ? <Alert variant="danger" title={formError} /> : null}
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+        <label htmlFor="pos-login-phone" className="sr-only">
+          {t("pos.login.phone")}
+        </label>
         <input
+          id="pos-login-phone"
           {...register("phone")}
           type="tel"
           inputMode="tel"
@@ -54,7 +58,11 @@ export default function PosLoginPage() {
           placeholder={t("pos.login.phone")}
           className="font-data text-midnight h-16 rounded-2xl border-0 bg-white px-6 text-center text-[1.5rem] font-bold"
         />
+        <label htmlFor="pos-login-pin" className="sr-only">
+          {t("pos.login.pin")}
+        </label>
         <input
+          id="pos-login-pin"
           {...register("pin")}
           type="password"
           inputMode="numeric"

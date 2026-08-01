@@ -20,10 +20,10 @@ const MODULE_LABELS: Record<ModuleKey, { label: string; description: string }> =
   },
   invoicing: {
     label: "Invoicing",
-    description: "SmartInvoice — bill repeat customers and track payment status.",
+    description: "Bill repeat customers and track payment status.",
   },
   cashReconciliation: {
-    label: "Cash reconciliation",
+    label: "Cash Check",
     description: "End-of-day cash checks against staff-logged sales.",
   },
   inventoryReorder: {
@@ -32,15 +32,15 @@ const MODULE_LABELS: Record<ModuleKey, { label: string; description: string }> =
   },
   compliance: {
     label: "Compliance tracking",
-    description: "ComplianceRadar filing deadlines and reminders.",
+    description: "Filing deadlines and reminders.",
   },
   payroll: {
     label: "Payroll",
-    description: "PeopleHub staff pay runs and PAYE calculation.",
+    description: "Staff pay runs and PAYE calculation.",
   },
   fullPnl: {
-    label: "Full P&L statement",
-    description: "Profit & loss breakdown on the Money page.",
+    label: "Full P&L (Profit & Loss)",
+    description: "Full profit & loss breakdown on the Money page.",
   },
   accountantPortal: {
     label: "Accountant portal",
@@ -121,15 +121,20 @@ export default function ModulesSettingsPage() {
                     aria-label={`${isOn ? "Hide" : "Show"} ${label}`}
                     onClick={() => overrideMutation.mutate({ moduleKey, value: !isOn })}
                     disabled={overrideMutation.isPending}
-                    className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
-                      isOn ? "bg-gold" : "bg-surface-secondary"
-                    }`}
+                    className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center"
                   >
                     <span
-                      className={`absolute top-1 size-5 rounded-full bg-white transition-transform ${
-                        isOn ? "translate-x-6" : "translate-x-1"
+                      aria-hidden
+                      className={`relative h-7 w-12 rounded-full transition-colors ${
+                        isOn ? "bg-gold" : "bg-surface-secondary"
                       }`}
-                    />
+                    >
+                      <span
+                        className={`absolute top-1 size-5 rounded-full bg-white transition-transform ${
+                          isOn ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </span>
                   </button>
                 </li>
               );

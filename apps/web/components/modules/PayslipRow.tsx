@@ -47,9 +47,9 @@ export function PayslipRow({
       <button
         type="button"
         onClick={handleDownload}
-        className="text-data-aiAccent shrink-0 text-[0.75rem] hover:underline"
+        className="text-data-aiAccent -m-2 shrink-0 p-2 text-[0.75rem] hover:underline"
       >
-        Payslip
+        Download payslip
       </button>
     </div>
   );

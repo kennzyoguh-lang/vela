@@ -167,7 +167,12 @@ export function ChatPanel({ variant }: { variant: "dock" | "full" }) {
         </div>
       ) : null}
 
-      <div ref={scrollRef} className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <div
+        ref={scrollRef}
+        role="log"
+        aria-live="polite"
+        className="flex flex-1 flex-col gap-3 overflow-y-auto p-4"
+      >
         {isLoadingMessages ? (
           <Skeleton className="h-16 w-2/3" />
         ) : displayMessages.length === 0 ? (
@@ -199,7 +204,11 @@ export function ChatPanel({ variant }: { variant: "dock" | "full" }) {
         )}
       </div>
 
-      {error ? <p className="text-status-danger px-4 pb-2 text-[0.8125rem]">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-status-danger px-4 pb-2 text-[0.8125rem]">
+          {error}
+        </p>
+      ) : null}
 
       <form
         onSubmit={(e) => {

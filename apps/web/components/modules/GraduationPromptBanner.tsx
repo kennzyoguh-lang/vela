@@ -76,7 +76,7 @@ export function GraduationPromptBanner() {
             type="button"
             aria-label="Not now"
             onClick={() => setDismissed((prev) => new Set(prev).add(prompt.factor))}
-            className="text-text-secondary hover:text-text-primary shrink-0"
+            className="text-text-secondary hover:text-text-primary flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center"
           >
             <X className="size-5" aria-hidden />
           </button>

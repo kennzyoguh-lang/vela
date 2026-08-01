@@ -101,8 +101,8 @@ export function VoiceInputButton({ value, onChange }: VoiceInputButtonProps) {
         <button
           type="button"
           onClick={() => onChange("")}
-          aria-label="Clear name"
-          className="text-text-secondary"
+          aria-label={t("pos.sell.clearName")}
+          className="text-text-secondary -m-2 p-2"
         >
           <X className="size-4" aria-hidden />
         </button>

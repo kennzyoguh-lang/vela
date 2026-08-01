@@ -9,9 +9,8 @@ export default function OrganisationSettingsPage() {
           <CardTitle>Organisation</CardTitle>
         </CardHeader>
         <p className="font-ui text-text-secondary text-[0.875rem]">
-          Organisation profile editing (name, industry, base currency, compliance bodies) ships
-          alongside ComplianceRadar — Foundation establishes the Settings shell these forms will
-          live in.
+          Editing your organisation's name, industry, base currency, and compliance bodies is coming
+          soon.
         </p>
       </Card>
     </SettingsTemplate>
