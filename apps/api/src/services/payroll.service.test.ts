@@ -41,6 +41,7 @@ function employeeStub(overrides: Record<string, unknown> = {}) {
     housingAllowance: 50_000,
     transportAllowance: 30_000,
     otherAllowances: 0,
+    annualRentPaid: 0,
     startDate: new Date("2026-01-01"),
     isActive: true,
     createdAt: new Date(),
@@ -101,6 +102,32 @@ describe("payroll.service", () => {
         payslip.employeePension + payslip.nhf,
       );
       expect(payslip.paye).toBeCloseTo(expectedPaye);
+    });
+
+    it("reduces PAYE for an employee who has declared annual rent paid (NTA 2025 rent relief)", async () => {
+      vi.mocked(employeeRepo.listActiveByOrg).mockResolvedValue([
+        employeeStub({ annualRentPaid: 2_400_000 }),
+      ] as never);
+      vi.mocked(payrollRunRepo.findByPeriod).mockResolvedValue(null);
+      vi.mocked(payrollRunRepo.saveRun).mockResolvedValue({ id: randomUUID() } as never);
+
+      await payrollService.runPayroll(orgId, "2026-07");
+      const [, , payslips] = vi.mocked(payrollRunRepo.saveRun).mock.calls[0]!;
+      const withRent = payslips[0]!;
+
+      vi.clearAllMocks();
+      vi.mocked(employeeRepo.listActiveByOrg).mockResolvedValue([
+        employeeStub({ annualRentPaid: 0 }),
+      ] as never);
+      vi.mocked(payrollRunRepo.findByPeriod).mockResolvedValue(null);
+      vi.mocked(payrollRunRepo.saveRun).mockResolvedValue({ id: randomUUID() } as never);
+
+      await payrollService.runPayroll(orgId, "2026-07");
+      const [, , noRentPayslips] = vi.mocked(payrollRunRepo.saveRun).mock.calls[0]!;
+      const withoutRent = noRentPayslips[0]!;
+
+      expect(withRent.paye).toBeLessThan(withoutRent.paye);
+      expect(withRent.netPay).toBeGreaterThan(withoutRent.netPay);
     });
 
     it("recomputes a still-draft run for the same period rather than refusing", async () => {

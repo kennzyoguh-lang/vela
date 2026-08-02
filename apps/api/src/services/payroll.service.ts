@@ -26,8 +26,12 @@ function computePayslip(employee: Employee): PayslipComputation {
   const employerPension = pensionable * EMPLOYER_PENSION_RATE;
   const nhf = basic * NHF_RATE;
   // Pension and NHF are tax-deductible reliefs under Nigerian tax law —
-  // subtracted before PAYE bands are applied (paye-calculator.ts).
-  const paye = calculateMonthlyPaye(grossPay, employeePension + nhf);
+  // subtracted before PAYE bands are applied (paye-calculator.ts). Rent
+  // relief (NTA 2025, replacing the eliminated Consolidated Relief
+  // Allowance) is annual by nature — annualRentPaid defaults to 0 (no
+  // relief) for an employee who hasn't declared any rent.
+  const monthlyRentPaid = Number(employee.annualRentPaid ?? 0) / 12;
+  const paye = calculateMonthlyPaye(grossPay, employeePension + nhf, monthlyRentPaid);
   const netPay = grossPay - paye - employeePension - nhf;
 
   return {

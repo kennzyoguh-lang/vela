@@ -10,6 +10,7 @@ export const createEmployeeSchema = z.object({
   housingAllowance: z.coerce.number().nonnegative().default(0),
   transportAllowance: z.coerce.number().nonnegative().default(0),
   otherAllowances: z.coerce.number().nonnegative().default(0),
+  annualRentPaid: z.coerce.number().nonnegative().default(0),
   startDate: z.string().min(1, "Choose a start date"),
 });
 
