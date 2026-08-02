@@ -74,6 +74,26 @@ export async function setBusinessProfileFactors(
   );
 }
 
+// Nigeria Tax Act 2025's "small company" status inputs (tax-status.service.ts)
+// — set together since they're answered as one short form, same precedent
+// as setBusinessProfileFactors above. Each stays null until the owner
+// supplies it; never defaulted to a guessed value.
+export async function setTaxProfile(
+  orgId: string,
+  profile: {
+    annualTurnover: number | null;
+    fixedAssetsValue: number | null;
+    providesProfessionalServices: boolean | null;
+  },
+): Promise<void> {
+  await withOrgScope(orgId, (tx) =>
+    tx.organisation.update({
+      where: { id: orgId },
+      data: profile,
+    }),
+  );
+}
+
 // A single module's manual override — Requirement 4's "reveal any hidden
 // module" (or hide a shown one). `value: null` clears the override,
 // reverting that module to its computed default. One key at a time (not a

@@ -10,6 +10,9 @@ export const createEmployeeSchema = z.object({
   housingAllowance: z.number().nonnegative().default(0),
   transportAllowance: z.number().nonnegative().default(0),
   otherAllowances: z.number().nonnegative().default(0),
+  // Nigeria Tax Act 2025's rent relief (paye-calculator.ts) — annual, unlike
+  // the other allowances above which are monthly payroll components.
+  annualRentPaid: z.number().nonnegative().default(0),
   startDate: z.coerce.date(),
 });
 

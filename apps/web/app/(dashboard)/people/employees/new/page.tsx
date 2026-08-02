@@ -134,6 +134,14 @@ export default function NewEmployeePage() {
           error={errors.otherAllowances?.message}
         />
         <Input
+          label="Annual rent paid"
+          type="number"
+          step="0.01"
+          helperText="Optional — 20% of this (up to ₦500,000/year) reduces their PAYE tax under the Nigeria Tax Act 2025"
+          {...register("annualRentPaid")}
+          error={errors.annualRentPaid?.message}
+        />
+        <Input
           label="Start date"
           type="date"
           {...register("startDate")}

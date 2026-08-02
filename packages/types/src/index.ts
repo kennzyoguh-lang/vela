@@ -243,6 +243,19 @@ export interface ComplianceObligation {
 
 export type FilingStatus = "upcoming" | "due_soon" | "overdue" | "filed";
 
+// Nigeria Tax Act 2025 "small company" status (tax-status.service.ts) —
+// "unknown" until the owner supplies all three raw inputs; never guessed.
+export type SmallCompanyStatus = "small" | "standard" | "unknown";
+
+export interface TaxStatus {
+  annualTurnover: number | null;
+  fixedAssetsValue: number | null;
+  providesProfessionalServices: boolean | null;
+  status: SmallCompanyStatus;
+  citRate: number | null;
+  summary: string;
+}
+
 export interface ComplianceFiling {
   id: string;
   orgId: string;
@@ -324,6 +337,7 @@ export interface Employee {
   housingAllowance: string;
   transportAllowance: string;
   otherAllowances: string;
+  annualRentPaid: string;
   startDate: string;
   isActive: boolean;
   createdAt: string;

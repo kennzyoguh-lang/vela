@@ -11,6 +11,7 @@ export interface EmployeeInput {
   housingAllowance?: number;
   transportAllowance?: number;
   otherAllowances?: number;
+  annualRentPaid?: number;
   startDate: Date;
 }
 
@@ -28,6 +29,7 @@ export async function create(orgId: string, input: EmployeeInput): Promise<Emplo
         housingAllowance: input.housingAllowance ?? 0,
         transportAllowance: input.transportAllowance ?? 0,
         otherAllowances: input.otherAllowances ?? 0,
+        annualRentPaid: input.annualRentPaid ?? 0,
         startDate: input.startDate,
       },
     }),

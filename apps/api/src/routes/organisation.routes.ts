@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as organisationController from "../controllers/organisation.controller";
 import * as businessProfileController from "../controllers/business-profile.controller";
+import * as taxStatusController from "../controllers/tax-status.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/rbac.middleware";
 import { apiRateLimit } from "../middleware/rate-limit.middleware";
@@ -101,6 +102,21 @@ organisationRouter.post(
   requireRole("owner", "admin"),
   auditLog("staff.device_reset", "user"),
   asyncHandler(organisationController.resetStaffDevice),
+);
+
+// Nigeria Tax Act 2025 small-company status — owner/admin only both ways
+// (unlike business-profile's GET above, this isn't something every role's
+// own UI needs; it's an owner-facing compliance figure). No generic
+// auditLog() middleware — tax-status.service.ts writes its own entry.
+organisationRouter.get(
+  "/tax-status",
+  requireRole("owner", "admin"),
+  asyncHandler(taxStatusController.getTaxStatus),
+);
+organisationRouter.patch(
+  "/tax-status",
+  requireRole("owner", "admin"),
+  asyncHandler(taxStatusController.setTaxProfile),
 );
 
 organisationRouter.post(

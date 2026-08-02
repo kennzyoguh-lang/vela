@@ -88,6 +88,14 @@ model Organisation {
   // is also a legitimate, real completed state. Drives whether the
   // onboarding prompt still shows.
   profileFactorsConfirmedAt DateTime?      @map("profile_factors_confirmed_at") @db.Timestamptz
+  // Nigeria Tax Act 2025 "small company" status (Section 56 — turnover
+  // <= NGN50m AND fixed assets <= NGN250m AND not a professional-services
+  // provider, effective 1 Jan 2026): 0% CIT/CGT/Development Levy, vs. 30%
+  // CIT otherwise. All three nullable — status is "unknown" (never silently
+  // assumed) until the owner supplies all three (tax-status.service.ts).
+  annualTurnover               Decimal? @map("annual_turnover") @db.Decimal(14, 2)
+  fixedAssetsValue             Decimal? @map("fixed_assets_value") @db.Decimal(14, 2)
+  providesProfessionalServices Boolean? @map("provides_professional_services")
   createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamptz
   updatedAt               DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -573,6 +581,11 @@ model Employee {
   housingAllowance   Decimal        @default(0) @map("housing_allowance") @db.Decimal(14, 2)
   transportAllowance Decimal        @default(0) @map("transport_allowance") @db.Decimal(14, 2)
   otherAllowances    Decimal        @default(0) @map("other_allowances") @db.Decimal(14, 2)
+  // Nigeria Tax Act 2025: the Consolidated Relief Allowance is eliminated and
+  // replaced with rent relief (20% of annual rent paid, capped at NGN500,000)
+  // — an employee who declares no rent simply forfeits the relief, they are
+  // never assumed to be a renter (paye-calculator.ts#calculateRentRelief).
+  annualRentPaid     Decimal        @default(0) @map("annual_rent_paid") @db.Decimal(14, 2)
   startDate          DateTime       @map("start_date") @db.Date
   isActive           Boolean        @default(true) @map("is_active")
   createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz
