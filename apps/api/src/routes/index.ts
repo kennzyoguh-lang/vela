@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { publicRouter } from "./public.routes";
 import { authRouter } from "./auth.routes";
 import { staffAuthRouter } from "./staff-auth.routes";
 import { organisationRouter } from "./organisation.routes";
@@ -24,6 +25,10 @@ import { quickSaleRouter } from "./quick-sale.routes";
 // URL path versioning (Handbook 7.4) — a breaking change gets /v2, never an
 // in-place change to /v1.
 export const v1Router = Router();
+// Public, unauthenticated — mounted first since it needs no auth context at
+// all, same precedent as /pay below but for the GTM-engine's marketing-site
+// endpoints (Channel 1: FIRS penalty calculator lead capture).
+v1Router.use("/public", publicRouter);
 v1Router.use("/auth", authRouter);
 v1Router.use("/auth/staff", staffAuthRouter);
 v1Router.use("/organisation", organisationRouter);
