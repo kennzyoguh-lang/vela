@@ -19,12 +19,16 @@ vi.mock("../repositories/audit-log.repository", () => ({
 vi.mock("./payment-gateways", () => ({
   getGateway: vi.fn(),
 }));
+vi.mock("./referral.service", () => ({
+  recordConversionIfReferred: vi.fn().mockResolvedValue(undefined),
+}));
 
 import * as invoiceRepo from "../repositories/invoice.repository";
 import * as invoiceService from "./invoice.service";
 import * as transactionMarkupService from "./transaction-markup.service";
 import * as webhookEventRepo from "../repositories/webhook-event.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import * as referralService from "./referral.service";
 import { getGateway } from "./payment-gateways";
 import { processWebhook } from "./payment-webhook.service";
 
@@ -82,6 +86,23 @@ describe("payment-webhook.service — idempotency and signature verification", (
     expect(auditLogRepo.write).toHaveBeenCalledWith(
       expect.objectContaining({ orgId, entityId: invoiceId, action: "invoice.mark_paid" }),
     );
+    expect(referralService.recordConversionIfReferred).toHaveBeenCalledWith(orgId, "invoice_paid");
+  });
+
+  it("reports a Quick Sale payment as a quick_sale_paid conversion event, not invoice_paid", async () => {
+    vi.mocked(getGateway).mockReturnValue(stubGateway() as never);
+    vi.mocked(invoiceRepo.findByPaymentPortalToken).mockResolvedValue({
+      orgId,
+      id: invoiceId,
+      source: "quick_sale",
+    } as never);
+
+    await processWebhook("paystack", Buffer.from("{}"), "sig");
+
+    expect(referralService.recordConversionIfReferred).toHaveBeenCalledWith(
+      orgId,
+      "quick_sale_paid",
+    );
   });
 
   it("a duplicate delivery of the same event is a no-op — never double-marks paid", async () => {
@@ -98,6 +119,7 @@ describe("payment-webhook.service — idempotency and signature verification", (
     expect(invoiceService.markPaid).not.toHaveBeenCalled();
     expect(transactionMarkupService.recordMarkup).not.toHaveBeenCalled();
     expect(auditLogRepo.write).not.toHaveBeenCalled();
+    expect(referralService.recordConversionIfReferred).not.toHaveBeenCalled();
   });
 
   it("an event type the handler doesn't act on is ignored, not processed", async () => {

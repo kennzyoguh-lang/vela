@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as organisationController from "../controllers/organisation.controller";
 import * as businessProfileController from "../controllers/business-profile.controller";
 import * as taxStatusController from "../controllers/tax-status.controller";
+import * as referralController from "../controllers/referral.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/rbac.middleware";
 import { apiRateLimit } from "../middleware/rate-limit.middleware";
@@ -117,6 +118,15 @@ organisationRouter.patch(
   "/tax-status",
   requireRole("owner", "admin"),
   asyncHandler(taxStatusController.setTaxProfile),
+);
+
+// GTM Channel 3 — owner/admin only, same reasoning as tax-status above:
+// a growth/reward figure for the owner, not something every role's own UI
+// needs. No generic auditLog() — this is a read, nothing to log.
+organisationRouter.get(
+  "/referral-summary",
+  requireRole("owner", "admin"),
+  asyncHandler(referralController.getSummary),
 );
 
 organisationRouter.post(

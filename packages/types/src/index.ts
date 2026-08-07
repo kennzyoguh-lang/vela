@@ -262,6 +262,17 @@ export interface TaxStatus {
   summary: string;
 }
 
+// GTM Channel 3 — computed on read from the conversion count, never stored
+// (see apps/api/src/services/referral.service.ts#tierForConversionCount).
+export type ReferralTier = "bronze" | "silver" | "gold" | "platinum";
+
+export interface ReferralSummary {
+  code: string;
+  conversionCount: number;
+  tier: ReferralTier;
+  rewardsDescription: string[];
+}
+
 export interface ComplianceFiling {
   id: string;
   orgId: string;

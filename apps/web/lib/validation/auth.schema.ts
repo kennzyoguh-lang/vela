@@ -10,6 +10,9 @@ export const signupSchema = z.object({
   email: z.string().email("Enter a valid email"),
   password: z.string().min(10, "At least 10 characters"),
   country: z.string().length(2).default("NG"),
+  // Carried through from ?referredBy= (GTM Channel 3's /refer/[code] and
+  // FIRS-calculator-style funnels) — never a visible form field.
+  referredBy: z.string().optional(),
 });
 
 export const loginSchema = z.object({

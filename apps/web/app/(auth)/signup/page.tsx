@@ -31,6 +31,7 @@ export default function SignupPage() {
       country: "NG",
       email: searchParams.get("email") ?? "",
       orgName: searchParams.get("orgName") ?? "",
+      referredBy: searchParams.get("referredBy") ?? undefined,
     },
   });
 
