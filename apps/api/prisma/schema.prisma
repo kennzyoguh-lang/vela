@@ -872,3 +872,23 @@ model CalculatorLead {
 
   @@map("calculator_leads")
 }
+
+// GTM Channel 2 — self-serve waitlist. No org_id, same shape/rationale as
+// CalculatorLead above. `segment` is ALWAYS derived server-side from
+// `problem` (waitlist.service.ts#deriveSegment) — never trusted from the
+// client, same "never trust client-computed classification" principle as
+// business-profile's server-computed status. Drives which nurture-email copy
+// (nurture-email.job.ts) a signup receives.
+model WaitlistSignup {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessName String   @map("business_name")
+  ownerName    String   @map("owner_name")
+  email        String
+  phone        String?
+  revenueRange String   @map("revenue_range")
+  problem      String
+  segment      String
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("waitlist_signups")
+}

@@ -12,9 +12,10 @@ const AUTH_PATHS = ["/login", "/signup", "/2fa", "/reset-password"];
 // is the invoice payment link an SME's own customer opens; it was missing
 // from any allowlist, so every unauthenticated visitor — the entire intended
 // audience — was being bounced to /login, where they have no account.
-// /firs-calculator is GTM Channel 1's public marketing/lead-gen page — same
-// reasoning: its entire audience is unauthenticated visitors.
-const PUBLIC_PATHS = ["/pay", "/firs-calculator"];
+// /firs-calculator and /waitlist are GTM Channels 1-2's public marketing/
+// lead-gen pages — same reasoning: their entire audience is unauthenticated
+// visitors.
+const PUBLIC_PATHS = ["/pay", "/firs-calculator", "/waitlist"];
 // The anti-theft/POS staff area — its own session (phone+PIN login,
 // /v1/auth/staff/login) marked by the same vela_has_session cookie, but its
 // own login page (/pos/login), not the owner /login. An unauthenticated
