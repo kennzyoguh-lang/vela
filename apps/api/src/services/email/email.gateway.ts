@@ -18,7 +18,12 @@ interface ResendSendResponse {
  * business profiling's notification-channel default (formal/semi-formal
  * orgs route to email instead of WhatsApp/SMS).
  */
-export async function sendEmail(to: string, subject: string, body: string): Promise<void> {
+export async function sendEmail(
+  to: string,
+  subject: string,
+  body: string,
+  html?: string,
+): Promise<void> {
   if (!env.RESEND_API_KEY) {
     logger.info(
       { to, subject, body },
@@ -38,6 +43,7 @@ export async function sendEmail(to: string, subject: string, body: string): Prom
       to,
       subject,
       text: body,
+      ...(html ? { html } : {}),
     }),
   });
 

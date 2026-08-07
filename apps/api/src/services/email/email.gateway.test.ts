@@ -57,6 +57,36 @@ describe("email.gateway#sendEmail", () => {
     );
   });
 
+  it("includes an html field only when a caller passes one", async () => {
+    process.env.RESEND_API_KEY = "test-key";
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: "abc123" }),
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+    const { sendEmail } = await import("./email.gateway");
+
+    await sendEmail(
+      "owner@example.com",
+      "Your VELA daily summary",
+      "Today: 5 sales.",
+      "<p>Today: 5 sales.</p>",
+    );
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://api.resend.com/emails",
+      expect.objectContaining({
+        body: JSON.stringify({
+          from: "Vela <notifications@vela.app>",
+          to: "owner@example.com",
+          subject: "Your VELA daily summary",
+          text: "Today: 5 sales.",
+          html: "<p>Today: 5 sales.</p>",
+        }),
+      }),
+    );
+  });
+
   it("throws a clear error when Resend's API reports failure", async () => {
     process.env.RESEND_API_KEY = "test-key";
     const fetchSpy = vi.fn().mockResolvedValue({

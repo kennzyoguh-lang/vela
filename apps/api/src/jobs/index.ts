@@ -14,6 +14,7 @@ import {
 } from "./compliance-reminder.job";
 import { startBankSyncWorker, scheduleBankSync } from "./bank-sync.job";
 import { startOwnerSummaryWorker, scheduleOwnerSummaryScan } from "./owner-summary.job";
+import { startNurtureEmailWorker } from "./nurture-email.job";
 import { logger } from "../lib/logger";
 
 export async function startJobs() {
@@ -25,6 +26,9 @@ export async function startJobs() {
     startComplianceReminderWorker(),
     startBankSyncWorker(),
     startOwnerSummaryWorker(),
+    // Per-signup delayed jobs, not a daily schedule — no scheduleXxx()
+    // counterpart below, see nurture-email.job.ts#scheduleNurtureEmails.
+    startNurtureEmailWorker(),
   ];
 
   await Promise.all([

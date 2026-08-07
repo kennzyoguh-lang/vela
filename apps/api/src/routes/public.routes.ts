@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as calculatorLeadController from "../controllers/calculator-lead.controller";
+import * as waitlistController from "../controllers/waitlist.controller";
 import { publicPortalRateLimit } from "../middleware/rate-limit.middleware";
 import { asyncHandler } from "../lib/async-handler";
 
@@ -13,3 +14,4 @@ export const publicRouter = Router();
 publicRouter.use(publicPortalRateLimit());
 
 publicRouter.post("/calculator-leads", asyncHandler(calculatorLeadController.recordLead));
+publicRouter.post("/waitlist", asyncHandler(waitlistController.join));
