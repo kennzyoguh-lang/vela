@@ -11,6 +11,12 @@ export type Role = "owner" | "admin" | "accountant" | "staff" | "view_only";
 // formality tier).
 export * from "./business-profile";
 
+// GTM Channel 1 — FIRS penalty estimates. Shared so the number a visitor
+// sees on the public calculator page and the number stored server-side on
+// lead capture can never drift (same "one shared pure function" precedent
+// as business-profile.ts's computeModuleDefaults).
+export * from "./firs-penalty-calculator";
+
 // Shared envelope for paginated list endpoints (invoices, clients, bank
 // transactions) — a bare array response was returning every row in the org
 // unbounded; every paginated list endpoint now returns this shape instead.

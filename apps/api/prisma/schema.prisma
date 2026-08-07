@@ -850,3 +850,25 @@ model CashReconciliation {
   @@index([orgId, businessDate])
   @@map("cash_reconciliations")
 }
+
+// GTM Channel 1 (FIRS Penalty Calculator) lead capture. No org_id — this is
+// filled out by anonymous visitors before they have any account, exactly
+// the same "global ledger, no per-tenant scope" shape as WebhookEvent above
+// (see that model's migration comment for the RLS rationale, which applies
+// here too: no policy is needed or applicable). convertedToAccount is set
+// by calculator-lead.service.ts#markConverted once the lead actually signs
+// up, so conversion rate can be computed on read rather than tracked
+// separately.
+model CalculatorLead {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email              String
+  businessName       String   @map("business_name")
+  vatPenalty         Decimal  @map("vat_penalty") @db.Decimal(14, 2)
+  whtPenalty         Decimal  @map("wht_penalty") @db.Decimal(14, 2)
+  citPenalty         Decimal  @map("cit_penalty") @db.Decimal(14, 2)
+  totalPenalty       Decimal  @map("total_penalty") @db.Decimal(14, 2)
+  convertedToAccount Boolean  @default(false) @map("converted_to_account")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("calculator_leads")
+}

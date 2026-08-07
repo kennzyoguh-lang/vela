@@ -2,6 +2,7 @@ import * as organisationRepo from "../repositories/organisation.repository";
 import * as userRepo from "../repositories/user.repository";
 import * as sessionRepo from "../repositories/session.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import * as calculatorLeadService from "./calculator-lead.service";
 import { hashPassword, verifyPassword, hashToken, verifyTokenHash } from "./password.service";
 import {
   signAccessToken,
@@ -67,6 +68,11 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
     throw err;
   }
   await organisationRepo.setOrganisationOwner(org.id, user.id);
+
+  // Best-effort: closes the FIRS-calculator lead loop (calculator-lead.
+  // service.ts) if this signup came from that funnel. Never allowed to fail
+  // the signup itself — a missed conversion mark is just a metric gap.
+  calculatorLeadService.markConverted(input.email).catch(() => {});
 
   return issueSession(org.id, user.id, "owner", {});
 }

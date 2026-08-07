@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import { Alert } from "@/components/ui/Alert";
 // questions belong to onboarding, after commitment (a later phase's scope).
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
@@ -23,7 +24,14 @@ export default function SignupPage() {
     formState: { errors, isSubmitting },
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { country: "NG" },
+    // Prefilled when arriving from a lead-capture funnel (e.g. the FIRS
+    // penalty calculator, app/firs-calculator/page.tsx) — reduces friction
+    // for someone who already gave us this information once.
+    defaultValues: {
+      country: "NG",
+      email: searchParams.get("email") ?? "",
+      orgName: searchParams.get("orgName") ?? "",
+    },
   });
 
   async function onSubmit(values: SignupFormValues) {
