@@ -3,6 +3,7 @@ import * as userRepo from "../repositories/user.repository";
 import * as sessionRepo from "../repositories/session.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
 import * as calculatorLeadService from "./calculator-lead.service";
+import * as referralService from "./referral.service";
 import { hashPassword, verifyPassword, hashToken, verifyTokenHash } from "./password.service";
 import {
   signAccessToken,
@@ -44,9 +45,20 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
   const existing = await userRepo.findByEmail(input.email);
   if (existing) throw new ConflictError("An account with this email already exists");
 
+  // Best-effort resolve — an unrecognized or expired code, or any lookup
+  // failure, must never block a real signup. Resolved once, here, and
+  // stored on the org permanently (see Organisation.referredByOrgId's
+  // schema comment) rather than re-resolved later.
+  let referral: { orgId: string; codeId: string } | null = null;
+  if (input.referredBy) {
+    referral = await referralService.resolveCode(input.referredBy).catch(() => null);
+  }
+
   const org = await organisationRepo.createOrganisation({
     name: input.orgName,
     country: input.country,
+    referredByOrgId: referral?.orgId,
+    referredByCodeId: referral?.codeId,
   });
   const passwordHash = await hashPassword(input.password);
   let user;

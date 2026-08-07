@@ -9,6 +9,11 @@ export const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(10).max(128),
   country: z.string().length(2).default("NG"),
+  // GTM Channel 3 — set when arriving from a /refer/[code] link. Resolved
+  // server-side (referral.service.ts#resolveCode) into the referrer's org
+  // id, never trusted or stored as-is; an unrecognized code is silently
+  // ignored rather than failing the signup.
+  referredBy: z.string().max(20).optional(),
 });
 
 export const loginSchema = z.object({

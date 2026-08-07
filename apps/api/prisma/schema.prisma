@@ -96,6 +96,14 @@ model Organisation {
   annualTurnover               Decimal? @map("annual_turnover") @db.Decimal(14, 2)
   fixedAssetsValue             Decimal? @map("fixed_assets_value") @db.Decimal(14, 2)
   providesProfessionalServices Boolean? @map("provides_professional_services")
+  // GTM Channel 3 (referral system) — resolved ONCE at signup via the
+  // resolve_referral_code() SECURITY DEFINER function and never changed
+  // after, so payment-webhook.service.ts can read "who referred this org"
+  // straight off its own row (no cross-org lookup needed at conversion
+  // time). No FK constraint to referral_codes/organisations — same
+  // "plain value, no cascade coupling" reasoning as AuditLog.orgId.
+  referredByOrgId  String?  @map("referred_by_org_id") @db.Uuid
+  referredByCodeId String?  @map("referred_by_code_id") @db.Uuid
   createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamptz
   updatedAt               DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -121,6 +129,8 @@ model Organisation {
   sales                 Sale[]
   saleItems             SaleItem[]
   cashReconciliations   CashReconciliation[]
+  referralCodes         ReferralCode[]
+  referralConversions   ReferralConversion[]
 
   @@map("organisations")
 }
@@ -891,4 +901,46 @@ model WaitlistSignup {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("waitlist_signups")
+}
+
+// GTM Channel 3 — one shareable code per org. Org-scoped (the referrer owns
+// and reads their own code), standard RLS. Public resolution (an anonymous
+// /refer/[code] visitor, or the signup flow before any org context exists)
+// goes through resolve_referral_code() (migration 20260807120000), never a
+// direct table read — same two-step "SECURITY DEFINER resolve, then
+// withOrgScope" shape as invoice.repository.ts#findByPaymentPortalToken.
+model ReferralCode {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId     String   @map("org_id") @db.Uuid
+  code      String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("referral_codes")
+}
+
+// GTM Channel 3 — the reward ledger, written once per referee org
+// (@@unique([refereeOrgId]) is the actual idempotency guarantee — a retried
+// or duplicate webhook event that reaches recordConversion twice just hits
+// this constraint and no-ops, same "create-and-catch-P2002" precedent as
+// webhook-event.repository.ts#recordIfNew). `orgId` is the REFERRER (for
+// RLS — they're the one this reward belongs to), not the org that just
+// paid. Per the session's "track now, apply later" billing-gap decision:
+// rewardDescription records what's OWED in plain language; nothing here
+// ever touches a real subscription credit or charge.
+model ReferralConversion {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId             String   @map("org_id") @db.Uuid
+  refereeOrgId      String   @unique @map("referee_org_id") @db.Uuid
+  referralCodeId    String   @map("referral_code_id") @db.Uuid
+  conversionEvent   String   @map("conversion_event")
+  convertedAt       DateTime @map("converted_at") @db.Timestamptz
+  rewardRecordedAt  DateTime @map("reward_recorded_at") @db.Timestamptz
+  rewardDescription String   @map("reward_description")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("referral_conversions")
 }

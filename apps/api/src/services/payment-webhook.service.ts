@@ -3,6 +3,7 @@ import * as invoiceService from "./invoice.service";
 import * as transactionMarkupService from "./transaction-markup.service";
 import * as webhookEventRepo from "../repositories/webhook-event.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import * as referralService from "./referral.service";
 import { getGateway } from "./payment-gateways";
 import { logger } from "../lib/logger";
 import type { PaymentProcessor } from "@prisma/client";
@@ -87,6 +88,23 @@ export async function processWebhook(
     settledAt: event.paidAt,
     activationChannel: "portal",
   });
+
+  // GTM Channel 3 — same idempotent point as recordMarkup above (this
+  // whole function only reaches here once per unique webhook event, via
+  // the recordIfNew check earlier). recordConversionIfReferred has its own
+  // idempotency (a unique constraint on the referee org), so a second paid
+  // invoice from an already-converted org is a safe no-op, not a special
+  // case to guard against here. Never allowed to fail the webhook — a
+  // referral reward is a growth nice-to-have, not a reason to reject a
+  // real payment.
+  referralService
+    .recordConversionIfReferred(
+      invoice.orgId,
+      invoice.source === "quick_sale" ? "quick_sale_paid" : "invoice_paid",
+    )
+    .catch((err) => {
+      logger.error({ orgId: invoice.orgId, err }, "Failed to record referral conversion");
+    });
 
   return "processed";
 }

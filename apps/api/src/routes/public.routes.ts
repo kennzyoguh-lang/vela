@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as calculatorLeadController from "../controllers/calculator-lead.controller";
 import * as waitlistController from "../controllers/waitlist.controller";
+import * as referralController from "../controllers/referral.controller";
 import { publicPortalRateLimit } from "../middleware/rate-limit.middleware";
 import { asyncHandler } from "../lib/async-handler";
 
@@ -15,3 +16,4 @@ publicRouter.use(publicPortalRateLimit());
 
 publicRouter.post("/calculator-leads", asyncHandler(calculatorLeadController.recordLead));
 publicRouter.post("/waitlist", asyncHandler(waitlistController.join));
+publicRouter.get("/referral-codes/:code", asyncHandler(referralController.validateCode));

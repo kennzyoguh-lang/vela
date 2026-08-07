@@ -53,7 +53,14 @@ vi.mock("./rate-limit.service", () => ({
   recordTwoFaFailure: vi.fn(),
   clearTwoFaFailures: vi.fn(),
 }));
+vi.mock("./calculator-lead.service", () => ({
+  markConverted: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("./referral.service", () => ({
+  resolveCode: vi.fn(),
+}));
 
+import * as organisationRepo from "../repositories/organisation.repository";
 import * as userRepo from "../repositories/user.repository";
 import * as sessionRepo from "../repositories/session.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
@@ -61,6 +68,7 @@ import * as passwordService from "./password.service";
 import * as jwtService from "./jwt.service";
 import * as twofaService from "./twofa.service";
 import * as rateLimitService from "./rate-limit.service";
+import * as referralService from "./referral.service";
 import * as authService from "./auth.service";
 
 function stubUser(overrides: Record<string, unknown> = {}) {
@@ -81,6 +89,75 @@ describe("auth.service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(rateLimitService.isTwoFaLockedOut).mockResolvedValue(false);
+  });
+
+  describe("signup", () => {
+    function stubSignupPlumbing() {
+      const orgId = randomUUID();
+      const userId = randomUUID();
+      vi.mocked(userRepo.findByEmail).mockResolvedValue(null as never);
+      vi.mocked(organisationRepo.createOrganisation).mockResolvedValue({ id: orgId } as never);
+      vi.mocked(userRepo.createUser).mockResolvedValue({ id: userId } as never);
+      return { orgId, userId };
+    }
+
+    it("never resolves a referral code when none was provided", async () => {
+      stubSignupPlumbing();
+
+      await authService.signup({
+        orgName: "Ada's Textiles",
+        name: "Ada",
+        email: "ada@example.com",
+        password: "correct-horse-battery",
+        country: "NG",
+      });
+
+      expect(referralService.resolveCode).not.toHaveBeenCalled();
+      expect(organisationRepo.createOrganisation).toHaveBeenCalledWith(
+        expect.objectContaining({ referredByOrgId: undefined, referredByCodeId: undefined }),
+      );
+    });
+
+    it("resolves a referredBy code and stores both ids on the new org", async () => {
+      stubSignupPlumbing();
+      vi.mocked(referralService.resolveCode).mockResolvedValue({
+        orgId: "referrer-org",
+        codeId: "code-1",
+      });
+
+      await authService.signup({
+        orgName: "Ada's Textiles",
+        name: "Ada",
+        email: "ada@example.com",
+        password: "correct-horse-battery",
+        country: "NG",
+        referredBy: "ABCD123",
+      });
+
+      expect(referralService.resolveCode).toHaveBeenCalledWith("ABCD123");
+      expect(organisationRepo.createOrganisation).toHaveBeenCalledWith(
+        expect.objectContaining({ referredByOrgId: "referrer-org", referredByCodeId: "code-1" }),
+      );
+    });
+
+    it("never blocks signup when referral-code resolution fails", async () => {
+      const { orgId } = stubSignupPlumbing();
+      vi.mocked(referralService.resolveCode).mockRejectedValue(new Error("db hiccup"));
+
+      await expect(
+        authService.signup({
+          orgName: "Ada's Textiles",
+          name: "Ada",
+          email: "ada@example.com",
+          password: "correct-horse-battery",
+          country: "NG",
+          referredBy: "ABCD123",
+        }),
+      ).resolves.toMatchObject({ orgId, accessToken: "access-token" });
+      expect(organisationRepo.createOrganisation).toHaveBeenCalledWith(
+        expect.objectContaining({ referredByOrgId: undefined, referredByCodeId: undefined }),
+      );
+    });
   });
 
   describe("login", () => {

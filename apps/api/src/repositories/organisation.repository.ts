@@ -16,10 +16,20 @@ import type { Organisation } from "@prisma/client";
 export async function createOrganisation(input: {
   name: string;
   country: string;
+  referredByOrgId?: string | null;
+  referredByCodeId?: string | null;
 }): Promise<Organisation> {
   const id = randomUUID();
   return withOrgScope(id, (tx) =>
-    tx.organisation.create({ data: { id, name: input.name, country: input.country } }),
+    tx.organisation.create({
+      data: {
+        id,
+        name: input.name,
+        country: input.country,
+        referredByOrgId: input.referredByOrgId ?? null,
+        referredByCodeId: input.referredByCodeId ?? null,
+      },
+    }),
   );
 }
 
