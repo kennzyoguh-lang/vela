@@ -4,7 +4,20 @@ import { useAuthStore } from "@/stores/auth-store";
 // Foundation's typed API client. Once Phase 2 introduces the OpenAPI spec
 // (Handbook 4.7/7.8), this is replaced by the generated client — no raw fetch
 // calls scattered through components even before that pipeline exists.
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+//
+// Empty string in production, not an absolute URL: when the API is deployed
+// on a different domain than this app (e.g. Render vs Vercel), requests must
+// go through next.config.js's same-origin rewrite (API_PROXY_TARGET) rather
+// than hitting the API directly cross-origin — session cookies (httpOnly,
+// SameSite=Strict, no Domain attribute) are only visible to middleware.ts
+// when the browser sees them as set by THIS app's own origin. `${""}${path}`
+// resolves to a same-origin relative path, which the rewrite then intercepts.
+// Vercel's env UI won't accept an explicitly empty value for NEXT_PUBLIC_API_URL,
+// so this branches on NODE_ENV (which Next.js always inlines client-side)
+// instead of requiring one to be set.
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  (process.env.NODE_ENV === "production" ? "" : "http://localhost:4000");
 
 // requireAuth (Handbook 8.1) only accepts a Bearer access token — these are
 // the endpoints that either don't need one or are how one gets minted, so

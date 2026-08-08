@@ -23,7 +23,12 @@ const PUBLIC_PATHS = ["/pay", "/firs-calculator", "/waitlist", "/refer"];
 // visitor to /pos/login redirects to /pos/sell, not the owner dashboard.
 const POS_LOGIN_PATH = "/pos/login";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+// Same NODE_ENV-aware fallback as lib/api/client.ts — in production this is
+// empty (same-origin proxied requests, already covered by 'self' below), not
+// a stale localhost entry that could never actually be reached from there.
+const API_ORIGIN =
+  process.env.NEXT_PUBLIC_API_URL ??
+  (process.env.NODE_ENV === "production" ? "" : "http://localhost:4000");
 
 // Nonce-based CSP (Next.js's own documented pattern) rather than 'unsafe-inline'
 // on script-src — the root layout's inline theme-init script (avoids a
