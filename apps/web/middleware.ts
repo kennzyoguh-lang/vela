@@ -100,5 +100,12 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // /v1/* excluded — those are next.config.js's same-origin API proxy
+  // (API_PROXY_TARGET), not a page. This middleware's session-gating logic
+  // was intercepting every /v1/* fetch (no session cookie exists yet on the
+  // very request that would create one, e.g. the login POST itself) and
+  // redirecting it to /login before the rewrite ever got a chance to run —
+  // found live, the login POST returned a 200 with the /login PAGE'S html
+  // instead of the API's JSON.
+  matcher: ["/((?!api|v1|_next/static|_next/image|favicon.ico).*)"],
 };
