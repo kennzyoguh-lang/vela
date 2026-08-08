@@ -18,6 +18,7 @@ export const COMPLIANCE_REMINDER_QUEUE = "compliance-reminders";
 export const BANK_SYNC_QUEUE = "bank-sync";
 export const OWNER_SUMMARY_QUEUE = "owner-daily-summary";
 export const NURTURE_EMAIL_QUEUE = "nurture-email";
+export const ACCOUNTANT_EARNINGS_GENERATION_QUEUE = "accountant-earnings-generation";
 
 export const reminderQueue = new Queue(REMINDER_QUEUE, { connection: jobsConnection });
 export const recurringInvoiceQueue = new Queue(RECURRING_INVOICE_QUEUE, {
@@ -33,6 +34,9 @@ export const complianceReminderQueue = new Queue(COMPLIANCE_REMINDER_QUEUE, {
 export const bankSyncQueue = new Queue(BANK_SYNC_QUEUE, { connection: jobsConnection });
 export const ownerSummaryQueue = new Queue(OWNER_SUMMARY_QUEUE, { connection: jobsConnection });
 export const nurtureEmailQueue = new Queue(NURTURE_EMAIL_QUEUE, { connection: jobsConnection });
+export const accountantEarningsGenerationQueue = new Queue(ACCOUNTANT_EARNINGS_GENERATION_QUEUE, {
+  connection: jobsConnection,
+});
 
 // All jobs are idempotent by design (Handbook 5.8) — safe to re-run. Retry
 // policy: 3 attempts with exponential backoff, matching the reminder/

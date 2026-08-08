@@ -16,3 +16,4 @@ accountantPortalRouter.get(
   "/client-orgs/:clientOrgId/summary",
   asyncHandler(accountantPortalController.getClientOrgSummary),
 );
+accountantPortalRouter.get("/earnings", asyncHandler(accountantPortalController.getEarnings));
