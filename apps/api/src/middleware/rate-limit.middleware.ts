@@ -89,6 +89,33 @@ export function twoFaVerifyRateLimit() {
   });
 }
 
+// Per-IP — /verify-email has no session yet (the token itself is the
+// credential), so this is DoS/token-guessing protection only, same shape as
+// twoFaVerifyRateLimit(); the token's own signature is what actually
+// prevents forgery.
+export function emailVerifyRateLimit() {
+  return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
+    const key = `ratelimit:email-verify:${req.ip}`;
+    const { allowed } = await checkAndIncrement(key, 20, 60);
+    if (!allowed) return next(new RateLimitedError("Too many attempts — try again shortly", 60));
+    next();
+  });
+}
+
+// Authed — keyed per-user rather than per-IP since resend is a
+// requireAuth route, mirroring loginRateLimit()'s "identifier, not just IP"
+// reasoning. Deliberately tight: resend sends a real email, not just a
+// login attempt.
+export function resendVerificationRateLimit() {
+  return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
+    const key = `ratelimit:resend-verification:${req.userId ?? req.ip}`;
+    const { allowed } = await checkAndIncrement(key, 3, 60);
+    if (!allowed)
+      return next(new RateLimitedError("Too many resend attempts — try again shortly", 60));
+    next();
+  });
+}
+
 // The public payment portal (Handbook 7.1) is unauthenticated by design, so
 // it gets its own, stricter, per-IP limit rather than apiRateLimit's per-org
 // one (there's no org context to key on until the token is resolved).

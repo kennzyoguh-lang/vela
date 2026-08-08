@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Circle } from "lucide-react";
 import {
   DashboardTemplate,
   type DashboardWidgetSlot,
 } from "@/components/templates/DashboardTemplate";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { api } from "@/lib/api/client";
 import { OutstandingInvoicesWidget } from "@/components/modules/OutstandingInvoicesWidget";
 import { LowStockWidget } from "@/components/modules/LowStockWidget";
 import { ComplianceWidget } from "@/components/modules/ComplianceWidget";
@@ -14,41 +17,77 @@ import { UpcomingPayrollWidget } from "@/components/modules/UpcomingPayrollWidge
 import { AskVelaInsightWidget } from "@/components/modules/AskVelaInsightWidget";
 import { OwnerDailyStatusBanner } from "@/components/modules/OwnerDailyStatusBanner";
 import { GraduationPromptBanner } from "@/components/modules/GraduationPromptBanner";
+import { EmailVerificationBanner } from "@/components/modules/EmailVerificationBanner";
 import { useModuleVisibility } from "@/lib/business-profile/useModuleVisibility";
 
-const ONBOARDING_STEPS = [
-  { label: "Business created", done: true },
-  { label: "Compliance obligations selected", done: false },
-  { label: "Bank account connected", done: false },
-  { label: "Team invited", done: false },
-];
+interface SetupChecklist {
+  complianceObligationsSelected: boolean;
+  bankAccountConnected: boolean;
+  teamInvited: boolean;
+}
 
 // Design System 6.5/Part 7 — the first-run guided checklist replaces the hero
-// slot until 4-of-4 complete (not yet reachable in Foundation since none of
-// the underlying modules exist to mark a step genuinely done beyond signup).
+// slot until 4-of-4 complete. "Business created" is always done by the time
+// this renders (signup is a prerequisite of reaching the dashboard); the
+// other 3 are read from GET /v1/organisation/setup-checklist, computed on
+// read from data that already exists elsewhere (compliance obligations, bank
+// accounts, invites/staff) rather than a separate stored flag.
 function FirstRunChecklist() {
-  const doneCount = ONBOARDING_STEPS.filter((s) => s.done).length;
+  const { data: checklist } = useQuery({
+    queryKey: ["organisation", "setup-checklist"],
+    queryFn: () => api.get<SetupChecklist>("/v1/organisation/setup-checklist"),
+    staleTime: 30_000,
+  });
+
+  const steps = [
+    { label: "Business created", done: true, href: null },
+    {
+      label: "Compliance obligations selected",
+      done: checklist?.complianceObligationsSelected ?? false,
+      href: "/compliance/settings",
+    },
+    {
+      label: "Bank account connected",
+      done: checklist?.bankAccountConnected ?? false,
+      href: "/money",
+    },
+    { label: "Team invited", done: checklist?.teamInvited ?? false, href: "/settings/users" },
+  ];
+  const doneCount = steps.filter((s) => s.done).length;
+
   return (
     <Card className="md:col-span-2">
       <CardHeader>
         <CardTitle>
-          Get set up ({doneCount} of {ONBOARDING_STEPS.length})
+          Get set up ({doneCount} of {steps.length})
         </CardTitle>
       </CardHeader>
       <ul className="flex flex-col gap-2">
-        {ONBOARDING_STEPS.map((step) => (
-          <li
-            key={step.label}
-            className="font-ui text-text-primary flex items-center gap-2 text-[0.875rem]"
-          >
-            {step.done ? (
-              <CheckCircle2 className="text-sage size-4" aria-hidden />
-            ) : (
-              <Circle className="text-text-secondary size-4" aria-hidden />
-            )}
-            {step.label}
-          </li>
-        ))}
+        {steps.map((step) => {
+          const icon = step.done ? (
+            <CheckCircle2 className="text-sage size-4 shrink-0" aria-hidden />
+          ) : (
+            <Circle className="text-text-secondary size-4 shrink-0" aria-hidden />
+          );
+          return (
+            <li
+              key={step.label}
+              className="font-ui text-text-primary flex items-center gap-2 text-[0.875rem]"
+            >
+              {step.href && !step.done ? (
+                <Link href={step.href} className="flex items-center gap-2 hover:underline">
+                  {icon}
+                  {step.label}
+                </Link>
+              ) : (
+                <>
+                  {icon}
+                  {step.label}
+                </>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </Card>
   );
@@ -112,6 +151,7 @@ export default function DashboardHomePage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <EmailVerificationBanner />
       <GraduationPromptBanner />
       {visibility.cashReconciliation ? <OwnerDailyStatusBanner /> : null}
       <h1 className="font-ui text-text-primary text-[1.5rem] font-bold">Home</h1>

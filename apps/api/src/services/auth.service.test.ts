@@ -20,6 +20,7 @@ vi.mock("../repositories/user.repository", () => ({
   createUser: vi.fn(),
   updateLastLogin: vi.fn(),
   updateBackupCodes: vi.fn(),
+  markEmailVerified: vi.fn(),
 }));
 vi.mock("../repositories/session.repository", () => ({
   createSession: vi.fn(),
@@ -42,6 +43,8 @@ vi.mock("./jwt.service", () => ({
   rotateRefreshToken: vi.fn(() => "rotated-refresh-token"),
   signTwoFaChallengeToken: vi.fn(() => "challenge-token"),
   verifyTwoFaChallengeToken: vi.fn(),
+  signEmailVerificationToken: vi.fn(() => "verify-token"),
+  verifyEmailVerificationToken: vi.fn(),
 }));
 vi.mock("./twofa.service", () => ({
   verifyTotpCode: vi.fn(),
@@ -59,6 +62,12 @@ vi.mock("./calculator-lead.service", () => ({
 vi.mock("./referral.service", () => ({
   resolveCode: vi.fn(),
 }));
+vi.mock("./email/email.gateway", () => ({
+  sendEmail: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../email/templates/verify-email", () => ({
+  verifyEmailEmail: vi.fn(() => ({ subject: "s", html: "h", text: "t" })),
+}));
 
 import * as organisationRepo from "../repositories/organisation.repository";
 import * as userRepo from "../repositories/user.repository";
@@ -69,6 +78,7 @@ import * as jwtService from "./jwt.service";
 import * as twofaService from "./twofa.service";
 import * as rateLimitService from "./rate-limit.service";
 import * as referralService from "./referral.service";
+import * as emailGateway from "./email/email.gateway";
 import * as authService from "./auth.service";
 
 function stubUser(overrides: Record<string, unknown> = {}) {
@@ -325,6 +335,94 @@ describe("auth.service", () => {
         /challenge expired or invalid/i,
       );
       expect(userRepo.findById).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("verifyEmail", () => {
+    const orgId = randomUUID();
+    const userId = randomUUID();
+
+    it("marks the account verified on a valid token", async () => {
+      vi.mocked(jwtService.verifyEmailVerificationToken).mockReturnValue({ sub: userId, orgId });
+      vi.mocked(userRepo.findById).mockResolvedValue(
+        stubUser({ id: userId, orgId, emailVerifiedAt: null }) as never,
+      );
+
+      await authService.verifyEmail("some-token");
+
+      expect(userRepo.markEmailVerified).toHaveBeenCalledWith(orgId, userId);
+    });
+
+    it("is a no-op — not an error — when the account is already verified", async () => {
+      vi.mocked(jwtService.verifyEmailVerificationToken).mockReturnValue({ sub: userId, orgId });
+      vi.mocked(userRepo.findById).mockResolvedValue(
+        stubUser({ id: userId, orgId, emailVerifiedAt: new Date() }) as never,
+      );
+
+      await authService.verifyEmail("some-token");
+
+      expect(userRepo.markEmailVerified).not.toHaveBeenCalled();
+    });
+
+    it("rejects an expired or tampered token before ever looking up the user", async () => {
+      vi.mocked(jwtService.verifyEmailVerificationToken).mockImplementation(() => {
+        throw new Error("jwt expired");
+      });
+
+      await expect(authService.verifyEmail("bad-token")).rejects.toThrow(
+        /verification link expired or invalid/i,
+      );
+      expect(userRepo.findById).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("resendVerificationEmail", () => {
+    const orgId = randomUUID();
+    const userId = randomUUID();
+
+    it("sends a fresh verification email to an unverified account", async () => {
+      vi.mocked(userRepo.findById).mockResolvedValue(
+        stubUser({
+          id: userId,
+          orgId,
+          email: "ada@example.com",
+          name: "Ada",
+          emailVerifiedAt: null,
+        }) as never,
+      );
+
+      await authService.resendVerificationEmail(orgId, userId);
+
+      expect(jwtService.signEmailVerificationToken).toHaveBeenCalledWith({
+        sub: userId,
+        orgId,
+      });
+      expect(emailGateway.sendEmail).toHaveBeenCalledWith("ada@example.com", "s", "t", "h");
+    });
+
+    it("is a silent no-op for an already-verified account", async () => {
+      vi.mocked(userRepo.findById).mockResolvedValue(
+        stubUser({
+          id: userId,
+          orgId,
+          email: "ada@example.com",
+          emailVerifiedAt: new Date(),
+        }) as never,
+      );
+
+      await authService.resendVerificationEmail(orgId, userId);
+
+      expect(emailGateway.sendEmail).not.toHaveBeenCalled();
+    });
+
+    it("is a silent no-op for a phone+PIN staff account with no email", async () => {
+      vi.mocked(userRepo.findById).mockResolvedValue(
+        stubUser({ id: userId, orgId, email: null, emailVerifiedAt: null }) as never,
+      );
+
+      await authService.resendVerificationEmail(orgId, userId);
+
+      expect(emailGateway.sendEmail).not.toHaveBeenCalled();
     });
   });
 });

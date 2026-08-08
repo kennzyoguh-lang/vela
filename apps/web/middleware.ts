@@ -14,8 +14,12 @@ const AUTH_PATHS = ["/login", "/signup", "/2fa", "/reset-password"];
 // audience — was being bounced to /login, where they have no account.
 // /firs-calculator, /waitlist, and /refer are GTM Channels 1-3's public
 // marketing/lead-gen pages — same reasoning: their entire audience is
-// unauthenticated visitors.
-const PUBLIC_PATHS = ["/pay", "/firs-calculator", "/waitlist", "/refer"];
+// unauthenticated visitors. /verify-email is deliberately NOT in AUTH_PATHS
+// even though it lives in app/(auth) — a freshly signed-up visitor already
+// has a session (signup issues one immediately), and AUTH_PATHS redirects an
+// already-authenticated visitor away before the token in the link would ever
+// get verified.
+const PUBLIC_PATHS = ["/pay", "/firs-calculator", "/waitlist", "/refer", "/verify-email"];
 // The anti-theft/POS staff area — its own session (phone+PIN login,
 // /v1/auth/staff/login) marked by the same vela_has_session cookie, but its
 // own login page (/pos/login), not the owner /login. An unauthenticated

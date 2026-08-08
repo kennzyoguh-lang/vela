@@ -3,6 +3,8 @@ import * as inviteRepo from "../repositories/invite.repository";
 import * as userRepo from "../repositories/user.repository";
 import * as organisationRepo from "../repositories/organisation.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import * as complianceObligationRepo from "../repositories/compliance-obligation.repository";
+import * as bankAccountRepo from "../repositories/bank-account.repository";
 import { hashPassword } from "./password.service";
 import { normalizePhoneNumber } from "../lib/phone";
 import { BusinessRuleViolationError, ConflictError } from "../lib/errors";
@@ -235,4 +237,32 @@ export async function resetStaffDevice(orgId: string, actorId: string, targetUse
     entityType: "user",
     entityId: targetUserId,
   });
+}
+
+export interface SetupChecklist {
+  complianceObligationsSelected: boolean;
+  bankAccountConnected: boolean;
+  teamInvited: boolean;
+}
+
+// Backs the dashboard's "Get set up" first-run checklist
+// (apps/web/app/(dashboard)/page.tsx#FirstRunChecklist) — all 3 booleans are
+// computed on read from data that already exists elsewhere, not cached or
+// stored, same derive-don't-cache precedent used throughout this codebase.
+// "Team invited" counts either a still-pending invite or an already-active
+// second user (an accepted invite becomes a user row; a phone+PIN staff
+// account created via createStaffUser never goes through the invite table at
+// all) — either one means the owner is no longer working alone.
+export async function getSetupChecklist(orgId: string): Promise<SetupChecklist> {
+  const [obligations, bankAccounts, pendingInvites, users] = await Promise.all([
+    complianceObligationRepo.listActive(orgId),
+    bankAccountRepo.listActiveByOrg(orgId),
+    inviteRepo.listPendingForOrg(orgId),
+    userRepo.listByOrg(orgId),
+  ]);
+  return {
+    complianceObligationsSelected: obligations.length > 0,
+    bankAccountConnected: bankAccounts.length > 0,
+    teamInvited: pendingInvites.length > 0 || users.length > 1,
+  };
 }

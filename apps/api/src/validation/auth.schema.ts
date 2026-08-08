@@ -21,6 +21,10 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1),
+});
+
 export const twoFaVerifySchema = z.object({
   code: z.string().length(6).regex(/^\d+$/),
 });

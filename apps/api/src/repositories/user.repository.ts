@@ -73,6 +73,12 @@ export async function listByOrg(orgId: string): Promise<User[]> {
   );
 }
 
+export async function markEmailVerified(orgId: string, userId: string): Promise<void> {
+  await withOrgScope(orgId, (tx) =>
+    tx.user.update({ where: { id: userId, orgId }, data: { emailVerifiedAt: new Date() } }),
+  );
+}
+
 export async function updateLastLogin(orgId: string, userId: string): Promise<void> {
   await withOrgScope(orgId, (tx) =>
     tx.user.update({ where: { id: userId, orgId }, data: { lastLogin: new Date() } }),

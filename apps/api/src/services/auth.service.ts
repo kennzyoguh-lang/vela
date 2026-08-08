@@ -4,6 +4,8 @@ import * as sessionRepo from "../repositories/session.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
 import * as calculatorLeadService from "./calculator-lead.service";
 import * as referralService from "./referral.service";
+import * as emailGateway from "./email/email.gateway";
+import { verifyEmailEmail } from "../email/templates/verify-email";
 import { hashPassword, verifyPassword, hashToken, verifyTokenHash } from "./password.service";
 import {
   signAccessToken,
@@ -11,10 +13,13 @@ import {
   rotateRefreshToken,
   signTwoFaChallengeToken,
   verifyTwoFaChallengeToken,
+  signEmailVerificationToken,
+  verifyEmailVerificationToken,
 } from "./jwt.service";
 import { verifyTotpCode, consumeBackupCode, decryptTwoFaSecret } from "./twofa.service";
 import { isTwoFaLockedOut, recordTwoFaFailure, clearTwoFaFailures } from "./rate-limit.service";
-import { UnauthenticatedError, ConflictError } from "../lib/errors";
+import { UnauthenticatedError, ConflictError, NotFoundError } from "../lib/errors";
+import { logger } from "../lib/logger";
 import type { SignupInput, LoginInput } from "../validation/auth.schema";
 
 export interface AuthResult {
@@ -85,6 +90,17 @@ export async function signup(input: SignupInput): Promise<AuthResult> {
   // service.ts) if this signup came from that funnel. Never allowed to fail
   // the signup itself — a missed conversion mark is just a metric gap.
   calculatorLeadService.markConverted(input.email).catch(() => {});
+
+  // Best-effort, fire-and-forget — same "never block the request path"
+  // reasoning as nurture-email.job.ts's scheduleNurtureEmails call. A new
+  // owner must never be locked out of the account they just created because
+  // an email failed to send; emailVerifiedAt just stays null until they use
+  // the "resend" action.
+  const verificationToken = signEmailVerificationToken({ sub: user.id, orgId: org.id });
+  const { subject, html, text } = verifyEmailEmail(input.name, verificationToken);
+  emailGateway.sendEmail(input.email, subject, text, html).catch((err) => {
+    logger.error({ userId: user.id, err }, "Failed to send signup verification email");
+  });
 
   return issueSession(org.id, user.id, "owner", {});
 }
@@ -268,4 +284,54 @@ export async function refresh(
 
 export async function logout(orgId: string, sessionFamilyId: string): Promise<void> {
   await sessionRepo.terminateFamily(orgId, sessionFamilyId);
+}
+
+// No session required — the signed token itself (24h TTL, its own audience,
+// see jwt.service.ts) is what proves the request is legitimate, same
+// "resolve, then act" shape as /2fa/verify. Never errors on an
+// already-verified account — clicking a stale-but-still-valid link twice
+// (e.g. two browser tabs) is a no-op, not a failure.
+export async function verifyEmail(token: string): Promise<void> {
+  let claims: { sub: string; orgId: string };
+  try {
+    claims = verifyEmailVerificationToken(token);
+  } catch {
+    throw new UnauthenticatedError("Verification link expired or invalid — request a new one");
+  }
+
+  const user = await userRepo.findById(claims.orgId, claims.sub);
+  if (!user) throw new NotFoundError("Account not found");
+  if (!user.emailVerifiedAt) {
+    await userRepo.markEmailVerified(claims.orgId, claims.sub);
+  }
+}
+
+// Authed — resends to the account's own email, never an address the caller
+// supplies (Handbook 3.12-style "never let the caller redirect where a
+// security email goes"). A no-op for an already-verified or email-less
+// (phone+PIN staff) account rather than an error, so a stray double-click
+// on "Resend" never surfaces a confusing failure.
+export async function resendVerificationEmail(orgId: string, userId: string): Promise<void> {
+  const user = await userRepo.findById(orgId, userId);
+  if (!user) throw new NotFoundError("Account not found");
+  if (!user.email || user.emailVerifiedAt) return;
+
+  const token = signEmailVerificationToken({ sub: user.id, orgId: user.orgId });
+  const { subject, html, text } = verifyEmailEmail(user.name, token);
+  await emailGateway.sendEmail(user.email, subject, text, html);
+}
+
+export interface CurrentUserSummary {
+  email: string | null;
+  emailVerifiedAt: Date | null;
+}
+
+// Backs the dashboard's email-verification banner — deliberately a fresh DB
+// read rather than a claim on the access token, so the banner disappears the
+// same moment verification succeeds instead of waiting for the next silent
+// token refresh.
+export async function getCurrentUser(orgId: string, userId: string): Promise<CurrentUserSummary> {
+  const user = await userRepo.findById(orgId, userId);
+  if (!user) throw new NotFoundError("Account not found");
+  return { email: user.email, emailVerifiedAt: user.emailVerifiedAt };
 }

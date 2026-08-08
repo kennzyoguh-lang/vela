@@ -39,6 +39,10 @@ const NO_AUTH_PATHS = [
   // 2fa/verify above: no session exists yet, and a wrong PIN's 401 must not
   // trigger the refresh-and-retry logic meant for an expired session.
   "/v1/auth/staff/login",
+  // The signed token in the link is the credential (see
+  // auth.service.ts#verifyEmail) — a visitor with no session at all (e.g. a
+  // fresh browser) must not trigger a wasted /v1/auth/refresh attempt first.
+  "/v1/auth/verify-email",
 ];
 
 export class ApiError extends Error {

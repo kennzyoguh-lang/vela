@@ -16,12 +16,19 @@ vi.mock("../repositories/user.repository", () => ({
   updateRole: vi.fn(),
   setActive: vi.fn(),
   updateNotificationPhone: vi.fn(),
+  listByOrg: vi.fn(),
 }));
 vi.mock("../repositories/organisation.repository", () => ({
   setDiscountApprovalPinHash: vi.fn(),
 }));
 vi.mock("../repositories/audit-log.repository", () => ({
   write: vi.fn(),
+}));
+vi.mock("../repositories/compliance-obligation.repository", () => ({
+  listActive: vi.fn(),
+}));
+vi.mock("../repositories/bank-account.repository", () => ({
+  listActiveByOrg: vi.fn(),
 }));
 vi.mock("./password.service", () => ({
   hashPassword: vi.fn(async () => "hashed-pin"),
@@ -30,6 +37,9 @@ vi.mock("./password.service", () => ({
 import * as userRepo from "../repositories/user.repository";
 import * as organisationRepo from "../repositories/organisation.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
+import * as inviteRepo from "../repositories/invite.repository";
+import * as complianceObligationRepo from "../repositories/compliance-obligation.repository";
+import * as bankAccountRepo from "../repositories/bank-account.repository";
 import * as passwordService from "./password.service";
 import * as organisationService from "./organisation.service";
 
@@ -271,5 +281,64 @@ describe("organisation.service#setNotificationPhone", () => {
       organisationService.setNotificationPhone(orgId, actorId, "08012345678"),
     ).rejects.toThrow(/already registered/i);
     expect(userRepo.updateNotificationPhone).not.toHaveBeenCalled();
+  });
+});
+
+describe("organisation.service#getSetupChecklist", () => {
+  const orgId = randomUUID();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(complianceObligationRepo.listActive).mockResolvedValue([]);
+    vi.mocked(bankAccountRepo.listActiveByOrg).mockResolvedValue([]);
+    vi.mocked(inviteRepo.listPendingForOrg).mockResolvedValue([]);
+    vi.mocked(userRepo.listByOrg).mockResolvedValue([{ id: randomUUID() } as never]);
+  });
+
+  it("reports every step incomplete for a brand-new solo org", async () => {
+    const result = await organisationService.getSetupChecklist(orgId);
+
+    expect(result).toEqual({
+      complianceObligationsSelected: false,
+      bankAccountConnected: false,
+      teamInvited: false,
+    });
+  });
+
+  it("marks compliance obligations selected once at least one is active", async () => {
+    vi.mocked(complianceObligationRepo.listActive).mockResolvedValue([
+      { id: randomUUID() } as never,
+    ]);
+
+    const result = await organisationService.getSetupChecklist(orgId);
+
+    expect(result.complianceObligationsSelected).toBe(true);
+  });
+
+  it("marks bank account connected once at least one active account exists", async () => {
+    vi.mocked(bankAccountRepo.listActiveByOrg).mockResolvedValue([{ id: randomUUID() } as never]);
+
+    const result = await organisationService.getSetupChecklist(orgId);
+
+    expect(result.bankAccountConnected).toBe(true);
+  });
+
+  it("marks team invited on a still-pending invite alone, before anyone accepts it", async () => {
+    vi.mocked(inviteRepo.listPendingForOrg).mockResolvedValue([{ id: randomUUID() } as never]);
+
+    const result = await organisationService.getSetupChecklist(orgId);
+
+    expect(result.teamInvited).toBe(true);
+  });
+
+  it("marks team invited once a second user exists, even with no pending invite", async () => {
+    vi.mocked(userRepo.listByOrg).mockResolvedValue([
+      { id: randomUUID() } as never,
+      { id: randomUUID() } as never,
+    ]);
+
+    const result = await organisationService.getSetupChecklist(orgId);
+
+    expect(result.teamInvited).toBe(true);
   });
 });
