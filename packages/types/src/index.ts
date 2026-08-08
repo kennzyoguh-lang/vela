@@ -273,6 +273,20 @@ export interface ReferralSummary {
   rewardsDescription: string[];
 }
 
+// GTM Channel 4 — an accounting firm's own org, read via the accountant
+// portal. Tier reuses ReferralTier directly (see
+// apps/api/src/services/accountant-earning.service.ts#getSummary).
+export interface AccountantEarningsSummary {
+  tier: ReferralTier;
+  lifetimeReferralCount: number;
+  monthlyHistory: Array<{
+    month: string;
+    referredCount: number;
+    activeClientCount: number;
+    amountOwed: number | null;
+  }>;
+}
+
 export interface ComplianceFiling {
   id: string;
   orgId: string;
