@@ -33,3 +33,4 @@ coverage/
 
 # Husky
 .husky/_
+.vercel
