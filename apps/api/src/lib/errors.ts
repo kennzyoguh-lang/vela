@@ -51,6 +51,15 @@ export class BusinessRuleViolationError extends DomainError {
   }
 }
 
+// Distinct from InsufficientPermissionError (a role problem) — this is a
+// verification-status problem, so the frontend can tell the two apart and
+// show "verify your email" rather than a generic access-denied message.
+export class EmailNotVerifiedError extends DomainError {
+  constructor(message = "Please verify your email address to do this") {
+    super(message, "EMAIL_NOT_VERIFIED", 403);
+  }
+}
+
 export class RateLimitedError extends DomainError {
   constructor(
     message = "Too many requests",

@@ -24,6 +24,12 @@ export async function listPendingInvites(req: Request, res: Response) {
   sendSuccess(res, invites);
 }
 
+export async function getSetupChecklist(req: Request, res: Response) {
+  const { orgId } = getAuthContext(req);
+  const checklist = await organisationService.getSetupChecklist(orgId);
+  sendSuccess(res, checklist);
+}
+
 // req.params.* below are guaranteed by each route's ":inviteId"/":userId"
 // pattern — noUncheckedIndexedAccess types ParamsDictionary's values as
 // possibly undefined regardless, since it can't see the route definition.

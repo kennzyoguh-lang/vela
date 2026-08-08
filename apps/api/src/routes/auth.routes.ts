@@ -6,6 +6,8 @@ import {
   loginRateLimit,
   signupRateLimit,
   twoFaVerifyRateLimit,
+  emailVerifyRateLimit,
+  resendVerificationRateLimit,
 } from "../middleware/rate-limit.middleware";
 import { auditLog } from "../middleware/audit.middleware";
 import { asyncHandler } from "../lib/async-handler";
@@ -51,3 +53,19 @@ authRouter.post(
   twoFaVerifyRateLimit(),
   asyncHandler(twoFactorController.confirmSetup),
 );
+
+// No requireAuth — the signed token itself proves the request is
+// legitimate (see auth.service.ts#verifyEmail), same "resolve, then act"
+// shape as /2fa/verify above.
+authRouter.post("/verify-email", emailVerifyRateLimit(), asyncHandler(authController.verifyEmail));
+authRouter.post(
+  "/resend-verification",
+  requireAuth,
+  resendVerificationRateLimit(),
+  asyncHandler(authController.resendVerification),
+);
+
+// Backs the dashboard's email-verification banner (apps/web's
+// EmailVerificationBanner) — a fresh read, not a token claim, so the banner
+// reacts immediately to a just-completed verification.
+authRouter.get("/me", requireAuth, asyncHandler(authController.me));

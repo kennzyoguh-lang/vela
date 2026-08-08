@@ -61,6 +61,34 @@ export function verifyTwoFaChallengeToken(token: string): TwoFaChallengeClaims {
   }) as unknown as TwoFaChallengeClaims;
 }
 
+export interface EmailVerificationClaims {
+  sub: string; // user id
+  orgId: string;
+}
+
+const EMAIL_VERIFICATION_AUDIENCE = "email-verification";
+const EMAIL_VERIFICATION_TTL_SECONDS = 24 * 60 * 60;
+
+// Same structural-distinctness precedent as the 2FA challenge token above —
+// a verification link is emailed out and may sit unopened for a while, so it
+// gets its own audience (never accepted as an access token) and a much
+// longer TTL (24h vs the challenge token's 5 minutes, which only needs to
+// survive one immediate redirect).
+export function signEmailVerificationToken(claims: EmailVerificationClaims): string {
+  return jwt.sign(claims, privateKey, {
+    algorithm: "RS256",
+    expiresIn: EMAIL_VERIFICATION_TTL_SECONDS,
+    audience: EMAIL_VERIFICATION_AUDIENCE,
+  });
+}
+
+export function verifyEmailVerificationToken(token: string): EmailVerificationClaims {
+  return jwt.verify(token, publicKey, {
+    algorithms: ["RS256"],
+    audience: EMAIL_VERIFICATION_AUDIENCE,
+  }) as unknown as EmailVerificationClaims;
+}
+
 export function newRefreshToken(): { token: string; familyId: string } {
   // Opaque random token, not a JWT — stored hashed (session.service.ts), never
   // decodable client-side. familyId groups every rotation of one login session

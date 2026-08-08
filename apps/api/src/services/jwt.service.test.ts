@@ -86,4 +86,58 @@ describe("jwt.service", () => {
       expect(() => verifyTwoFaChallengeToken(accessToken)).toThrow();
     });
   });
+
+  describe("email verification token — structural separation from real access tokens", () => {
+    it("round-trips claims through sign/verify", async () => {
+      const { signEmailVerificationToken, verifyEmailVerificationToken } =
+        await import("./jwt.service");
+      const token = signEmailVerificationToken({ sub: "user-1", orgId: "org-1" });
+      expect(verifyEmailVerificationToken(token)).toMatchObject({
+        sub: "user-1",
+        orgId: "org-1",
+      });
+    });
+
+    it("verifyAccessToken rejects an email verification token", async () => {
+      const { signEmailVerificationToken, verifyAccessToken } = await import("./jwt.service");
+      const token = signEmailVerificationToken({ sub: "user-1", orgId: "org-1" });
+      expect(() => verifyAccessToken(token)).toThrow();
+    });
+
+    it("verifyEmailVerificationToken rejects a real access token", async () => {
+      const { signAccessToken, verifyEmailVerificationToken } = await import("./jwt.service");
+      const accessToken = signAccessToken({
+        sub: "user-1",
+        orgId: "org-1",
+        role: "owner",
+        sessionFamilyId: "family-1",
+      });
+      expect(() => verifyEmailVerificationToken(accessToken)).toThrow();
+    });
+
+    it("verifyEmailVerificationToken rejects a 2FA challenge token", async () => {
+      const { signTwoFaChallengeToken, verifyEmailVerificationToken } =
+        await import("./jwt.service");
+      const challengeToken = signTwoFaChallengeToken({ sub: "user-1", orgId: "org-1" });
+      expect(() => verifyEmailVerificationToken(challengeToken)).toThrow();
+    });
+
+    // Reconstructs the same private key the module loaded from
+    // JWT_PRIVATE_KEY_BASE64 (set in beforeAll) to forge an already-expired
+    // token with the right audience — the one property signEmailVerificationToken
+    // itself can't produce, since it always signs with the real 24h TTL.
+    it("verifyEmailVerificationToken rejects an expired token", async () => {
+      const { verifyEmailVerificationToken } = await import("./jwt.service");
+      const jwt = (await import("jsonwebtoken")).default;
+      const privateKey = Buffer.from(process.env.JWT_PRIVATE_KEY_BASE64!, "base64").toString(
+        "utf8",
+      );
+      const expired = jwt.sign({ sub: "user-1", orgId: "org-1" }, privateKey, {
+        algorithm: "RS256",
+        expiresIn: -10,
+        audience: "email-verification",
+      });
+      expect(() => verifyEmailVerificationToken(expired)).toThrow();
+    });
+  });
 });

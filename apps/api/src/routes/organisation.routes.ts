@@ -5,6 +5,7 @@ import * as taxStatusController from "../controllers/tax-status.controller";
 import * as referralController from "../controllers/referral.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/rbac.middleware";
+import { requireVerifiedEmail } from "../middleware/email-verification.middleware";
 import { apiRateLimit } from "../middleware/rate-limit.middleware";
 import { auditLog } from "../middleware/audit.middleware";
 import { asyncHandler } from "../lib/async-handler";
@@ -17,6 +18,7 @@ organisationRouter.use(requireAuth, apiRateLimit());
 organisationRouter.post(
   "/invites",
   requireRole("owner", "admin"),
+  requireVerifiedEmail,
   auditLog("invite.create", "organisation_invite"),
   asyncHandler(organisationController.inviteUser),
 );
@@ -31,6 +33,11 @@ organisationRouter.delete(
   auditLog("invite.revoke", "organisation_invite"),
   asyncHandler(organisationController.revokeInvite),
 );
+// Open to every authenticated org member, same reasoning as business-profile's
+// GET below — the dashboard's first-run checklist renders for whoever's
+// looking at Home, not just owner/admin.
+organisationRouter.get("/setup-checklist", asyncHandler(organisationController.getSetupChecklist));
+
 organisationRouter.patch(
   "/users/:userId/role",
   requireRole("owner"),
@@ -49,6 +56,7 @@ organisationRouter.post(
 organisationRouter.patch(
   "/discount-approval-pin",
   requireRole("owner", "admin"),
+  requireVerifiedEmail,
   asyncHandler(organisationController.setDiscountApprovalPin),
 );
 
@@ -92,6 +100,13 @@ organisationRouter.patch(
   asyncHandler(businessProfileController.confirmGraduationPrompt),
 );
 
+// No requireVerifiedEmail here (unlike /invites and /discount-approval-pin
+// below) — phone+PIN staff creation is core day-one POS setup (anti-theft
+// Piece 5), the kind of thing a brand-new owner does within minutes of
+// signing up, well before they've had a chance to open their inbox. Gating
+// it broke the already-shipped Quick Sale SMS flow's own integration test
+// (a fresh, unverified owner creating a staff account) — caught live, not
+// theoretically.
 organisationRouter.post(
   "/staff",
   requireRole("owner", "admin"),

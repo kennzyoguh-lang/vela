@@ -1,8 +1,14 @@
 import type { Request, Response } from "express";
 import * as authService from "../services/auth.service";
-import { signupSchema, loginSchema, twoFaChallengeSchema } from "../validation/auth.schema";
+import {
+  signupSchema,
+  loginSchema,
+  twoFaChallengeSchema,
+  verifyEmailSchema,
+} from "../validation/auth.schema";
 import { sendSuccess } from "../lib/response";
 import { setRefreshCookie, readRefreshCookie, clearSessionCookies } from "../lib/session-cookies";
+import { getAuthContext } from "../lib/auth-context";
 
 export async function signup(req: Request, res: Response) {
   const input = signupSchema.parse(req.body);
@@ -75,4 +81,24 @@ export async function logout(req: Request, res: Response) {
   }
   clearSessionCookies(res);
   sendSuccess(res, { loggedOut: true });
+}
+
+// No auth context — the signed token itself is the credential (see
+// auth.service.ts#verifyEmail).
+export async function verifyEmail(req: Request, res: Response) {
+  const { token } = verifyEmailSchema.parse(req.body);
+  await authService.verifyEmail(token);
+  sendSuccess(res, { verified: true });
+}
+
+export async function resendVerification(req: Request, res: Response) {
+  const { orgId, userId } = getAuthContext(req);
+  await authService.resendVerificationEmail(orgId, userId);
+  sendSuccess(res, { sent: true });
+}
+
+export async function me(req: Request, res: Response) {
+  const { orgId, userId } = getAuthContext(req);
+  const result = await authService.getCurrentUser(orgId, userId);
+  sendSuccess(res, result);
 }
