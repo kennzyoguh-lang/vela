@@ -131,6 +131,7 @@ model Organisation {
   cashReconciliations   CashReconciliation[]
   referralCodes         ReferralCode[]
   referralConversions   ReferralConversion[]
+  accountantEarnings    AccountantEarning[]
 
   @@map("organisations")
 }
@@ -943,4 +944,31 @@ model ReferralConversion {
   organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@map("referral_conversions")
+}
+
+// GTM Channel 4 — one row per (accountant org, month), written by the
+// monthly accountant-earnings-generation job (mirrors compliance-filing-
+// generation.job.ts's shape). `referredCount` reuses referral_conversions
+// (any org, including an accounting firm's own org, can hold a referral
+// code) filtered to this org and month; `activeClientCount` comes from the
+// existing accountant_client_links relationship, unrelated to referrals.
+// amountOwed stays NULL until real subscription pricing exists to multiply
+// against — same "track now, apply later" decision as ReferralConversion's
+// rewardDescription, see referral.service.ts's comment for the full
+// reasoning. orgId is the accountant firm's OWN org (RLS: they read their
+// own earnings).
+model AccountantEarning {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId             String   @map("org_id") @db.Uuid
+  month             String // "YYYY-MM", matches accountant-portal.service.ts's currentPeriodLabel()
+  referredCount     Int      @map("referred_count")
+  activeClientCount Int      @map("active_client_count")
+  amountOwed        Decimal? @map("amount_owed") @db.Decimal(14, 2)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, month])
+  @@map("accountant_earnings")
 }

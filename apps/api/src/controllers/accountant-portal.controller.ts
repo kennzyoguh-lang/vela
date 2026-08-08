@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import * as accountantPortalService from "../services/accountant-portal.service";
+import * as accountantEarningService from "../services/accountant-earning.service";
 import * as userRepo from "../repositories/user.repository";
 import { sendSuccess } from "../lib/response";
 import { getAuthContext } from "../lib/auth-context";
@@ -37,5 +38,15 @@ export async function getClientOrgSummary(req: Request, res: Response) {
     userId,
     req.params.clientOrgId!,
   );
+  sendSuccess(res, summary);
+}
+
+// GTM Channel 4 — the accountant firm's OWN org, not a client org, so this
+// reads orgId straight from auth context (unlike the two functions above,
+// which are always about a DIFFERENT org the accountant has been linked
+// into).
+export async function getEarnings(req: Request, res: Response) {
+  const { orgId } = getAuthContext(req);
+  const summary = await accountantEarningService.getSummary(orgId);
   sendSuccess(res, summary);
 }

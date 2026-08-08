@@ -15,6 +15,10 @@ import {
 import { startBankSyncWorker, scheduleBankSync } from "./bank-sync.job";
 import { startOwnerSummaryWorker, scheduleOwnerSummaryScan } from "./owner-summary.job";
 import { startNurtureEmailWorker } from "./nurture-email.job";
+import {
+  startAccountantEarningsGenerationWorker,
+  scheduleAccountantEarningsGeneration,
+} from "./accountant-earnings-generation.job";
 import { logger } from "../lib/logger";
 
 export async function startJobs() {
@@ -29,6 +33,7 @@ export async function startJobs() {
     // Per-signup delayed jobs, not a daily schedule — no scheduleXxx()
     // counterpart below, see nurture-email.job.ts#scheduleNurtureEmails.
     startNurtureEmailWorker(),
+    startAccountantEarningsGenerationWorker(),
   ];
 
   await Promise.all([
@@ -39,6 +44,7 @@ export async function startJobs() {
     scheduleComplianceReminderScan(),
     scheduleBankSync(),
     scheduleOwnerSummaryScan(),
+    scheduleAccountantEarningsGeneration(),
   ]);
 
   logger.info("Background job workers started and daily schedules registered");
