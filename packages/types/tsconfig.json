@@ -2,7 +2,14 @@
   "extends": "../config/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "declaration": true
+    "declaration": true,
+    // CommonJS, not the base config's ESNext — matches apps/api's own build
+    // override (apps/api/tsconfig.json). This package's compiled dist is
+    // require()'d directly at production runtime (no package.json "type"
+    // field, so .js there means CJS); ESM output would mismatch that and
+    // fail to load under Node's stricter ESM resolution rules.
+    "module": "CommonJS",
+    "moduleResolution": "Node"
   },
   "include": ["src"]
 }
