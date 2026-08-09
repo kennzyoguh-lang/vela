@@ -57,7 +57,7 @@ export default function VerifyEmailPage() {
         </Alert>
       ) : null}
       <Link
-        href="/"
+        href="/dashboard"
         className="bg-action-primary text-action-primaryText font-ui duration-quick inline-flex min-h-[44px] w-full items-center justify-center rounded-md px-4 text-[1rem] font-semibold transition-transform hover:brightness-95 active:scale-[0.98]"
       >
         Go to dashboard

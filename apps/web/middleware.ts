@@ -18,8 +18,27 @@ const AUTH_PATHS = ["/login", "/signup", "/2fa", "/reset-password"];
 // even though it lives in app/(auth) — a freshly signed-up visitor already
 // has a session (signup issues one immediately), and AUTH_PATHS redirects an
 // already-authenticated visitor away before the token in the link would ever
-// get verified.
-const PUBLIC_PATHS = ["/pay", "/firs-calculator", "/waitlist", "/refer", "/verify-email"];
+// get verified. /terms and /privacy are the legal pages linked from the
+// marketing homepage's footer.
+const PUBLIC_PATHS = [
+  "/pay",
+  "/firs-calculator",
+  "/waitlist",
+  "/refer",
+  "/verify-email",
+  "/terms",
+  "/privacy",
+];
+// The marketing homepage lives at the bare root. It's public like the paths
+// above, but unlike them an already-authenticated visitor DOES get bounced
+// onward — same "no reason to show a logged-in owner the pitch" reasoning as
+// AUTH_PATHS below, just for "/" specifically. It can't just join
+// PUBLIC_PATHS: every pathname starts with "/", so a prefix check there would
+// make the whole allowlist match everything.
+const MARKETING_HOME = "/";
+// The authenticated app's home screen — was literally "/" until the
+// marketing homepage needed that address for itself.
+const APP_HOME = "/dashboard";
 // The anti-theft/POS staff area — its own session (phone+PIN login,
 // /v1/auth/staff/login) marked by the same vela_has_session cookie, but its
 // own login page (/pos/login), not the owner /login. An unauthenticated
@@ -76,6 +95,7 @@ export function middleware(req: NextRequest) {
 
   const pathname = req.nextUrl.pathname;
   const hasSession = req.cookies.has(SESSION_MARKER_COOKIE);
+  const isRoot = pathname === MARKETING_HOME;
   const isAuthPath = AUTH_PATHS.some((p) => pathname.startsWith(p));
   const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
   const isPosLogin = pathname.startsWith(POS_LOGIN_PATH);
@@ -89,12 +109,16 @@ export function middleware(req: NextRequest) {
     response = NextResponse.redirect(new URL(POS_LOGIN_PATH, req.url));
   } else if (hasSession && isPosLogin) {
     response = NextResponse.redirect(new URL("/pos/sell", req.url));
+  } else if (isRoot) {
+    response = hasSession
+      ? NextResponse.redirect(new URL(APP_HOME, req.url))
+      : NextResponse.next({ request: { headers: requestHeaders } });
   } else if (!hasSession && !isAuthPath && !isPublicPath && !isPosLogin) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("from", pathname);
     response = NextResponse.redirect(loginUrl);
   } else if (hasSession && isAuthPath) {
-    response = NextResponse.redirect(new URL("/", req.url));
+    response = NextResponse.redirect(new URL(APP_HOME, req.url));
   } else {
     response = NextResponse.next({ request: { headers: requestHeaders } });
   }

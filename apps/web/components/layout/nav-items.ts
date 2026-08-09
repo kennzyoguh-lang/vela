@@ -30,7 +30,7 @@ export interface NavItem {
 // themselves are Phase 2+ (SmartInvoice, ComplianceRadar, PeopleHub, P&L,
 // Ask Vela) — Foundation wires the shell's nav entries only.
 export const NAV_ITEMS: NavItem[] = [
-  { label: "Home", href: "/", icon: LayoutDashboard, mobilePrimary: true },
+  { label: "Home", href: "/dashboard", icon: LayoutDashboard, mobilePrimary: true },
   {
     label: "Invoices",
     href: "/invoices",

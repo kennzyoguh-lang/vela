@@ -21,7 +21,7 @@ export function PosRoleGate() {
     if (pathname === "/pos/login" || !accessToken) return;
     const claims = decodeAccessTokenClaims(accessToken);
     if (claims?.role === "owner" || claims?.role === "admin") {
-      router.replace("/");
+      router.replace("/dashboard");
     }
   }, [accessToken, pathname, router]);
 

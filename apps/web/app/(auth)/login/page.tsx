@@ -36,7 +36,7 @@ export default function LoginPage() {
         router.push("/2fa");
       } else {
         useAuthStore.getState().setAccessToken(result.accessToken);
-        router.push("/");
+        router.push("/dashboard");
       }
     } catch (err) {
       // Generic message regardless of which field was wrong — never reveal
