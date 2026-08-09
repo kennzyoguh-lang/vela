@@ -43,7 +43,7 @@ export default function TwoFactorChallengePage() {
       });
       useAuthStore.getState().setChallengeToken(null);
       useAuthStore.getState().setAccessToken(result.accessToken);
-      router.push("/");
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Invalid code. Try again.");
     } finally {

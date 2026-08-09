@@ -83,7 +83,7 @@ export default function OnboardingPage() {
       hasSalesStaff: YesNoUnsure;
       isCacRegistered: YesNoUnsure;
     }) => api.patch("/v1/organisation/business-profile/factors", factors),
-    onSuccess: () => router.push("/"),
+    onSuccess: () => router.push("/dashboard"),
   });
 
   function handleContinue() {
