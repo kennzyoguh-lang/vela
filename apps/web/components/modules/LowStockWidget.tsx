@@ -24,11 +24,11 @@ export function LowStockWidget() {
   });
 
   return (
-    <Card className="flex h-full flex-col justify-between gap-4">
+    <Card accent className="flex h-full flex-col justify-between gap-4">
       <div>
         <CardHeader>
-          <CardTitle>Low stock</CardTitle>
-          <PackageX className="text-text-secondary size-4" aria-hidden />
+          <CardTitle eyebrow>Low stock</CardTitle>
+          <PackageX className="text-gold size-4" aria-hidden />
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-6 w-2/3" />
@@ -41,14 +41,16 @@ export function LowStockWidget() {
             Nothing running low — or stock tracking isn&apos;t set up yet.
           </p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="divide-border flex flex-col divide-y">
             {lowStock.slice(0, 4).map((product) => (
               <li
                 key={product.id}
-                className="font-ui text-text-primary flex justify-between text-[0.875rem]"
+                className="font-ui text-text-primary flex items-center justify-between py-1.5 text-[0.875rem] first:pt-0 last:pb-0"
               >
                 <span>{product.name}</span>
-                <span className="font-semibold">{product.stockQuantity} left</span>
+                <span className="font-data text-status-danger text-[0.8rem] font-bold tabular-nums">
+                  {product.stockQuantity} left
+                </span>
               </li>
             ))}
           </ul>

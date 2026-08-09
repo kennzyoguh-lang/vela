@@ -29,10 +29,10 @@ export function AskVelaInsightWidget() {
   });
 
   return (
-    <Card className="flex h-full flex-col justify-between gap-4">
+    <Card accent className="flex h-full flex-col justify-between gap-4">
       <div>
         <CardHeader>
-          <CardTitle>Ask Vela insight</CardTitle>
+          <CardTitle eyebrow>Ask Vela insight</CardTitle>
           <Sparkles className="text-data-aiAccent size-4" aria-hidden />
         </CardHeader>
         {isLoading ? (

@@ -8,7 +8,7 @@ import { Search, Bell } from "lucide-react";
 // modules. Org switcher/profile menu are stubbed the same way.
 export function TopBar() {
   return (
-    <header className="border-border bg-surface-raised flex h-14 shrink-0 items-center justify-between border-b px-4">
+    <header className="bg-surface-raised border-gold/20 flex h-14 shrink-0 items-center justify-between border-b px-4">
       <button
         type="button"
         className="text-text-secondary hover:bg-surface-canvas flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-md px-3"

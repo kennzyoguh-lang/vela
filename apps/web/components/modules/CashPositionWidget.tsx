@@ -26,11 +26,11 @@ export function CashPositionWidget() {
   const currency = accounts?.[0]?.currency ?? "NGN";
 
   return (
-    <Card className="flex h-full flex-col justify-between gap-4">
+    <Card accent className="flex h-full flex-col justify-between gap-4">
       <div>
         <CardHeader>
-          <CardTitle>Cash position</CardTitle>
-          <Landmark className="text-text-secondary size-4" aria-hidden />
+          <CardTitle eyebrow>Cash position</CardTitle>
+          <Landmark className="text-gold size-4" aria-hidden />
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-6 w-2/3" />
@@ -43,7 +43,7 @@ export function CashPositionWidget() {
             Connect a bank account to see your balance here.
           </p>
         ) : (
-          <p className="font-ui text-text-primary text-[1.25rem] font-bold">
+          <p className="font-data text-text-primary text-[1.35rem] font-bold tabular-nums">
             {formatMoney(total, currency)}
           </p>
         )}

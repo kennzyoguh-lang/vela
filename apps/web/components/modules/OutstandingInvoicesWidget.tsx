@@ -32,11 +32,11 @@ export function OutstandingInvoicesWidget() {
   const currency = outstanding[0]?.currency ?? "NGN";
 
   return (
-    <Card className="flex h-full flex-col justify-between gap-4">
+    <Card accent className="flex h-full flex-col justify-between gap-4">
       <div>
         <CardHeader>
-          <CardTitle>Outstanding invoices</CardTitle>
-          <FileText className="text-text-secondary size-4" aria-hidden />
+          <CardTitle eyebrow>Outstanding invoices</CardTitle>
+          <FileText className="text-gold size-4" aria-hidden />
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-6 w-2/3" />
@@ -50,7 +50,7 @@ export function OutstandingInvoicesWidget() {
           </p>
         ) : (
           <p className="font-ui text-text-primary text-[0.875rem]">
-            <span className="text-[1.25rem] font-bold">
+            <span className="font-data text-[1.35rem] font-bold tabular-nums">
               {formatMoney(totalOutstanding, currency)}
             </span>{" "}
             across {outstanding.length} invoice{outstanding.length === 1 ? "" : "s"}

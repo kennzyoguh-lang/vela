@@ -30,11 +30,11 @@ export function UpcomingPayrollWidget() {
   const currentRun = runs?.find((r) => r.periodLabel === currentPeriodLabel());
 
   return (
-    <Card className="flex h-full flex-col justify-between gap-4">
+    <Card accent className="flex h-full flex-col justify-between gap-4">
       <div>
         <CardHeader>
-          <CardTitle>Upcoming payroll</CardTitle>
-          <Users className="text-text-secondary size-4" aria-hidden />
+          <CardTitle eyebrow>Upcoming payroll</CardTitle>
+          <Users className="text-gold size-4" aria-hidden />
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-6 w-2/3" />
@@ -48,7 +48,7 @@ export function UpcomingPayrollWidget() {
           </p>
         ) : (
           <p className="font-ui text-text-primary text-[0.875rem]">
-            <span className="text-[1.25rem] font-bold">
+            <span className="font-data text-[1.35rem] font-bold tabular-nums">
               {formatMoney(currentRun.totalNetPay, "NGN")}
             </span>{" "}
             {currentRun.status === "paid" ? "paid" : "pending"} for {currentRun.periodLabel}
