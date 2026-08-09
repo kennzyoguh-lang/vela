@@ -39,11 +39,11 @@ export function ComplianceWidget() {
     : undefined;
 
   return (
-    <Card className="flex h-full flex-col justify-between gap-4">
+    <Card accent className="flex h-full flex-col justify-between gap-4">
       <div>
         <CardHeader>
-          <CardTitle>Compliance</CardTitle>
-          <ShieldCheck className="text-text-secondary size-4" aria-hidden />
+          <CardTitle eyebrow>Compliance</CardTitle>
+          <ShieldCheck className="text-gold size-4" aria-hidden />
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-6 w-2/3" />
@@ -57,7 +57,7 @@ export function ComplianceWidget() {
           </p>
         ) : (
           <p className="font-ui text-text-primary text-[0.875rem]">
-            <span className="text-[1rem] font-bold">
+            <span className="font-data text-[1rem] font-bold">
               {nextObligation?.label ?? next.obligationType}
             </span>
             <br />
