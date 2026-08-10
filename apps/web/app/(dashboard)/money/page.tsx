@@ -10,6 +10,7 @@ import type {
   TransactionCategory,
 } from "@vela/types";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { BankAccountCard } from "@/components/modules/BankAccountCard";
@@ -84,14 +85,11 @@ export default function MoneyPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-ui text-text-primary text-[1.5rem] font-bold">Money</h1>
-        <MonoConnectButton />
-      </div>
+      <PageHeader eyebrow="Money" title="Money" action={<MonoConnectButton />} />
 
-      <Card>
+      <Card accent>
         <CardHeader>
-          <CardTitle>Cash position</CardTitle>
+          <CardTitle eyebrow>Cash position</CardTitle>
         </CardHeader>
         {accountsLoading ? (
           <Skeleton className="h-8 w-1/3" />
@@ -101,7 +99,7 @@ export default function MoneyPage() {
           </p>
         ) : (
           <>
-            <p className="font-ui text-text-primary mb-3 text-[1.5rem] font-bold">
+            <p className="font-data text-text-primary mb-3 text-[1.5rem] font-bold tabular-nums">
               {formatMoney(totalCashPosition, currency)}
             </p>
             <div className="flex flex-col gap-2">
@@ -148,9 +146,9 @@ export default function MoneyPage() {
         </>
       ) : null}
 
-      <Card>
+      <Card accent>
         <CardHeader>
-          <CardTitle>Transactions</CardTitle>
+          <CardTitle eyebrow>Transactions</CardTitle>
         </CardHeader>
         {transactionsLoading ? (
           <div className="flex flex-col gap-2">
@@ -175,7 +173,7 @@ export default function MoneyPage() {
                   </p>
                 </div>
                 <p
-                  className={`font-ui shrink-0 text-[0.875rem] font-semibold ${
+                  className={`font-data shrink-0 text-[0.875rem] font-bold tabular-nums ${
                     tx.type === "credit" ? "text-sage" : "text-text-primary"
                   }`}
                 >

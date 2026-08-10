@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AccountantEarningsSummary, ReferralTier } from "@vela/types";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import {
@@ -31,9 +32,9 @@ function EarningsCard() {
   });
 
   return (
-    <Card className="flex flex-col gap-3">
+    <Card accent className="flex flex-col gap-3">
       <CardHeader>
-        <CardTitle>Your earnings</CardTitle>
+        <CardTitle eyebrow>Your earnings</CardTitle>
       </CardHeader>
       {error ? (
         <Alert variant="danger" title="Couldn't load your earnings — try again shortly." />
@@ -43,13 +44,13 @@ function EarningsCard() {
         <>
           <div className="flex items-center justify-between">
             <span className="font-ui text-text-secondary text-[0.875rem]">Businesses referred</span>
-            <span className="font-ui text-text-primary text-[1.25rem] font-bold">
+            <span className="font-data text-text-primary text-[1.25rem] font-bold tabular-nums">
               {data.lifetimeReferralCount}
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="font-ui text-text-secondary text-[0.875rem]">Tier</span>
-            <span className="font-ui text-gold-dark text-[0.9375rem] font-semibold">
+            <span className="font-data text-gold text-[0.8rem] font-bold uppercase tracking-[0.04em]">
               {TIER_LABEL[data.tier]}
             </span>
           </div>
@@ -66,8 +67,8 @@ function EarningsCard() {
                 {data.monthlyHistory.map((row) => (
                   <tr key={row.month} className="text-text-primary">
                     <td>{row.month}</td>
-                    <td>{row.referredCount}</td>
-                    <td>{row.activeClientCount}</td>
+                    <td className="font-data tabular-nums">{row.referredCount}</td>
+                    <td className="font-data tabular-nums">{row.activeClientCount}</td>
                   </tr>
                 ))}
               </tbody>
@@ -112,14 +113,10 @@ export default function AccountantPortalPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-text-primary text-[1.5rem] font-bold">
-          Accountant Portal
-        </h1>
-        <p className="font-ui text-text-secondary text-[0.875rem]">
-          One login, all your clients — read-only summaries for every org that's linked you in.
-        </p>
-      </div>
+      <PageHeader eyebrow="Accountant Portal" title="Accountant Portal" />
+      <p className="font-ui text-text-secondary -mt-2 text-[0.875rem]">
+        One login, all your clients — read-only summaries for every org that&apos;s linked you in.
+      </p>
 
       {error ? <Alert variant="danger" title={error} /> : null}
       {linksError ? (
@@ -128,9 +125,9 @@ export default function AccountantPortalPage() {
 
       <EarningsCard />
 
-      <Card>
+      <Card accent>
         <CardHeader>
-          <CardTitle>Pending invitations</CardTitle>
+          <CardTitle eyebrow>Pending invitations</CardTitle>
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-12 w-full" />
@@ -150,9 +147,9 @@ export default function AccountantPortalPage() {
         )}
       </Card>
 
-      <Card>
+      <Card accent>
         <CardHeader>
-          <CardTitle>Your clients</CardTitle>
+          <CardTitle eyebrow>Your clients</CardTitle>
         </CardHeader>
         {isLoading ? (
           <Skeleton className="h-12 w-full" />

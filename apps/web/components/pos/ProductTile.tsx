@@ -81,7 +81,7 @@ export function ProductTile({ product, selected, onSelect }: ProductTileProps) {
       <span className="font-ui text-text-primary line-clamp-2 text-center text-[1rem] font-bold leading-tight">
         {product.name}
       </span>
-      <span className="font-data text-text-secondary text-[0.875rem] font-bold">
+      <span className="font-data text-text-secondary text-[0.875rem] font-bold tabular-nums">
         {formatMoney(product.price, product.currency)}
       </span>
     </button>

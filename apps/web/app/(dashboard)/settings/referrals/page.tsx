@@ -70,9 +70,9 @@ export default function ReferralsSettingsPage() {
           )}
         </Card>
 
-        <Card className="flex flex-col gap-3">
+        <Card accent className="flex flex-col gap-3">
           <CardHeader>
-            <CardTitle>Your rewards</CardTitle>
+            <CardTitle eyebrow>Your rewards</CardTitle>
           </CardHeader>
 
           {isLoading || !summary ? (
@@ -83,13 +83,13 @@ export default function ReferralsSettingsPage() {
                 <span className="font-ui text-text-secondary text-[0.875rem]">
                   Successful referrals
                 </span>
-                <span className="font-ui text-text-primary text-[1.25rem] font-bold">
+                <span className="font-data text-text-primary text-[1.25rem] font-bold tabular-nums">
                   {summary.conversionCount}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="font-ui text-text-secondary text-[0.875rem]">Tier</span>
-                <span className="font-ui text-gold-dark text-[0.9375rem] font-semibold">
+                <span className="font-data text-gold text-[0.8rem] font-bold uppercase tracking-[0.04em]">
                   {TIER_LABEL[summary.tier]}
                 </span>
               </div>

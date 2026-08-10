@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ComplianceObligation, ComplianceObligationType, TaxStatus } from "@vela/types";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
@@ -41,9 +42,9 @@ function TaxStatusCard() {
   });
 
   return (
-    <Card>
+    <Card accent>
       <CardHeader>
-        <CardTitle>Your tax status</CardTitle>
+        <CardTitle eyebrow>Your tax status</CardTitle>
       </CardHeader>
       <p className="font-ui text-text-secondary text-[0.875rem]">
         Tell us your annual turnover, fixed assets, and whether you provide professional services to
@@ -163,8 +164,8 @@ export default function ComplianceSettingsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="font-ui text-text-primary text-[1.5rem] font-bold">Compliance obligations</h1>
-      <p className="font-ui text-text-secondary text-[0.875rem]">
+      <PageHeader eyebrow="Compliance" title="Compliance obligations" />
+      <p className="font-ui text-text-secondary -mt-2 text-[0.875rem]">
         Switch on the obligations that apply to your business — VELA tracks their deadlines and
         reminds you before they're due.
       </p>

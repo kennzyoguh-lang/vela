@@ -59,18 +59,21 @@ export default function PayrollRunDetailPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
+          <p className="font-data text-gold mb-2 text-[0.7rem] font-bold uppercase tracking-[0.14em]">
+            Payroll
+          </p>
           <div className="flex items-center gap-2">
-            <h1 className="font-ui text-text-primary text-[1.5rem] font-bold">
-              Payroll — {run.periodLabel}
+            <h1 className="font-display text-text-primary text-[1.75rem] font-normal leading-tight">
+              {run.periodLabel}
             </h1>
             <Badge
               status={run.status === "paid" ? "active" : "draft"}
               label={run.status === "paid" ? "Paid" : "Draft"}
             />
           </div>
-          <p className="font-ui text-text-secondary text-[0.875rem]">
+          <p className="font-ui text-text-secondary mt-1 text-[0.875rem]">
             {run.payslips.length} employee{run.payslips.length === 1 ? "" : "s"} · Total net pay{" "}
-            {formatMoney(run.totalNetPay, "NGN")}
+            <span className="font-data tabular-nums">{formatMoney(run.totalNetPay, "NGN")}</span>
           </p>
         </div>
         {run.status === "draft" ? (
@@ -82,35 +85,35 @@ export default function PayrollRunDetailPage() {
 
       {actionError ? <Alert variant="danger" title={actionError} /> : null}
 
-      <Card>
+      <Card accent>
         <CardHeader>
-          <CardTitle>Totals</CardTitle>
+          <CardTitle eyebrow>Totals</CardTitle>
         </CardHeader>
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="font-ui text-text-secondary text-[0.875rem]">Gross pay</span>
-            <span className="font-ui text-text-primary text-[0.875rem]">
+            <span className="font-data text-text-primary text-[0.875rem] tabular-nums">
               {formatMoney(run.totalGrossPay, "NGN")}
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="font-ui text-text-secondary text-[0.875rem]">Deductions</span>
-            <span className="font-ui text-text-primary text-[0.875rem]">
+            <span className="font-data text-text-primary text-[0.875rem] tabular-nums">
               {formatMoney(run.totalDeductions, "NGN")}
             </span>
           </div>
           <div className="border-border flex items-center justify-between border-t pt-2">
             <span className="font-ui text-text-primary text-[1rem] font-bold">Net pay</span>
-            <span className="font-ui text-sage text-[1.125rem] font-bold">
+            <span className="font-data text-sage text-[1.125rem] font-bold tabular-nums">
               {formatMoney(run.totalNetPay, "NGN")}
             </span>
           </div>
         </div>
       </Card>
 
-      <Card>
+      <Card accent>
         <CardHeader>
-          <CardTitle>Payslips</CardTitle>
+          <CardTitle eyebrow>Payslips</CardTitle>
         </CardHeader>
         {run.payslips.length === 0 ? (
           <p className="font-ui text-text-secondary text-[0.875rem]">

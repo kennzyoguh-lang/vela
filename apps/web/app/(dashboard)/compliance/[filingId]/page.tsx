@@ -68,8 +68,11 @@ export default function ComplianceFilingDetailPage() {
     <DetailTemplate
       header={
         <div>
+          <p className="font-data text-gold mb-2 text-[0.7rem] font-bold uppercase tracking-[0.14em]">
+            Compliance
+          </p>
           <div className="flex items-center gap-2">
-            <h1 className="font-ui text-text-primary text-[1.5rem] font-bold">
+            <h1 className="font-display text-text-primary text-[1.75rem] font-normal leading-tight">
               {obligation.label}
             </h1>
             <Badge
@@ -77,17 +80,17 @@ export default function ComplianceFilingDetailPage() {
               label={filingStatusLabel(filing.status)}
             />
           </div>
-          <p className="font-ui text-text-secondary text-[0.875rem]">
+          <p className="font-ui text-text-secondary mt-1 text-[0.875rem]">
             {obligation.authority} · {filing.periodLabel} ·{" "}
             {formatFilingDuePhrase(filing.dueDate, filing.status)}
           </p>
         </div>
       }
       main={
-        <Card className="flex flex-col gap-4">
+        <Card accent className="flex flex-col gap-4">
           <div>
             <CardHeader>
-              <CardTitle>Details</CardTitle>
+              <CardTitle eyebrow>Details</CardTitle>
             </CardHeader>
             <p className="font-ui text-text-secondary text-[0.875rem]">{obligation.description}</p>
           </div>
@@ -120,7 +123,7 @@ export default function ComplianceFilingDetailPage() {
           ) : (
             <div className="border-border flex flex-col gap-3 border-t pt-4">
               <CardHeader>
-                <CardTitle>Mark as filed</CardTitle>
+                <CardTitle eyebrow>Mark as filed</CardTitle>
               </CardHeader>
               {actionError ? <Alert variant="danger" title={actionError} /> : null}
               <Input

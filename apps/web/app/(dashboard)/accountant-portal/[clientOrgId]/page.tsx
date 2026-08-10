@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileText, Landmark, ShieldCheck, Users } from "lucide-react";
 import { DetailTemplate } from "@/components/templates/DetailTemplate";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Alert } from "@/components/ui/Alert";
 import { formatMoney } from "@/lib/format";
@@ -73,10 +74,8 @@ export default function ClientOrgSummaryPage() {
   return (
     <DetailTemplate
       header={
-        <div>
-          <h1 className="font-display text-text-primary text-[1.5rem] font-bold">
-            {summary.orgName}
-          </h1>
+        <div className="flex flex-col gap-2">
+          <PageHeader eyebrow="Client" title={summary.orgName} />
           <p className="font-ui text-text-secondary text-[0.875rem]">
             Read-only summary — client of the Accountant Portal
           </p>
@@ -84,12 +83,12 @@ export default function ClientOrgSummaryPage() {
       }
       main={
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Card className="flex flex-col gap-2">
+          <Card accent className="flex flex-col gap-2">
             <CardHeader>
-              <CardTitle>Outstanding invoices</CardTitle>
-              <FileText className="text-text-secondary size-4" aria-hidden />
+              <CardTitle eyebrow>Outstanding invoices</CardTitle>
+              <FileText className="text-gold size-4" aria-hidden />
             </CardHeader>
-            <p className="font-ui text-text-primary text-[1.25rem] font-bold">
+            <p className="font-data text-text-primary text-[1.25rem] font-bold tabular-nums">
               {formatMoney(summary.outstandingInvoicesTotal, summary.baseCurrency)}
             </p>
             <p className="font-ui text-text-secondary text-[0.8125rem]">
@@ -98,20 +97,20 @@ export default function ClientOrgSummaryPage() {
             </p>
           </Card>
 
-          <Card className="flex flex-col gap-2">
+          <Card accent className="flex flex-col gap-2">
             <CardHeader>
-              <CardTitle>Cash position</CardTitle>
-              <Landmark className="text-text-secondary size-4" aria-hidden />
+              <CardTitle eyebrow>Cash position</CardTitle>
+              <Landmark className="text-gold size-4" aria-hidden />
             </CardHeader>
-            <p className="font-ui text-text-primary text-[1.25rem] font-bold">
+            <p className="font-data text-text-primary text-[1.25rem] font-bold tabular-nums">
               {formatMoney(summary.cashPosition, summary.baseCurrency)}
             </p>
           </Card>
 
-          <Card className="flex flex-col gap-2">
+          <Card accent className="flex flex-col gap-2">
             <CardHeader>
-              <CardTitle>Compliance</CardTitle>
-              <ShieldCheck className="text-text-secondary size-4" aria-hidden />
+              <CardTitle eyebrow>Compliance</CardTitle>
+              <ShieldCheck className="text-gold size-4" aria-hidden />
             </CardHeader>
             {!summary.nextComplianceFiling ? (
               <p className="font-ui text-text-secondary text-[0.875rem]">
@@ -139,10 +138,10 @@ export default function ClientOrgSummaryPage() {
             )}
           </Card>
 
-          <Card className="flex flex-col gap-2">
+          <Card accent className="flex flex-col gap-2">
             <CardHeader>
-              <CardTitle>Payroll</CardTitle>
-              <Users className="text-text-secondary size-4" aria-hidden />
+              <CardTitle eyebrow>Payroll</CardTitle>
+              <Users className="text-gold size-4" aria-hidden />
             </CardHeader>
             {!summary.currentPayrollRun ? (
               <p className="font-ui text-text-secondary text-[0.875rem]">
@@ -150,7 +149,7 @@ export default function ClientOrgSummaryPage() {
               </p>
             ) : (
               <p className="font-ui text-text-primary text-[0.875rem]">
-                <span className="text-[1.25rem] font-bold">
+                <span className="font-data text-[1.25rem] font-bold tabular-nums">
                   {formatMoney(summary.currentPayrollRun.totalNetPay, summary.baseCurrency)}
                 </span>{" "}
                 {summary.currentPayrollRun.status === "paid" ? "paid" : "pending"} for{" "}
