@@ -8,6 +8,7 @@ import {
   type DashboardWidgetSlot,
 } from "@/components/templates/DashboardTemplate";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { api } from "@/lib/api/client";
 import { OutstandingInvoicesWidget } from "@/components/modules/OutstandingInvoicesWidget";
 import { LowStockWidget } from "@/components/modules/LowStockWidget";
@@ -162,18 +163,15 @@ export default function DashboardHomePage() {
       <EmailVerificationBanner />
       <GraduationPromptBanner />
       {visibility.cashReconciliation ? <OwnerDailyStatusBanner /> : null}
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="font-data text-gold mb-2 text-[0.7rem] font-bold uppercase tracking-[0.14em]">
-            Dashboard
+      <PageHeader
+        eyebrow="Dashboard"
+        title="Home"
+        action={
+          <p className="font-data text-text-secondary text-[0.78rem] tabular-nums">
+            {todayLabel()}
           </p>
-          <h1 className="font-display text-text-primary text-[2rem] font-normal leading-tight">
-            Home
-          </h1>
-          <div className="bg-gold mt-3 h-0.5 w-14" aria-hidden />
-        </div>
-        <p className="font-data text-text-secondary text-[0.78rem] tabular-nums">{todayLabel()}</p>
-      </div>
+        }
+      />
       <DashboardTemplate widgets={widgets} />
     </div>
   );

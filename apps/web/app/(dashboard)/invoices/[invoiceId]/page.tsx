@@ -106,8 +106,11 @@ export default function InvoiceDetailPage() {
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
+              <p className="font-data text-gold mb-2 text-[0.7rem] font-bold uppercase tracking-[0.14em]">
+                Invoice
+              </p>
               <div className="flex items-center gap-2">
-                <h1 className="font-ui text-text-primary text-[1.5rem] font-bold">
+                <h1 className="font-display text-text-primary text-[1.75rem] font-normal leading-tight">
                   {invoice.number}
                 </h1>
                 <Badge
@@ -115,7 +118,7 @@ export default function InvoiceDetailPage() {
                   label={invoiceStatusLabel(invoice.status)}
                 />
               </div>
-              <p className="font-ui text-text-secondary text-[0.875rem]">
+              <p className="font-ui text-text-secondary mt-1 text-[0.875rem]">
                 {invoice.source === "quick_sale"
                   ? "Quick Sale — Walk-in customer"
                   : (client?.name ?? "…")}{" "}
@@ -188,9 +191,9 @@ export default function InvoiceDetailPage() {
         </div>
       }
       main={
-        <Card>
+        <Card accent>
           <CardHeader>
-            <CardTitle>Line items</CardTitle>
+            <CardTitle eyebrow>Line items</CardTitle>
           </CardHeader>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px]">
@@ -206,11 +209,11 @@ export default function InvoiceDetailPage() {
                 {lineItems.map((item, i) => (
                   <tr key={i} className="font-ui text-text-primary text-[0.875rem]">
                     <td className="py-2">{item.description}</td>
-                    <td className="py-2 text-right">{item.quantity}</td>
-                    <td className="py-2 text-right">
+                    <td className="font-data py-2 text-right tabular-nums">{item.quantity}</td>
+                    <td className="font-data py-2 text-right tabular-nums">
                       {formatMoney(item.unitPrice, invoice.currency)}
                     </td>
-                    <td className="py-2 text-right">
+                    <td className="font-data py-2 text-right tabular-nums">
                       {formatMoney(item.quantity * item.unitPrice, invoice.currency)}
                     </td>
                   </tr>
@@ -220,13 +223,22 @@ export default function InvoiceDetailPage() {
           </div>
           <div className="border-border mt-3 flex flex-col items-end gap-1 border-t pt-3">
             <p className="font-ui text-text-secondary text-[0.875rem]">
-              Subtotal {formatMoney(invoice.subtotal, invoice.currency)}
+              Subtotal{" "}
+              <span className="font-data tabular-nums">
+                {formatMoney(invoice.subtotal, invoice.currency)}
+              </span>
             </p>
             <p className="font-ui text-text-secondary text-[0.875rem]">
-              Tax {formatMoney(invoice.tax, invoice.currency)} · Discount{" "}
-              {formatMoney(invoice.discount, invoice.currency)}
+              Tax{" "}
+              <span className="font-data tabular-nums">
+                {formatMoney(invoice.tax, invoice.currency)}
+              </span>{" "}
+              · Discount{" "}
+              <span className="font-data tabular-nums">
+                {formatMoney(invoice.discount, invoice.currency)}
+              </span>
             </p>
-            <p className="font-ui text-text-primary text-[1.125rem] font-bold">
+            <p className="font-data text-text-primary text-[1.125rem] font-bold tabular-nums">
               Total {formatMoney(invoice.total, invoice.currency)}
             </p>
           </div>
@@ -237,17 +249,17 @@ export default function InvoiceDetailPage() {
       }
       rail={
         <div className="flex flex-col gap-4">
-          <Card>
+          <Card accent>
             <CardHeader>
-              <CardTitle>Risk</CardTitle>
+              <CardTitle eyebrow>Risk</CardTitle>
             </CardHeader>
-            <p className={`font-ui text-[0.875rem] font-semibold ${risk.className}`}>
+            <p className={`font-data text-[0.875rem] font-bold uppercase ${risk.className}`}>
               {risk.label}
             </p>
           </Card>
-          <Card>
+          <Card accent>
             <CardHeader>
-              <CardTitle>Pay Now link</CardTitle>
+              <CardTitle eyebrow>Pay Now link</CardTitle>
             </CardHeader>
             <p className="text-text-secondary break-all font-mono text-[0.75rem]">{payUrl}</p>
             <Button
@@ -264,9 +276,9 @@ export default function InvoiceDetailPage() {
               {linkCopied ? "Copied!" : "Copy link"}
             </Button>
           </Card>
-          <Card>
+          <Card accent>
             <CardHeader>
-              <CardTitle>Activity</CardTitle>
+              <CardTitle eyebrow>Activity</CardTitle>
             </CardHeader>
             <ul className="font-ui text-text-secondary flex flex-col gap-1 text-[0.8125rem]">
               <li>Sent: {invoice.sentAt ? new Date(invoice.sentAt).toLocaleDateString() : "—"}</li>
