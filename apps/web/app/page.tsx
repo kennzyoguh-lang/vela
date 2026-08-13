@@ -13,11 +13,27 @@ import {
 } from "lucide-react";
 import { VelaLogo, VelaMark } from "@/components/brand/VelaLogo";
 import { Card, CardTitle } from "@/components/ui/Card";
+import { MobileNav } from "@/components/marketing/MobileNav";
+
+const TITLE = "VELA — The Business Operating System for African SMEs";
+const DESCRIPTION =
+  "Invoicing, tax compliance, payroll, banking, and a staff-proof point of sale — one system, not five disconnected tools. Built for how Nigerian SMEs actually run.";
 
 export const metadata: Metadata = {
-  title: "VELA — The Business Operating System for African SMEs",
-  description:
-    "Invoicing, tax compliance, payroll, banking, and a staff-proof point of sale — one system, not five disconnected tools. Built for how Nigerian SMEs actually run.",
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: "/",
+    siteName: "VELA",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 const MODULES = [
@@ -101,6 +117,7 @@ const PRICING_TIERS = [
     price: "₦35,000",
     period: "/month",
     blurb: "For a business running real payroll and reconciliation.",
+    popular: true,
     features: [
       "Up to 30 team members",
       "Unlimited payroll",
@@ -148,11 +165,75 @@ const AFRICA_POINTS = [
   },
 ];
 
+// A built-from-tokens preview of the real dashboard — not a screenshot (none
+// exist yet), but the exact same Card/typography/colour primitives the live
+// app renders with, so it's honest: this is what signing up actually looks
+// like, not a stock mockup.
+function DashboardPreview() {
+  return (
+    <div className="border-border bg-surface-raised shadow-3 mx-auto mt-16 max-w-[920px] overflow-hidden rounded-xl border text-left">
+      <div className="border-border bg-surface-secondary/60 flex items-center gap-2 border-b px-5 py-3">
+        <span className="size-2.5 rounded-full bg-[#e06b42]/60" aria-hidden />
+        <span className="bg-gold/60 size-2.5 rounded-full" aria-hidden />
+        <span className="bg-sage/60 size-2.5 rounded-full" aria-hidden />
+        <span className="font-data text-text-secondary ml-3 text-[0.68rem] uppercase tracking-[0.1em]">
+          app.vela.com — dashboard
+        </span>
+      </div>
+      <div className="border-border grid grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="p-5">
+          <p className="font-data text-gold text-[0.68rem] font-bold uppercase tracking-[0.1em]">
+            Cash position
+          </p>
+          <p className="font-data text-text-primary mt-2 text-[1.5rem] font-bold tabular-nums">
+            ₦4,820,600
+          </p>
+          <p className="font-ui text-sage mt-1 text-[0.78rem]">+12.4% this month</p>
+        </div>
+        <div className="p-5">
+          <p className="font-data text-gold text-[0.68rem] font-bold uppercase tracking-[0.1em]">
+            Outstanding invoices
+          </p>
+          <p className="font-data text-text-primary mt-2 text-[1.5rem] font-bold tabular-nums">
+            ₦1,240,000
+          </p>
+          <p className="font-ui text-text-secondary mt-1 text-[0.78rem]">6 invoices · 2 overdue</p>
+        </div>
+        <div className="p-5">
+          <p className="font-data text-gold text-[0.68rem] font-bold uppercase tracking-[0.1em]">
+            Compliance
+          </p>
+          <p className="font-data text-sage mt-2 text-[1.5rem] font-bold">On track</p>
+          <p className="font-ui text-text-secondary mt-1 text-[0.78rem]">
+            Next: VAT filing in 9 days
+          </p>
+        </div>
+      </div>
+      <div className="border-border border-t p-5">
+        <p className="font-data text-text-secondary mb-3 text-[0.68rem] font-bold uppercase tracking-[0.1em]">
+          Revenue, last 6 months
+        </p>
+        <div className="flex h-24 items-end gap-3">
+          {[38, 52, 47, 61, 58, 74].map((h, i) => (
+            <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+              <div
+                className="bg-gold/80 w-full rounded-t-sm"
+                style={{ height: `${h}%` }}
+                aria-hidden
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MarketingHomePage() {
   return (
     <div className="bg-surface-canvas min-h-dvh">
       {/* Nav */}
-      <header className="border-border bg-surface-raised/80 sticky top-0 z-20 border-b backdrop-blur">
+      <header className="border-border bg-surface-raised/80 relative sticky top-0 z-20 border-b backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1180px] items-center justify-between px-4 md:px-6">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="hidden dark:block">
@@ -165,31 +246,32 @@ export default function MarketingHomePage() {
           <nav className="flex items-center gap-6">
             <a
               href="#modules"
-              className="font-ui text-text-secondary hover:text-text-primary hidden text-[0.875rem] sm:inline"
+              className="font-ui text-text-secondary hover:text-text-primary duration-quick hidden text-[0.875rem] transition-colors sm:inline"
             >
               Product
             </a>
             <a
               href="#pricing"
-              className="font-ui text-text-secondary hover:text-text-primary hidden text-[0.875rem] sm:inline"
+              className="font-ui text-text-secondary hover:text-text-primary duration-quick hidden text-[0.875rem] transition-colors sm:inline"
             >
               Pricing
             </a>
             <a
               href="#africa"
-              className="font-ui text-text-secondary hover:text-text-primary hidden text-[0.875rem] sm:inline"
+              className="font-ui text-text-secondary hover:text-text-primary duration-quick hidden text-[0.875rem] transition-colors sm:inline"
             >
               Built for Africa
             </a>
+            <MobileNav />
             <Link
               href="/login"
-              className="font-ui text-text-secondary hover:text-text-primary text-[0.875rem]"
+              className="font-ui text-text-secondary hover:text-text-primary duration-quick hidden text-[0.875rem] transition-colors sm:inline"
             >
               Log in
             </Link>
             <Link
               href="/signup"
-              className="bg-action-primary text-action-primaryText font-ui inline-flex h-10 items-center rounded-sm px-4 text-[0.875rem] font-bold hover:brightness-95"
+              className="bg-action-primary text-action-primaryText font-ui duration-quick inline-flex h-10 items-center rounded-sm px-4 text-[0.875rem] font-bold transition-all hover:shadow-[0_0_0_3px_rgba(201,168,76,0.18)] hover:brightness-110"
             >
               Start free
             </Link>
@@ -198,38 +280,53 @@ export default function MarketingHomePage() {
       </header>
 
       {/* Hero */}
-      <section className="mx-auto max-w-[860px] px-4 pb-16 pt-20 text-center md:px-6 md:pt-28">
-        <p className="font-data text-gold mb-6 inline-flex items-center gap-2 text-[0.72rem] font-bold uppercase tracking-[0.16em]">
-          <span className="bg-gold size-1.5 rounded-full" aria-hidden />
-          Live product — not a prototype
-        </p>
-        <h1 className="font-display text-text-primary text-[2.5rem] font-normal leading-[1.15] md:text-[3.25rem]">
-          The Business Operating System, built for how{" "}
-          <span className="text-gold">Nigerian SMEs</span> actually run.
-        </h1>
-        <div className="bg-gold mx-auto mt-8 h-0.5 w-16" aria-hidden />
-        <p className="font-ui text-text-secondary mx-auto mt-8 max-w-[560px] text-[1.05rem] leading-[1.7]">
-          Invoicing, tax compliance, payroll, banking, and a staff-proof point of sale — one system,
-          not five disconnected tools. It adapts to the business it&apos;s running, from day one.
-        </p>
-        <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <Link
-            href="/signup"
-            className="bg-action-primary text-action-primaryText font-ui inline-flex h-12 items-center gap-2 rounded-sm px-7 text-[0.95rem] font-bold hover:brightness-95"
-          >
-            Start free <ArrowRight className="size-4" aria-hidden />
-          </Link>
-          <a
-            href="#modules"
-            className="border-border text-text-primary font-ui hover:border-gold inline-flex h-12 items-center rounded-sm border px-7 text-[0.95rem] font-bold"
-          >
-            See how it works
-          </a>
+      <section className="relative isolate overflow-hidden">
+        <div
+          className="bg-gold/10 pointer-events-none absolute -top-32 left-1/2 -z-10 size-[560px] -translate-x-[65%] rounded-full blur-[120px]"
+          aria-hidden
+        />
+        <div
+          className="bg-cobalt/20 pointer-events-none absolute -top-16 left-1/2 -z-10 size-[520px] -translate-x-[15%] rounded-full blur-[140px]"
+          aria-hidden
+        />
+        <div className="mx-auto max-w-[860px] px-4 pb-16 pt-20 text-center md:px-6 md:pt-28">
+          <p className="font-data text-gold mb-6 inline-flex items-center gap-2 text-[0.72rem] font-bold uppercase tracking-[0.16em]">
+            <span className="bg-gold size-1.5 rounded-full" aria-hidden />
+            Live product — not a prototype
+          </p>
+          <h1 className="font-display text-text-primary text-[2.75rem] font-normal leading-[1.12] md:text-[4rem]">
+            The Business Operating System, built for how{" "}
+            <span className="text-gold">Nigerian SMEs</span> actually run.
+          </h1>
+          <div className="bg-gold mx-auto mt-8 h-0.5 w-16" aria-hidden />
+          <p className="font-ui text-text-secondary mx-auto mt-8 max-w-[560px] text-[1.05rem] leading-[1.7]">
+            Invoicing, tax compliance, payroll, banking, and a staff-proof point of sale — one
+            system, not five disconnected tools. It adapts to the business it&apos;s running, from
+            day one.
+          </p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link
+              href="/signup"
+              className="bg-action-primary text-action-primaryText font-ui duration-quick shadow-2 inline-flex h-12 items-center gap-2 rounded-sm px-7 text-[0.95rem] font-bold transition-all hover:-translate-y-0.5 hover:brightness-110"
+            >
+              Start free <ArrowRight className="size-4" aria-hidden />
+            </Link>
+            <a
+              href="#modules"
+              className="border-border text-text-primary font-ui hover:border-gold duration-quick inline-flex h-12 items-center rounded-sm border px-7 text-[0.95rem] font-bold transition-colors"
+            >
+              See how it works
+            </a>
+          </div>
+          <p className="font-ui text-text-secondary mt-5 text-[0.78rem]">
+            No credit card required · Live in minutes · Free tier, permanently
+          </p>
+          <DashboardPreview />
         </div>
       </section>
 
       {/* Problem / solution */}
-      <section className="border-border border-t">
+      <section className="border-border bg-surface-raised/40 border-t">
         <div className="mx-auto max-w-[860px] px-4 py-16 text-center md:px-6">
           <h2 className="font-display text-text-primary text-[1.6rem] font-normal">
             Every SME owner is already running a Business OS.{" "}
@@ -257,8 +354,14 @@ export default function MarketingHomePage() {
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {MODULES.map((mod) => (
-              <Card accent key={mod.name} className="flex flex-col gap-3">
-                <mod.icon className="text-gold size-5" aria-hidden />
+              <Card
+                accent
+                key={mod.name}
+                className="duration-standard hover:border-t-gold hover:shadow-2 flex flex-col gap-3 transition-all hover:-translate-y-1"
+              >
+                <div className="bg-gold/10 flex size-9 items-center justify-center rounded-md">
+                  <mod.icon className="text-gold size-5" aria-hidden />
+                </div>
                 <CardTitle>{mod.name}</CardTitle>
                 <p className="font-ui text-text-secondary text-[0.83rem] leading-[1.6]">
                   {mod.description}
@@ -270,7 +373,7 @@ export default function MarketingHomePage() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="border-border border-t">
+      <section id="pricing" className="border-border bg-surface-raised/40 border-t">
         <div className="mx-auto max-w-[1180px] px-4 py-16 md:px-6">
           <div className="mb-10 max-w-[560px]">
             <p className="font-data text-gold mb-3 text-[0.7rem] font-bold uppercase tracking-[0.14em]">
@@ -286,7 +389,18 @@ export default function MarketingHomePage() {
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {PRICING_TIERS.map((tier) => (
-              <Card key={tier.name} accent className="flex flex-col gap-4">
+              <Card
+                key={tier.name}
+                accent
+                className={`duration-standard hover:shadow-2 relative flex flex-col gap-4 transition-all hover:-translate-y-1 ${
+                  tier.popular ? "ring-gold/50 ring-1" : ""
+                }`}
+              >
+                {tier.popular ? (
+                  <span className="bg-gold text-midnight font-data absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.06em]">
+                    Most popular
+                  </span>
+                ) : null}
                 <div>
                   <CardTitle eyebrow>{tier.name}</CardTitle>
                   <div className="mt-2 flex items-baseline gap-1">
@@ -331,7 +445,10 @@ export default function MarketingHomePage() {
           </div>
           <div className="border-border divide-border grid grid-cols-1 divide-y overflow-hidden rounded-lg border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
             {AFRICA_POINTS.map((point) => (
-              <div key={point.title} className="bg-surface-raised p-6">
+              <div
+                key={point.title}
+                className="bg-surface-raised hover:bg-surface-overlay duration-standard p-6 transition-colors"
+              >
                 <h3 className="font-ui text-text-primary mb-2 text-[0.92rem] font-bold">
                   {point.title}
                 </h3>
@@ -345,7 +462,11 @@ export default function MarketingHomePage() {
       </section>
 
       {/* Final CTA */}
-      <section className="border-border border-t">
+      <section className="border-border bg-surface-raised/40 relative isolate overflow-hidden border-t">
+        <div
+          className="bg-gold/10 pointer-events-none absolute left-1/2 top-0 -z-10 size-[420px] -translate-x-1/2 rounded-full blur-[120px]"
+          aria-hidden
+        />
         <div className="mx-auto max-w-[640px] px-4 py-20 text-center md:px-6">
           <h2 className="font-display text-text-primary text-[1.9rem] font-normal">
             See it for yourself.
@@ -356,7 +477,7 @@ export default function MarketingHomePage() {
           </p>
           <Link
             href="/signup"
-            className="bg-action-primary text-action-primaryText font-ui mt-8 inline-flex h-12 items-center gap-2 rounded-sm px-7 text-[0.95rem] font-bold hover:brightness-95"
+            className="bg-action-primary text-action-primaryText font-ui duration-quick shadow-2 mt-8 inline-flex h-12 items-center gap-2 rounded-sm px-7 text-[0.95rem] font-bold transition-all hover:-translate-y-0.5 hover:brightness-110"
           >
             Start free <ArrowRight className="size-4" aria-hidden />
           </Link>

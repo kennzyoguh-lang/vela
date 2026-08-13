@@ -134,6 +134,10 @@ export const config = {
   // very request that would create one, e.g. the login POST itself) and
   // redirecting it to /login before the rewrite ever got a chance to run —
   // found live, the login POST returned a 200 with the /login PAGE'S html
-  // instead of the API's JSON.
-  matcher: ["/((?!api|v1|_next/static|_next/image|favicon.ico).*)"],
+  // instead of the API's JSON. icon.svg and opengraph-image are Next.js's
+  // file-convention metadata routes — same reasoning as favicon.ico: browser
+  // tabs and social-media link-preview crawlers request them with no session
+  // cookie at all, and PUBLIC_PATHS wouldn't help since none of those callers
+  // ever follow a redirect to /login, they just silently show no icon/preview.
+  matcher: ["/((?!api|v1|_next/static|_next/image|favicon.ico|icon.svg|opengraph-image).*)"],
 };
