@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--next-font-inter", display
 export const metadata: Metadata = {
   title: "VELA — Your business, fully understood.",
   description: "The Business Operating System for African SMEs.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://web-seven-orpin-47.vercel.app",
+  ),
 };
 
 // Theme resolution runs before paint (inline script, no FOUC) — reads the
