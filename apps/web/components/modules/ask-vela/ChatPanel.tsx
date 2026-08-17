@@ -9,6 +9,16 @@ import { api, ApiError } from "@/lib/api/client";
 import { streamAskVela, type Citation } from "@/lib/api/ask-vela-stream";
 import { cn } from "@/lib/utils";
 
+// The API throws the raw env var name in its error message (useful for the
+// developer at the call site) — never surface that to whoever's actually
+// using the product, they don't know or care what ANTHROPIC_API_KEY is.
+function friendlyAskVelaError(message: string): string {
+  if (message.includes("ANTHROPIC_API_KEY")) {
+    return "Ask Vela isn't set up on this account yet.";
+  }
+  return message;
+}
+
 interface AskVelaConversationSummary {
   id: string;
   title: string | null;
@@ -136,7 +146,7 @@ export function ChatPanel({ variant }: { variant: "dock" | "full" }) {
         queryClient.invalidateQueries({ queryKey: ["ask-vela", "conversations"] });
       },
       onError: (message) => {
-        setError(message);
+        setError(friendlyAskVelaError(message));
         setIsSending(false);
         setPendingMessages([]);
       },
