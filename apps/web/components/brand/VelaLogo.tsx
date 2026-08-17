@@ -71,9 +71,13 @@ export function VelaLogo({
       <div className="flex flex-col leading-none">
         <span
           className={cn(
-            "font-ui text-[1.25rem] font-bold tracking-[0.18em]",
+            // Logo Identity System v1.0 §03: the wordmark is set in Helvetica
+            // Neue Bold specifically — distinct from font-ui (Inter), which
+            // is the general UI typeface everywhere else in the product.
+            "text-[1.25rem] font-bold tracking-[0.18em]",
             onDark ? "text-white" : "text-text-primary",
           )}
+          style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
         >
           VELA
         </span>
