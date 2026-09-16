@@ -65,7 +65,10 @@ describe("Password reset (real DB, real HTTP layer)", () => {
         .send({ email: `nobody-${randomUUID()}@example.com` });
 
       expect(realRes.status).toBe(fakeRes.status);
-      expect(realRes.body).toEqual(fakeRes.body);
+      // Compares .data only, not the whole body — meta.requestId is a
+      // per-request trace id (lib/response.ts), correctly different on
+      // every call, not part of the enumeration-safety guarantee.
+      expect(realRes.body.data).toEqual(fakeRes.body.data);
     },
     TEST_TIMEOUT_MS,
   );

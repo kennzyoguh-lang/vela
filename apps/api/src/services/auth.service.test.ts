@@ -571,10 +571,17 @@ describe("auth.service", () => {
   describe("resetPassword", () => {
     const orgId = randomUUID();
     const userId = randomUUID();
+    const nowSeconds = Math.floor(Date.now() / 1000);
 
     it("hashes the new password, updates it, and logs out every existing session", async () => {
-      vi.mocked(jwtService.verifyPasswordResetToken).mockReturnValue({ sub: userId, orgId });
-      vi.mocked(userRepo.findById).mockResolvedValue(stubUser({ id: userId, orgId }) as never);
+      vi.mocked(jwtService.verifyPasswordResetToken).mockReturnValue({
+        sub: userId,
+        orgId,
+        iat: nowSeconds,
+      });
+      vi.mocked(userRepo.findById).mockResolvedValue(
+        stubUser({ id: userId, orgId, passwordChangedAt: null }) as never,
+      );
 
       const result = await authService.resetPassword("valid-token", "a-new-strong-password");
 
@@ -582,6 +589,22 @@ describe("auth.service", () => {
       expect(userRepo.updatePasswordHash).toHaveBeenCalledWith(orgId, userId, "hashed");
       expect(sessionRepo.terminateAllForUser).toHaveBeenCalledWith(orgId, userId);
       expect(result).toEqual({ orgId, userId });
+    });
+
+    it("allows a token issued strictly after the account's last password change", async () => {
+      const changedAt = new Date((nowSeconds - 3600) * 1000); // an hour ago
+      vi.mocked(jwtService.verifyPasswordResetToken).mockReturnValue({
+        sub: userId,
+        orgId,
+        iat: nowSeconds,
+      });
+      vi.mocked(userRepo.findById).mockResolvedValue(
+        stubUser({ id: userId, orgId, passwordChangedAt: changedAt }) as never,
+      );
+
+      await expect(
+        authService.resetPassword("valid-token", "a-new-strong-password"),
+      ).resolves.toEqual({ orgId, userId });
     });
 
     it("rejects an expired or invalid token before touching the account", async () => {
@@ -597,13 +620,59 @@ describe("auth.service", () => {
     });
 
     it("rejects a token for an account that no longer exists", async () => {
-      vi.mocked(jwtService.verifyPasswordResetToken).mockReturnValue({ sub: userId, orgId });
+      vi.mocked(jwtService.verifyPasswordResetToken).mockReturnValue({
+        sub: userId,
+        orgId,
+        iat: nowSeconds,
+      });
       vi.mocked(userRepo.findById).mockResolvedValue(null);
 
       await expect(
         authService.resetPassword("valid-token", "a-new-strong-password"),
       ).rejects.toThrow(/Account not found/);
       expect(userRepo.updatePasswordHash).not.toHaveBeenCalled();
+    });
+
+    it("rejects a reset token issued before the account's last password change (already used)", async () => {
+      // The exact replay case: the token was used once already, the first
+      // use set passwordChangedAt to "now", and the same token (with its
+      // original, now-stale iat) is presented again.
+      const changedAt = new Date(nowSeconds * 1000);
+      vi.mocked(jwtService.verifyPasswordResetToken).mockReturnValue({
+        sub: userId,
+        orgId,
+        iat: nowSeconds - 60, // signed a minute before the change that consumed it
+      });
+      vi.mocked(userRepo.findById).mockResolvedValue(
+        stubUser({ id: userId, orgId, passwordChangedAt: changedAt }) as never,
+      );
+
+      await expect(
+        authService.resetPassword("replayed-token", "yet-another-password"),
+      ).rejects.toThrow(/expired or invalid/);
+      expect(userRepo.updatePasswordHash).not.toHaveBeenCalled();
+      expect(sessionRepo.terminateAllForUser).not.toHaveBeenCalled();
+    });
+
+    it("rejects a reset token issued at exactly the account's last password change", async () => {
+      // Boundary: iat === passwordChangedAt must also reject (<=, not <) —
+      // a genuinely fresh token minted in the same reset request could
+      // never be issued at literally the same instant its own use is
+      // recorded, so treating the boundary as "already used" costs nothing
+      // real while closing the edge.
+      const changedAt = new Date(nowSeconds * 1000);
+      vi.mocked(jwtService.verifyPasswordResetToken).mockReturnValue({
+        sub: userId,
+        orgId,
+        iat: nowSeconds,
+      });
+      vi.mocked(userRepo.findById).mockResolvedValue(
+        stubUser({ id: userId, orgId, passwordChangedAt: changedAt }) as never,
+      );
+
+      await expect(
+        authService.resetPassword("boundary-token", "yet-another-password"),
+      ).rejects.toThrow(/expired or invalid/);
     });
   });
 });

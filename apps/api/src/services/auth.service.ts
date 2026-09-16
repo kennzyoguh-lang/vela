@@ -376,12 +376,19 @@ export async function requestPasswordReset(email: string): Promise<void> {
  * (sessionRepo.terminateAllForUser): a password reset is exactly the moment
  * an attacker who was using a leaked-but-now-invalid password should be
  * kicked out, not left signed in on whatever session they already had.
+ *
+ * Single-use: the token's own signature/expiry alone would let it be
+ * replayed as many times as its 30-minute TTL allows (a genuine gap caught
+ * in review — a valid, unexpired reset link stayed usable even after being
+ * redeemed once). Rejected by comparing the token's issued-at time against
+ * the account's passwordChangedAt — see schema.prisma's comment on that
+ * column for why this needs no separate Redis/jti denylist.
  */
 export async function resetPassword(
   token: string,
   newPassword: string,
 ): Promise<{ orgId: string; userId: string }> {
-  let claims: { sub: string; orgId: string };
+  let claims: { sub: string; orgId: string; iat: number };
   try {
     claims = verifyPasswordResetToken(token);
   } catch {
@@ -390,6 +397,10 @@ export async function resetPassword(
 
   const user = await userRepo.findById(claims.orgId, claims.sub);
   if (!user) throw new NotFoundError("Account not found");
+
+  if (user.passwordChangedAt && claims.iat * 1000 <= user.passwordChangedAt.getTime()) {
+    throw new UnauthenticatedError("Reset link expired or invalid — request a new one");
+  }
 
   const passwordHash = await hashPassword(newPassword);
   await userRepo.updatePasswordHash(claims.orgId, claims.sub, passwordHash);

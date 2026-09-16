@@ -94,6 +94,16 @@ export interface PasswordResetClaims {
   orgId: string;
 }
 
+// jwt.verify's return also carries the standard `iat` claim (seconds since
+// epoch) — surfaced as its own type, not folded into PasswordResetClaims
+// itself, since a caller signing a token never supplies it (jwt.sign always
+// mints its own). auth.service.ts#resetPassword compares it against the
+// account's passwordChangedAt to enforce single-use (schema.prisma's
+// comment on that column explains why).
+export interface VerifiedPasswordResetClaims extends PasswordResetClaims {
+  iat: number;
+}
+
 const PASSWORD_RESET_AUDIENCE = "password-reset";
 // Deliberately much shorter than the email-verification link's 24h — this
 // token grants account takeover (a new password, no re-authentication), not
@@ -110,11 +120,11 @@ export function signPasswordResetToken(claims: PasswordResetClaims): string {
   });
 }
 
-export function verifyPasswordResetToken(token: string): PasswordResetClaims {
+export function verifyPasswordResetToken(token: string): VerifiedPasswordResetClaims {
   return jwt.verify(token, publicKey, {
     algorithms: ["RS256"],
     audience: PASSWORD_RESET_AUDIENCE,
-  }) as unknown as PasswordResetClaims;
+  }) as unknown as VerifiedPasswordResetClaims;
 }
 
 export function newRefreshToken(): { token: string; familyId: string } {
