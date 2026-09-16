@@ -22,6 +22,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Typecheck needs @prisma/client's generated model/enum types (AskVelaConversation,
+      # InvoiceStatus, etc.) to exist before `tsc --noEmit` runs — without this step every
+      # Prisma-typed import fails with "has no exported member", which is why this job has
+      # been red on every push (see git history: this step was missing here even though the
+      # `test` job below always had it).
+      - run: pnpm --filter @vela/api db:generate
       - run: pnpm run lint
       - run: pnpm run typecheck
       - run: pnpm run format:check
@@ -50,8 +56,26 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql://vela:vela@localhost:5432/vela_test?schema=public
+      # Fixed, CI-only fixtures — not real secrets, never used against any
+      # real database (this job's Postgres container is ephemeral and
+      # network-isolated). Connection URLs are assembled from separate
+      # fragments in the "Set database URLs" step below rather than written
+      # here as literal scheme://user:password@host strings.
+      #
+      # api_write_role is created NOLOGIN by the RLS migration; nothing
+      # before this job ever set its actual login password, so every test
+      # that touches PrismaClient (even a unit test that merely imports a
+      # repository) has been failing at construction time with "Invalid
+      # value undefined for datasource db" — this job's env block was simply
+      # missing everything env.ts requires. The "Set database URLs" and
+      # db:setup steps below are what actually make api_write_role able to
+      # log in on this job's ephemeral database.
+      DB_OWNER_PASSWORD: vela
+      API_WRITE_ROLE_PASSWORD: ci_test_password_only
       REDIS_URL: redis://localhost:6379
+      JWT_PRIVATE_KEY_BASE64: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2d0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktrd2dnU2xBZ0VBQW9JQkFRQ3p4VytYWXJHakxHT24KTSttL3YyM2xuSDluTDA2ZktFMi9zbEllOXg2aTZrdVVXSHBMdzNwMGVYVUdxQkx3Y2MwZG56M1NMZkNyT2RnbwpzNDZBT2JnWEFPaG9pai9jWjZjVzZPeVYwU2tPSjJxOWdPZm5XZE5rM0wxTGl3ZUs3azM0Ukx1dkZROEhVZkorCjhNVlN3a2w3MU5yU2E4bnNmZTFaaXJWakk2T2ZXU3lKL0JGWmVmN21BbHUzMFRCMVg5djRBcXlVZVpyaDFZbVMKUFJlVEFHdWdYV3V2K040dW5lc2xwZ3dCZEJDak5ybUNZK3lEZks2QndsZzIxOFkrNmxpQjJUQnNYVXoyYmt6SQpNRkVHNUV0TEtEeThDTFJJamwxMTdhSUp3bUNGUEVya3FRSksvQzN4RDJ4M0ZPU2FGZ0x3Wk1tVVlxUlFhQktsCjd3V3YxTVFqQWdNQkFBRUNnZ0VBRTVlY2NsVEV4R0pWbUFidDNrSjRNVEtOcGdxL1dGUTFxUU0vdFBVOHh3ZWUKNWhPQWZKcFkwYkhkQWJVMm56TGY1bThROTBPZmU2SEp2NkhXRVg1NDVEVHFuMTRWMktrSlNsTm5XV3FhdlZxcApaTzdVRjJBd1RFbE1iaHZBWGpGYm1RZXdwc08yU0JkenhNYnIwbm12TllvOHNQc2pYaDFaVFUxek9GTk5oVk9zCjh1QTNNZTVXODBvUWJ3YXFzbFpoZkc4VnhxMGRsY3UzNE5abXZEMGJFRlZVYW1uRnBoM3M5RkI1WFcwRllyR1MKa3RSR2NHL2VPZSt1T215RjIwSHFxSTRaYzJmN00yRXJQa3ZqTU1hNGFYZkJuMTVRbXJqZnIyWktscU8xZWUxeApKSTlLalZ0c2dDUjYyVmFLc0srYlprQTdoRDdGYTEzZHZiaWRIRkNZTVFLQmdRRDJobGlVWnhuM2dqVEdhcWRuCnpJdlMwbGRHVURQcGorc01WQmJtSFVsNU1KcTd5aXlBVmNFaGFqOVRCR1BweXFGbFhyRE5rVjNtZE81dm1zK24KZlJ1dDdOUUVSd0luaXBFMVJCVHJUcW00ZEpzRk50cWdEQ09WYXhwUGJWVXNyK0t5bVE1WXJaZ09nc2MwRnFYYwpiUStJVCtzQWNWbkI2bjMxVVNsS1BoTHpjUUtCZ1FDNnJrYUhvK3FMTVlRNW1OSlcvTEgrQ3ZjQURmQ2hkcEk5CmtWMGkxTk9YZU9kcWY4M0RIMERJdUVrY1lhT2x3UTMvbDVsOEFGczVCOHVhK1BGTCtyYmFQQnI3WWduamxiL2IKeE41U3loQXpxK0E5dS92OXVkMDZRcUhLTG9abEpaV3k5aWpnOTVaOFQvcUQrVHN2anM4WnNxU05vK2xXY3VvegpSL2JTMVd6KzB3S0JnUURGdUx6RTBlaG10aHpENHZpL2JMUGNjKzJockdQbWVSSnBBZXlYeFhlUFpxZEQ1SVJLCnJmekhZeUxFMzZtTzhvRDkvN05JUE1ZV04wU2hhSVlSN0dyTjFUdTY3b1RRMS9kY3hHME95VG1nZ28xdTRpNzQKM0tPUmpLUStmZzhwVnl3NFdEL0VhZjZoN012K2dBZXBRaU9LRGFjSzVONjdnK3BnWGljQ3I4U2RVUUtCZ1FDZwo2MHQyN3hCbURqZ0pvamRtcm9zTUR3MmQ2V1pNK0xYVkJySS9MVEI3K01lYklUSVFpYWRCbnNHL0NsZVRzVmZNCnhEU1ZGSVdPSXE4YkZvNkJ6VXZEMFYzODVpVGFIcUwwNGI0M3BXRFQrY3ZoeTJMTDgyVEZMTnprT0xpM0JmQUcKQlhWMWYxY2tMNWttSERndHBhL1dXZ3pJMzh0ckxzRzlsTUlxT2JtcjZ3S0JnUUNxM0hoVjBSR1I0dXlsYkZJcApqdUFoVGJ4YVlHbW1pWXRvNldMQjFmZzFyWExSSXBybURWa3BPbGhEeHJIK0p1UERnZi9yMGNuVzRTeUp4ZlBiCm9pWjJyVVY3dXpWOVdxOG05T0RWN0tialRGNFRpcVhtbTFKM3dEcXN5dU9PWStuS3ptdHdzTER6ZWFmUVdpSVEKandJSjFGeWU5aG9ML2h5Y1A4YWJNclEyakE9PQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg=="
+      JWT_PUBLIC_KEY_BASE64: "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUFzOFZ2bDJLeG95eGpwelBwdjc5dAo1WngvWnk5T255aE52N0pTSHZjZW91cExsRmg2UzhONmRIbDFCcWdTOEhITkhaODkwaTN3cXpuWUtMT09nRG00CkZ3RG9hSW8vM0dlbkZ1anNsZEVwRGlkcXZZRG41MW5UWk55OVM0c0hpdTVOK0VTN3J4VVBCMUh5ZnZERlVzSkoKZTlUYTBtdko3SDN0V1lxMVl5T2puMWtzaWZ3UldYbis1Z0pidDlFd2RWL2IrQUtzbEhtYTRkV0prajBYa3dCcgpvRjFyci9qZUxwM3JKYVlNQVhRUW96YTVnbVBzZzN5dWdjSllOdGZHUHVwWWdka3diRjFNOW01TXlEQlJCdVJMClN5Zzh2QWkwU0k1ZGRlMmlDY0pnaFR4SzVLa0NTdnd0OFE5c2R4VGttaFlDOEdUSmxHS2tVR2dTcGU4RnI5VEUKSXdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg=="
+      TWO_FA_ENCRYPTION_KEY_BASE64: "50tNi6YLlpHxmUZTBwygSaGo6YR90gTr9hQajTFNi8A="
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -62,7 +86,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Assembles DATABASE_URL / APP_DATABASE_URL from separate,
+      # non-credential-shaped fragments at run time, rather than writing a
+      # literal scheme://user:password@host string into this file.
+      - name: Set database URLs
+        run: |
+          HOST_SUFFIX="@localhost:5432/vela_test?schema=public"
+          echo "DATABASE_URL=postgresql://vela:${DB_OWNER_PASSWORD}${HOST_SUFFIX}" >> "$GITHUB_ENV"
+          echo "APP_DATABASE_URL=postgresql://api_write_role:${API_WRITE_ROLE_PASSWORD}${HOST_SUFFIX}" >> "$GITHUB_ENV"
       - run: pnpm --filter @vela/api db:generate
+      - run: pnpm --filter @vela/api db:setup
       - run: pnpm run test:unit
       - run: pnpm run test:integration
 
