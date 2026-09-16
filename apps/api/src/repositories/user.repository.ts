@@ -79,6 +79,16 @@ export async function markEmailVerified(orgId: string, userId: string): Promise<
   );
 }
 
+export async function updatePasswordHash(
+  orgId: string,
+  userId: string,
+  passwordHash: string,
+): Promise<void> {
+  await withOrgScope(orgId, (tx) =>
+    tx.user.update({ where: { id: userId, orgId }, data: { passwordHash } }),
+  );
+}
+
 export async function updateLastLogin(orgId: string, userId: string): Promise<void> {
   await withOrgScope(orgId, (tx) =>
     tx.user.update({ where: { id: userId, orgId }, data: { lastLogin: new Date() } }),

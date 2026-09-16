@@ -21,12 +21,14 @@ vi.mock("../repositories/user.repository", () => ({
   updateLastLogin: vi.fn(),
   updateBackupCodes: vi.fn(),
   markEmailVerified: vi.fn(),
+  updatePasswordHash: vi.fn(),
 }));
 vi.mock("../repositories/session.repository", () => ({
   createSession: vi.fn(),
   findActiveByFamily: vi.fn(),
   terminateSession: vi.fn(),
   terminateFamily: vi.fn(),
+  terminateAllForUser: vi.fn(),
 }));
 vi.mock("../repositories/audit-log.repository", () => ({
   write: vi.fn(),
@@ -45,6 +47,8 @@ vi.mock("./jwt.service", () => ({
   verifyTwoFaChallengeToken: vi.fn(),
   signEmailVerificationToken: vi.fn(() => "verify-token"),
   verifyEmailVerificationToken: vi.fn(),
+  signPasswordResetToken: vi.fn(() => "reset-token"),
+  verifyPasswordResetToken: vi.fn(),
 }));
 vi.mock("./twofa.service", () => ({
   verifyTotpCode: vi.fn(),
@@ -67,6 +71,9 @@ vi.mock("./email/email.gateway", () => ({
 }));
 vi.mock("../email/templates/verify-email", () => ({
   verifyEmailEmail: vi.fn(() => ({ subject: "s", html: "h", text: "t" })),
+}));
+vi.mock("../email/templates/password-reset", () => ({
+  passwordResetEmail: vi.fn(() => ({ subject: "s", html: "h", text: "t" })),
 }));
 
 import * as organisationRepo from "../repositories/organisation.repository";
@@ -516,6 +523,87 @@ describe("auth.service", () => {
       await expect(
         authService.refresh(orgId, sessionFamilyId, "presented-token"),
       ).resolves.toBeDefined();
+    });
+  });
+
+  describe("requestPasswordReset — must never reveal whether the email exists", () => {
+    it("emails a reset link when the account exists and has an email", async () => {
+      const user = stubUser({ name: "Bola", email: "bola@example.com" });
+      vi.mocked(userRepo.findByEmail).mockResolvedValue(user as never);
+      vi.mocked(userRepo.findById).mockResolvedValue(user as never);
+
+      await authService.requestPasswordReset("bola@example.com");
+
+      expect(jwtService.signPasswordResetToken).toHaveBeenCalledWith({
+        sub: user.id,
+        orgId: user.orgId,
+      });
+      expect(emailGateway.sendEmail).toHaveBeenCalledWith("bola@example.com", "s", "t", "h");
+    });
+
+    it("silently no-ops for an email with no account — no error, no email sent", async () => {
+      vi.mocked(userRepo.findByEmail).mockResolvedValue(null);
+
+      await expect(authService.requestPasswordReset("nobody@example.com")).resolves.toBeUndefined();
+      expect(emailGateway.sendEmail).not.toHaveBeenCalled();
+    });
+
+    it("silently no-ops for a phone+PIN staff account (no email on file)", async () => {
+      const user = stubUser({ name: "Amaka", email: null });
+      vi.mocked(userRepo.findByEmail).mockResolvedValue(user as never);
+      vi.mocked(userRepo.findById).mockResolvedValue(user as never);
+
+      await authService.requestPasswordReset("amaka@example.com");
+
+      expect(emailGateway.sendEmail).not.toHaveBeenCalled();
+    });
+
+    it("never throws even if the email provider fails", async () => {
+      const user = stubUser({ name: "Bola", email: "bola@example.com" });
+      vi.mocked(userRepo.findByEmail).mockResolvedValue(user as never);
+      vi.mocked(userRepo.findById).mockResolvedValue(user as never);
+      vi.mocked(emailGateway.sendEmail).mockRejectedValueOnce(new Error("Resend is down"));
+
+      await expect(authService.requestPasswordReset("bola@example.com")).resolves.toBeUndefined();
+    });
+  });
+
+  describe("resetPassword", () => {
+    const orgId = randomUUID();
+    const userId = randomUUID();
+
+    it("hashes the new password, updates it, and logs out every existing session", async () => {
+      vi.mocked(jwtService.verifyPasswordResetToken).mockReturnValue({ sub: userId, orgId });
+      vi.mocked(userRepo.findById).mockResolvedValue(stubUser({ id: userId, orgId }) as never);
+
+      const result = await authService.resetPassword("valid-token", "a-new-strong-password");
+
+      expect(passwordService.hashPassword).toHaveBeenCalledWith("a-new-strong-password");
+      expect(userRepo.updatePasswordHash).toHaveBeenCalledWith(orgId, userId, "hashed");
+      expect(sessionRepo.terminateAllForUser).toHaveBeenCalledWith(orgId, userId);
+      expect(result).toEqual({ orgId, userId });
+    });
+
+    it("rejects an expired or invalid token before touching the account", async () => {
+      vi.mocked(jwtService.verifyPasswordResetToken).mockImplementation(() => {
+        throw new Error("jwt expired");
+      });
+
+      await expect(authService.resetPassword("bad-token", "a-new-strong-password")).rejects.toThrow(
+        /expired or invalid/,
+      );
+      expect(userRepo.updatePasswordHash).not.toHaveBeenCalled();
+      expect(sessionRepo.terminateAllForUser).not.toHaveBeenCalled();
+    });
+
+    it("rejects a token for an account that no longer exists", async () => {
+      vi.mocked(jwtService.verifyPasswordResetToken).mockReturnValue({ sub: userId, orgId });
+      vi.mocked(userRepo.findById).mockResolvedValue(null);
+
+      await expect(
+        authService.resetPassword("valid-token", "a-new-strong-password"),
+      ).rejects.toThrow(/Account not found/);
+      expect(userRepo.updatePasswordHash).not.toHaveBeenCalled();
     });
   });
 });

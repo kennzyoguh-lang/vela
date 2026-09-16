@@ -78,3 +78,17 @@ export async function terminateAllExcept(
     }),
   );
 }
+
+// A password reset happens outside any existing session (the requester
+// followed an emailed link, not an authenticated "change password" form),
+// so there's no session to except — every one of this user's sessions is
+// logged out, since a leaked-but-now-changed password should no longer
+// keep an attacker's existing session alive.
+export async function terminateAllForUser(orgId: string, userId: string): Promise<void> {
+  await withOrgScope(orgId, (tx) =>
+    tx.userSession.updateMany({
+      where: { orgId, userId },
+      data: { isActive: false },
+    }),
+  );
+}

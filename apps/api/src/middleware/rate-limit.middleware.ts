@@ -102,6 +102,30 @@ export function emailVerifyRateLimit() {
   });
 }
 
+// Per-IP, same 5/min shape as signupRateLimit() — this endpoint sends a real
+// email per call (and, like signup, can't key on the email itself without
+// letting an attacker enumerate accounts at unlimited speed by varying the
+// address on every request).
+export function passwordResetRequestRateLimit() {
+  return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
+    const key = `ratelimit:password-reset-request:${req.ip}`;
+    const { allowed } = await checkAndIncrement(key, 5, 60);
+    if (!allowed) return next(new RateLimitedError("Too many attempts — try again shortly", 60));
+    next();
+  });
+}
+
+// Per-IP — the token-consuming step has no session either, same DoS/
+// token-guessing-only shape as emailVerifyRateLimit() above.
+export function passwordResetRateLimit() {
+  return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
+    const key = `ratelimit:password-reset:${req.ip}`;
+    const { allowed } = await checkAndIncrement(key, 20, 60);
+    if (!allowed) return next(new RateLimitedError("Too many attempts — try again shortly", 60));
+    next();
+  });
+}
+
 // Authed — keyed per-user rather than per-IP since resend is a
 // requireAuth route, mirroring loginRateLimit()'s "identifier, not just IP"
 // reasoning. Deliberately tight: resend sends a real email, not just a

@@ -68,7 +68,7 @@ export default function LoginPage() {
       />
       <div className="text-right">
         <Link
-          href="/reset-password"
+          href="/forgot-password"
           className="font-ui text-data-aiAccent text-[0.75rem] hover:underline"
         >
           Forgot password?

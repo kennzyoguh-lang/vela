@@ -89,6 +89,34 @@ export function verifyEmailVerificationToken(token: string): EmailVerificationCl
   }) as unknown as EmailVerificationClaims;
 }
 
+export interface PasswordResetClaims {
+  sub: string; // user id
+  orgId: string;
+}
+
+const PASSWORD_RESET_AUDIENCE = "password-reset";
+// Deliberately much shorter than the email-verification link's 24h — this
+// token grants account takeover (a new password, no re-authentication), not
+// just marking an address confirmed, so it gets the same "short-lived,
+// single-purpose" treatment as the 2FA challenge token, just long enough to
+// realistically survive an email round-trip.
+const PASSWORD_RESET_TTL_SECONDS = 30 * 60;
+
+export function signPasswordResetToken(claims: PasswordResetClaims): string {
+  return jwt.sign(claims, privateKey, {
+    algorithm: "RS256",
+    expiresIn: PASSWORD_RESET_TTL_SECONDS,
+    audience: PASSWORD_RESET_AUDIENCE,
+  });
+}
+
+export function verifyPasswordResetToken(token: string): PasswordResetClaims {
+  return jwt.verify(token, publicKey, {
+    algorithms: ["RS256"],
+    audience: PASSWORD_RESET_AUDIENCE,
+  }) as unknown as PasswordResetClaims;
+}
+
 export function newRefreshToken(): { token: string; familyId: string } {
   // Opaque random token, not a JWT — stored hashed (session.service.ts), never
   // decodable client-side. familyId groups every rotation of one login session

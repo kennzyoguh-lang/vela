@@ -40,7 +40,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/* suppressHydrationWarning here, not just on <html> above: browsers
+            deliberately hide a script's nonce attribute value when read back
+            from the live DOM (getAttribute("nonce") returns "") to stop an
+            XSS payload from scraping it via outerHTML — so React's hydration
+            check always sees this SSR-rendered nonce diverge from the DOM's
+            post-load "", even though nothing is actually wrong. Documented
+            Next.js CSP behavior, not a bug to chase. */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
       </head>
       <body>
         <Providers>{children}</Providers>
