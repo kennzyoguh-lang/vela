@@ -60,20 +60,20 @@ describe("compliance-obligation-rules", () => {
     });
   });
 
-  describe("cac_annual_return (annual, due March 31, prior-year period)", () => {
-    it("rolls to this year's March 31 when asked from earlier in the year", () => {
+  describe("cac_annual_return (annual, due June 30, prior-year period)", () => {
+    it("rolls to this year's June 30 when asked from earlier in the year", () => {
       const { dueDate, periodLabel } = OBLIGATION_RULES.cac_annual_return.nextOccurrence(
         utc(2026, 0, 1),
       );
-      expect(dueDate).toEqual(utc(2026, 2, 31));
+      expect(dueDate).toEqual(utc(2026, 5, 30));
       expect(periodLabel).toBe("FY2025");
     });
 
-    it("rolls to next year's March 31 once this year's has passed", () => {
+    it("rolls to next year's June 30 once this year's has passed", () => {
       const { dueDate, periodLabel } = OBLIGATION_RULES.cac_annual_return.nextOccurrence(
-        utc(2026, 3, 1), // April 1
+        utc(2026, 6, 1), // July 1
       );
-      expect(dueDate).toEqual(utc(2027, 2, 31));
+      expect(dueDate).toEqual(utc(2027, 5, 30));
       expect(periodLabel).toBe("FY2026");
     });
   });

@@ -98,8 +98,15 @@ export const OBLIGATION_RULES: Record<ComplianceObligationType, ComplianceObliga
     label: "Pension contribution remittance",
     authority: "PenCom",
     frequency: "monthly",
+    // SIMPLIFICATION (documented, not hidden — same pattern as CIT/CAC
+    // below): the Pension Reform Act (s.11(5)(b)) actually sets this
+    // deadline as 7 WORKING days from the date salary is paid, a floating
+    // date tied to the payroll run, not a fixed calendar day-of-month.
+    // Approximated here to the 7th of the following month until this reads
+    // from the actual payroll run's pay date instead of a generic calendar
+    // anchor.
     description:
-      "Employer and employee pension contributions, due by the 7th of the following month.",
+      "Employer and employee pension contributions, due within 7 working days of salary payment (approximated here to the 7th of the following month).",
     nextOccurrence: (from) => monthlyOccurrence(from, 7),
   },
   cit: {
@@ -116,9 +123,17 @@ export const OBLIGATION_RULES: Record<ComplianceObligationType, ComplianceObliga
     label: "CAC Annual Return",
     authority: "CAC",
     frequency: "annual",
+    // CAMA 2020 s.421(1): due 42 days after the AGM, and a private company's
+    // AGM must fall within 6 months of financial year-end — for the common
+    // Jan-Dec FY this assumes, filing guides consistently converge on 30
+    // June as the practical annual deadline (not the March 31 this used to
+    // anchor to, which had no clear statutory basis). Same "fixed calendar
+    // anchor until VELA captures real incorporation dates" simplification as
+    // CIT above — verify against the actual incorporation-anniversary date
+    // once that data exists.
     description:
       "Corporate Affairs Commission annual return (approximated to a fixed yearly date until VELA captures incorporation dates).",
-    nextOccurrence: (from) => annualOccurrence(from, 2, 31), // March 31
+    nextOccurrence: (from) => annualOccurrence(from, 5, 30), // June 30
   },
 };
 
