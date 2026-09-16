@@ -241,6 +241,18 @@ export async function issueSession(
   return { accessToken, refreshToken, orgId, userId, sessionFamilyId: familyId, role };
 }
 
+// BRD F-62 / Handbook 8.1: 60 minutes of inactivity, enforced server-side —
+// "an access token isn't refreshed past this window even if the refresh
+// token itself hasn't expired." The access token's own 60-minute JWT TTL is
+// NOT this control: a token issued 59 minutes into an idle session is still
+// cryptographically valid and would keep authenticating requests right up
+// to its own expiry regardless of activity, so the only point this can
+// actually be enforced is here, at refresh time, against the session's
+// tracked lastActive. Not yet Owner-configurable (BRD's stated intent) —
+// same "fixed default until a settings feature exists" pattern as
+// transaction-markup.service.ts's DEFAULT_MARKUP_PCT.
+const IDLE_TIMEOUT_MS = 60 * 60 * 1000;
+
 /**
  * Refresh-token rotation: single-use, reuse of an already-rotated token
  * invalidates the entire session family (Handbook 7.5) — treated as a signal
@@ -253,6 +265,11 @@ export async function refresh(
 ): Promise<{ accessToken: string; refreshToken: string }> {
   const session = await sessionRepo.findActiveByFamily(orgId, sessionFamilyId);
   if (!session) throw new UnauthenticatedError("Session expired or revoked");
+
+  if (Date.now() - session.lastActive.getTime() > IDLE_TIMEOUT_MS) {
+    await sessionRepo.terminateSession(orgId, session.id);
+    throw new UnauthenticatedError("Session expired after 60 minutes of inactivity");
+  }
 
   const matches = await verifyTokenHash(presentedToken, session.refreshTokenHash);
   if (!matches) {
