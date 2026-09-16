@@ -40,7 +40,9 @@ describe("Quick Sale fee parity with manual invoice payments", () => {
 
   afterAll(async () => {
     const { prisma } = await import("../../src/lib/prisma");
-    await prisma.organisation.deleteMany({ where: { id: { in: createdOrgIds } } });
+    if (createdOrgIds.length > 0) {
+      await prisma.organisation.deleteMany({ where: { id: { in: createdOrgIds } } });
+    }
     await prisma.$disconnect();
   });
 
