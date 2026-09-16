@@ -1,5 +1,10 @@
 import * as invoiceRepo from "../repositories/invoice.repository";
 import * as clientRepo from "../repositories/client.repository";
+import * as organisationRepo from "../repositories/organisation.repository";
+import * as emailGateway from "./email/email.gateway";
+import { invoiceSentEmail } from "../email/templates/invoice-sent";
+import { env } from "../lib/env";
+import { logger } from "../lib/logger";
 import { NotFoundError, BusinessRuleViolationError } from "../lib/errors";
 import type { InvoiceStatus } from "@prisma/client";
 import type { CreateInvoiceInput, QuickCreateInvoiceInput } from "../validation/invoice.schema";
@@ -81,10 +86,44 @@ export async function listInvoices(
   return invoiceRepo.listByOrg(orgId, { status }, page);
 }
 
+/**
+ * F-02 — marks the invoice sent AND actually emails the client their Pay Now
+ * link, via the same Resend gateway used elsewhere in this codebase. The
+ * status transition (the source of truth for "the owner marked this sent")
+ * always succeeds and is never rolled back by an email failure — a bad
+ * client address or a transient provider outage is real, but per Handbook
+ * 1.4 a third-party delivery failure must never block the core action it's
+ * layered on top of. The failure is still logged and reflected in the audit
+ * entry (delivered: false) so it's visible, not silently swallowed.
+ */
 export async function sendInvoice(orgId: string, invoiceId: string) {
   const invoice = await getInvoice(orgId, invoiceId);
   assertTransitionAllowed(invoice.status, "sent");
-  return invoiceRepo.updateStatus(orgId, invoiceId, "sent", { sentAt: new Date() });
+  const updated = await invoiceRepo.updateStatus(orgId, invoiceId, "sent", { sentAt: new Date() });
+
+  const client = updated.clientId ? await clientRepo.findById(orgId, updated.clientId) : null;
+  if (client?.email) {
+    try {
+      const organisation = await organisationRepo.findOrganisationById(orgId);
+      const payUrl = `${env.WEB_APP_URL}/pay/${updated.paymentPortalToken}`;
+      const { subject, html, text } = invoiceSentEmail({
+        clientName: client.name,
+        orgName: organisation?.name ?? "your supplier",
+        invoiceNumber: updated.number,
+        total: Number(updated.total),
+        currency: updated.currency,
+        dueDate: updated.dueDate,
+        payUrl,
+      });
+      await emailGateway.sendEmail(client.email, subject, text, html);
+    } catch (err) {
+      logger.error({ err, orgId, invoiceId }, "Failed to send invoice-sent email to client");
+    }
+  } else {
+    logger.info({ orgId, invoiceId }, "Invoice marked sent — client has no email on file");
+  }
+
+  return updated;
 }
 
 export async function markViewed(orgId: string, invoiceId: string) {
