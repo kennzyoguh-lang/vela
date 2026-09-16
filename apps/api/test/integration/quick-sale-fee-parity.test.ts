@@ -68,7 +68,7 @@ describe("Quick Sale fee parity with manual invoice payments", () => {
     createdOrgIds.push(orgId);
     const actorId = randomUUID();
 
-    const amount = 150_000; // 1% = 1500, well under the 2000 cap
+    const amount = 150_000; // 0.5% = 750, well under the 2000 cap
 
     const client = await withOrgScope(orgId, (tx) =>
       tx.client.create({
@@ -128,7 +128,7 @@ describe("Quick Sale fee parity with manual invoice payments", () => {
     expect(quickSaleMarkups[0]?.velaFeeAmount.toString()).toBe(
       manualMarkups[0]?.velaFeeAmount.toString(),
     );
-    expect(quickSaleMarkups[0]?.velaFeeAmount.toString()).toBe("1500");
+    expect(quickSaleMarkups[0]?.velaFeeAmount.toString()).toBe("750");
     expect(quickSaleMarkups[0]?.velaMarkupPct.toString()).toBe(
       manualMarkups[0]?.velaMarkupPct.toString(),
     );
@@ -153,7 +153,7 @@ describe("Quick Sale fee parity with manual invoice payments", () => {
     createdOrgIds.push(orgId);
     const actorId = randomUUID();
 
-    const amount = 500_000; // 1% = 5000, capped to MARKUP_CAP_AMOUNT (2000)
+    const amount = 500_000; // 0.5% = 2500, capped to MARKUP_CAP_AMOUNT (2000)
 
     const client = await withOrgScope(orgId, (tx) =>
       tx.client.create({
