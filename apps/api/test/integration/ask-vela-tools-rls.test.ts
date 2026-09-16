@@ -49,7 +49,13 @@ describe("ask-vela tool executors — cross-tenant isolation", () => {
 
   afterAll(async () => {
     if (createdOrgIds.length > 0) {
-      await prisma.organisation.deleteMany({ where: { id: { in: createdOrgIds } } });
+      try {
+        await prisma.organisation.deleteMany({ where: { id: { in: createdOrgIds } } });
+      } catch (err) {
+        // Best-effort cleanup only - a teardown failure here must never mask the
+        // real pass/fail result of this file's actual assertions above.
+        console.warn("org cleanup failed (non-fatal):", err);
+      }
     }
     await prisma.$disconnect();
   });
