@@ -36,8 +36,15 @@ describe("Discount approval guardrail (real DB, real HTTP layer)", () => {
     expect(signupRes.status).toBe(201);
     ownerAccessToken = signupRes.body.data.accessToken;
 
-    const claims = jwt.decode(ownerAccessToken) as { orgId: string };
+    const claims = jwt.decode(ownerAccessToken) as { orgId: string; sub: string };
     createdOrgIds.push(claims.orgId);
+
+    // /discount-approval-pin sits behind requireVerifiedEmail (organisation.routes.ts)
+    // — a freshly signed-up owner has emailVerifiedAt: null until they click a real
+    // verification link, which this test never sends, so the PIN endpoint would
+    // otherwise 403 every owner request below regardless of role.
+    const { markEmailVerified } = await import("../../src/repositories/user.repository");
+    await markEmailVerified(claims.orgId, claims.sub);
 
     const productRes = await request(app)
       .post("/v1/products")
@@ -68,7 +75,9 @@ describe("Discount approval guardrail (real DB, real HTTP layer)", () => {
 
   afterAll(async () => {
     const { prisma } = await import("../../src/lib/prisma");
-    await prisma.organisation.deleteMany({ where: { id: { in: createdOrgIds } } });
+    if (createdOrgIds.length > 0) {
+      await prisma.organisation.deleteMany({ where: { id: { in: createdOrgIds } } });
+    }
     await prisma.$disconnect();
   });
 

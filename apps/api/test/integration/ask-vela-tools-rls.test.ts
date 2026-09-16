@@ -48,7 +48,9 @@ describe("ask-vela tool executors — cross-tenant isolation", () => {
   const createdOrgIds: string[] = [];
 
   afterAll(async () => {
-    await prisma.organisation.deleteMany({ where: { id: { in: createdOrgIds } } });
+    if (createdOrgIds.length > 0) {
+      await prisma.organisation.deleteMany({ where: { id: { in: createdOrgIds } } });
+    }
     await prisma.$disconnect();
   });
 
