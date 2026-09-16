@@ -2,10 +2,14 @@ import * as transactionMarkupRepo from "../repositories/transaction-markup.repos
 import * as paymentActivationRepo from "../repositories/payment-activation.repository";
 import type { PaymentProcessor } from "@prisma/client";
 
-// BRD Section 8.1 / F-72: default 1.0%, configurable per-org later (org-level
-// override isn't built yet — every org uses the platform default until a
-// negotiated-rate feature exists, per the plan's scope decision).
-export const DEFAULT_MARKUP_PCT = 0.01;
+// BRD v3.1 Section 8.1 set this at 1.0%; the v3.2 Addendum (Section E.4)
+// revises the default down to 0.5% — stacked on top of Paystack's own
+// 1.5%+₦100 fee, 1.0% pushed the SME's effective cost past 2.5%, a
+// meaningful adoption barrier for the fee-sensitive Tier 0/Quick Sale
+// segment the Addendum exists to convert. Configurable per-org later
+// (org-level override isn't built yet — every org uses the platform default
+// until a negotiated-rate feature exists, per the plan's scope decision).
+export const DEFAULT_MARKUP_PCT = 0.005;
 
 // A flat 1% grows unbounded with transaction size — a ₦500,000 payment costs
 // ₦5,000 in fees, which is exactly the visible number that pushes a large

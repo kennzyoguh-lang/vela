@@ -34,17 +34,17 @@ describe("transaction-markup.service — fee cap", () => {
     };
   }
 
-  it("charges the plain 1% for a transaction well under the cap threshold", async () => {
-    await recordMarkup(baseInput(10_000)); // 1% = 100, cap is 2000 — uncapped
+  it("charges the plain 0.5% for a transaction well under the cap threshold", async () => {
+    await recordMarkup(baseInput(10_000)); // 0.5% = 50, cap is 2000 — uncapped
 
     expect(transactionMarkupRepo.create).toHaveBeenCalledWith(
       orgId,
-      expect.objectContaining({ velaFeeAmount: 100, velaMarkupPct: DEFAULT_MARKUP_PCT }),
+      expect.objectContaining({ velaFeeAmount: 50, velaMarkupPct: DEFAULT_MARKUP_PCT }),
     );
   });
 
   it("caps the fee for a large transaction instead of letting it grow unbounded", async () => {
-    // 1% of 500,000 would be 5,000 — well above the 2,000 cap.
+    // 0.5% of 500,000 would be 2,500 — above the 2,000 cap.
     await recordMarkup(baseInput(500_000));
 
     expect(transactionMarkupRepo.create).toHaveBeenCalledWith(
@@ -54,8 +54,8 @@ describe("transaction-markup.service — fee cap", () => {
   });
 
   it("charges exactly the cap at the breakeven point, not a cent more", async () => {
-    // 1% of 200,000 is exactly 2,000 — right at the cap boundary.
-    await recordMarkup(baseInput(200_000));
+    // 0.5% of 400,000 is exactly 2,000 — right at the cap boundary.
+    await recordMarkup(baseInput(400_000));
 
     expect(transactionMarkupRepo.create).toHaveBeenCalledWith(
       orgId,
