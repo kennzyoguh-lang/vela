@@ -3,6 +3,15 @@
 // "start simple, not configurable" precedent as compliance-obligation-
 // rules.ts's due-date rules. If the bands or relief formula change again in
 // a future Finance Act, this is the one place to update.
+//
+// SOURCE (verified independently, not from memory — Engineering Constitution
+// "Research rules"): Aluko & Oyebode, "Overview of the Notable Changes
+// Introduced by the New Nigeria Tax Acts, 2025" (Aug 2025), corroborated by
+// Mercans LLC's "Statutory Change Alert — Nigeria: Changes to Personal
+// Income Tax" (11 Sept 2025) — both give the identical band/rate table and
+// the eliminate-CRA/add-rent-relief mechanic below. Cross-check against the
+// Nigeria Tax Act 2025's Fourth Schedule directly if a future Finance Act
+// amends these figures.
 
 interface TaxBand {
   width: number; // Infinity for the top (uncapped) band
