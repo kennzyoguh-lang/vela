@@ -30,11 +30,12 @@ const THEME_INIT_SCRIPT = `
 })();
 `;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Read back the per-request nonce middleware.ts attached to this request's
   // headers — required for this inline script to run under the CSP's
   // nonce-based script-src (a plain <script> with no nonce is blocked).
-  const nonce = headers().get("x-nonce") ?? undefined;
+  // headers() is async as of Next.js 15 (Dynamic APIs).
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
