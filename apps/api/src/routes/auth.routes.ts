@@ -8,6 +8,8 @@ import {
   twoFaVerifyRateLimit,
   emailVerifyRateLimit,
   resendVerificationRateLimit,
+  passwordResetRequestRateLimit,
+  passwordResetRateLimit,
 } from "../middleware/rate-limit.middleware";
 import { auditLog } from "../middleware/audit.middleware";
 import { asyncHandler } from "../lib/async-handler";
@@ -63,6 +65,25 @@ authRouter.post(
   requireAuth,
   resendVerificationRateLimit(),
   asyncHandler(authController.resendVerification),
+);
+
+// No requireAuth on either — the whole point is recovering an account the
+// caller is currently locked out of. No auditLog() on /forgot-password:
+// wiring one here would mean setting req.orgId/userId even for a
+// nonexistent email to make the middleware fire, which reintroduces the
+// exact enumeration signal requestPasswordReset() is designed to avoid.
+// /reset-password does get one — by the time its controller runs, the
+// token has already proven a real account, so there's a real actor to log.
+authRouter.post(
+  "/forgot-password",
+  passwordResetRequestRateLimit(),
+  asyncHandler(authController.requestPasswordReset),
+);
+authRouter.post(
+  "/reset-password",
+  passwordResetRateLimit(),
+  auditLog("auth.password_reset", "user"),
+  asyncHandler(authController.resetPassword),
 );
 
 // Backs the dashboard's email-verification banner (apps/web's

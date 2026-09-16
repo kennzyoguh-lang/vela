@@ -6,6 +6,7 @@ import * as calculatorLeadService from "./calculator-lead.service";
 import * as referralService from "./referral.service";
 import * as emailGateway from "./email/email.gateway";
 import { verifyEmailEmail } from "../email/templates/verify-email";
+import { passwordResetEmail } from "../email/templates/password-reset";
 import { hashPassword, verifyPassword, hashToken, verifyTokenHash } from "./password.service";
 import {
   signAccessToken,
@@ -15,6 +16,8 @@ import {
   verifyTwoFaChallengeToken,
   signEmailVerificationToken,
   verifyEmailVerificationToken,
+  signPasswordResetToken,
+  verifyPasswordResetToken,
 } from "./jwt.service";
 import { verifyTotpCode, consumeBackupCode, decryptTwoFaSecret } from "./twofa.service";
 import { isTwoFaLockedOut, recordTwoFaFailure, clearTwoFaFailures } from "./rate-limit.service";
@@ -336,6 +339,63 @@ export async function resendVerificationEmail(orgId: string, userId: string): Pr
   const token = signEmailVerificationToken({ sub: user.id, orgId: user.orgId });
   const { subject, html, text } = verifyEmailEmail(user.name, token);
   await emailGateway.sendEmail(user.email, subject, text, html);
+}
+
+/**
+ * No auth context (the caller has, by definition, forgotten how to get one)
+ * — takes a bare email, same structural shape as login(). Deliberately
+ * returns void unconditionally and never throws for "no such account" or
+ * "phone+PIN staff account, no email on file": a response that differs by
+ * whether the address exists would let an attacker enumerate real accounts
+ * one guess at a time. The controller always shows the same
+ * "if that email has an account, we sent a link" message regardless.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const authLookup = await userRepo.findByEmail(email);
+  if (!authLookup) return;
+
+  const user = await userRepo.findById(authLookup.orgId, authLookup.id);
+  if (!user || !user.email) return;
+
+  const token = signPasswordResetToken({ sub: user.id, orgId: user.orgId });
+  const { subject, html, text } = passwordResetEmail(user.name, token);
+  try {
+    await emailGateway.sendEmail(user.email, subject, text, html);
+  } catch (err) {
+    // Same "a delivery failure must never surface differently than success"
+    // reasoning as the enumeration-safety comment above — logged for
+    // operability, never rethrown.
+    logger.error({ err, userId: user.id }, "Failed to send password-reset email");
+  }
+}
+
+/**
+ * The signed token (jwt.service.ts, 30-minute TTL) is the only credential —
+ * same "resolve, then act" shape as verifyEmail() above, just for a
+ * higher-stakes action. Logs out every existing session for the account
+ * (sessionRepo.terminateAllForUser): a password reset is exactly the moment
+ * an attacker who was using a leaked-but-now-invalid password should be
+ * kicked out, not left signed in on whatever session they already had.
+ */
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<{ orgId: string; userId: string }> {
+  let claims: { sub: string; orgId: string };
+  try {
+    claims = verifyPasswordResetToken(token);
+  } catch {
+    throw new UnauthenticatedError("Reset link expired or invalid — request a new one");
+  }
+
+  const user = await userRepo.findById(claims.orgId, claims.sub);
+  if (!user) throw new NotFoundError("Account not found");
+
+  const passwordHash = await hashPassword(newPassword);
+  await userRepo.updatePasswordHash(claims.orgId, claims.sub, passwordHash);
+  await sessionRepo.terminateAllForUser(claims.orgId, claims.sub);
+
+  return { orgId: claims.orgId, userId: claims.sub };
 }
 
 export interface CurrentUserSummary {

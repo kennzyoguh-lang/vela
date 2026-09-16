@@ -25,6 +25,18 @@ export const verifyEmailSchema = z.object({
   token: z.string().min(1),
 });
 
+export const requestPasswordResetSchema = z.object({
+  email: z.string().email(),
+});
+
+// Same password policy as signupSchema (Handbook — kept in sync deliberately,
+// not re-derived, since a weaker policy here would make reset a backdoor
+// around signup's own strength requirement).
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  newPassword: z.string().min(10).max(128),
+});
+
 export const twoFaVerifySchema = z.object({
   code: z.string().length(6).regex(/^\d+$/),
 });

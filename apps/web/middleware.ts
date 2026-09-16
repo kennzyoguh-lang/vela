@@ -6,7 +6,7 @@ import type { NextRequest } from "next/server";
 // here — this marker cookie carries no secret, only "a session likely
 // exists", and is set/cleared alongside it (apps/api/src/controllers/auth.controller.ts).
 const SESSION_MARKER_COOKIE = "vela_has_session";
-const AUTH_PATHS = ["/login", "/signup", "/2fa", "/reset-password"];
+const AUTH_PATHS = ["/login", "/signup", "/2fa", "/forgot-password", "/reset-password"];
 // Genuinely public routes — no session required, and unlike AUTH_PATHS, an
 // already-logged-in visitor is never redirected away from them either. /pay
 // is the invoice payment link an SME's own customer opens; it was missing
