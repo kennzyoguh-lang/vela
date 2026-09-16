@@ -69,6 +69,12 @@ export default function InvoicesPage() {
         </button>
       ))}
     >
+      {/* Quotes lives in the desktop sidebar (nav-items.ts) but has no
+          bottom-tab-bar slot of its own (Design System 3.2's 5-item cap) —
+          this keeps it one tap away on mobile too. */}
+      <Link href="/quotes" className="font-ui text-cobalt -mt-2 inline-block text-[0.8125rem]">
+        Looking for quotes? →
+      </Link>
       {isLoading ? (
         <div className="flex flex-col gap-2">
           <Skeleton className="h-20 w-full" />

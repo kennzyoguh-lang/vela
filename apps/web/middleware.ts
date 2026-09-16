@@ -12,6 +12,11 @@ const AUTH_PATHS = ["/login", "/signup", "/2fa", "/reset-password"];
 // is the invoice payment link an SME's own customer opens; it was missing
 // from any allowlist, so every unauthenticated visitor — the entire intended
 // audience — was being bounced to /login, where they have no account.
+// "/quote/" (trailing slash, not "/quote") is the exact same shape for
+// F-57's quote portal — a client viewing/accepting a quote link has no Vela
+// account either. The trailing slash matters: "/quote" alone would also
+// prefix-match "/quotes", the authenticated CRUD list page, and make it
+// public too.
 // /firs-calculator, /waitlist, and /refer are GTM Channels 1-3's public
 // marketing/lead-gen pages — same reasoning: their entire audience is
 // unauthenticated visitors. /verify-email is deliberately NOT in AUTH_PATHS
@@ -22,6 +27,7 @@ const AUTH_PATHS = ["/login", "/signup", "/2fa", "/reset-password"];
 // marketing homepage's footer.
 const PUBLIC_PATHS = [
   "/pay",
+  "/quote/",
   "/firs-calculator",
   "/waitlist",
   "/refer",
