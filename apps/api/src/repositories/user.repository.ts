@@ -79,13 +79,19 @@ export async function markEmailVerified(orgId: string, userId: string): Promise<
   );
 }
 
+// Sets passwordChangedAt in the same statement as the hash itself —
+// atomic, not two round-trips — since it doubles as password-reset-token
+// single-use enforcement (schema.prisma's comment on that column).
 export async function updatePasswordHash(
   orgId: string,
   userId: string,
   passwordHash: string,
 ): Promise<void> {
   await withOrgScope(orgId, (tx) =>
-    tx.user.update({ where: { id: userId, orgId }, data: { passwordHash } }),
+    tx.user.update({
+      where: { id: userId, orgId },
+      data: { passwordHash, passwordChangedAt: new Date() },
+    }),
   );
 }
 

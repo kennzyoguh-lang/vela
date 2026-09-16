@@ -55,57 +55,57 @@ enum YesNoUnsure {
 }
 
 model Organisation {
-  id                      String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                    String
-  industry                String?
-  baseCurrency            String           @default("NGN") @map("base_currency") @db.Char(3)
-  country                 String           @default("NG")
-  registrationNumber      String?          @map("registration_number")
-  taxId                   String?          @map("tax_id")
-  subscriptionTier        SubscriptionTier @default(starter) @map("subscription_tier")
-  subscriptionStatus      String           @default("trialing") @map("subscription_status")
-  ownerId                 String?          @map("owner_id") @db.Uuid
+  id                           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                         String
+  industry                     String?
+  baseCurrency                 String           @default("NGN") @map("base_currency") @db.Char(3)
+  country                      String           @default("NG")
+  registrationNumber           String?          @map("registration_number")
+  taxId                        String?          @map("tax_id")
+  subscriptionTier             SubscriptionTier @default(starter) @map("subscription_tier")
+  subscriptionStatus           String           @default("trialing") @map("subscription_status")
+  ownerId                      String?          @map("owner_id") @db.Uuid
   // Anti-theft Piece 4's staff-proof discount guardrail — org-wide, not
   // per-user (one manager PIN a staff member asks an owner/admin to type in
   // on the same device), null until an owner/admin sets one up.
-  discountApprovalPinHash String?          @map("discount_approval_pin_hash")
+  discountApprovalPinHash      String?          @map("discount_approval_pin_hash")
   // Business profiling — the three independent onboarding factors (never a
   // single tier). Each defaults to "unsure" so an org that hasn't been
   // through onboarding yet gets the safe, inclusive-middle-ground module
   // defaults (see business-profile.ts's computeModuleDefaults), not an
   // accidental "everything hidden" or "everything shown" state.
-  customerPattern         CustomerPattern  @default(unsure) @map("customer_pattern")
-  hasSalesStaff           YesNoUnsure      @default(unsure) @map("has_sales_staff")
-  isCacRegistered         YesNoUnsure      @default(unsure) @map("is_cac_registered")
+  customerPattern              CustomerPattern  @default(unsure) @map("customer_pattern")
+  hasSalesStaff                YesNoUnsure      @default(unsure) @map("has_sales_staff")
+  isCacRegistered              YesNoUnsure      @default(unsure) @map("is_cac_registered")
   // Per-module manual overrides (Requirement 4 — module visibility is
   // always a default, never a hard restriction). Keys are ModuleKey values
   // from business-profile.ts; a present key always wins over the computed
   // default regardless of direction (reveal OR hide). Empty object, not
   // null, so callers never need a null-check before spreading it.
-  moduleOverrides         Json             @default("{}") @map("module_overrides")
+  moduleOverrides              Json             @default("{}") @map("module_overrides")
   // Null means this org has never been through the onboarding questions —
   // distinct from having deliberately answered "unsure" to all three, which
   // is also a legitimate, real completed state. Drives whether the
   // onboarding prompt still shows.
-  profileFactorsConfirmedAt DateTime?      @map("profile_factors_confirmed_at") @db.Timestamptz
+  profileFactorsConfirmedAt    DateTime?        @map("profile_factors_confirmed_at") @db.Timestamptz
   // Nigeria Tax Act 2025 "small company" status (Section 56 — turnover
   // <= NGN50m AND fixed assets <= NGN250m AND not a professional-services
   // provider, effective 1 Jan 2026): 0% CIT/CGT/Development Levy, vs. 30%
   // CIT otherwise. All three nullable — status is "unknown" (never silently
   // assumed) until the owner supplies all three (tax-status.service.ts).
-  annualTurnover               Decimal? @map("annual_turnover") @db.Decimal(14, 2)
-  fixedAssetsValue             Decimal? @map("fixed_assets_value") @db.Decimal(14, 2)
-  providesProfessionalServices Boolean? @map("provides_professional_services")
+  annualTurnover               Decimal?         @map("annual_turnover") @db.Decimal(14, 2)
+  fixedAssetsValue             Decimal?         @map("fixed_assets_value") @db.Decimal(14, 2)
+  providesProfessionalServices Boolean?         @map("provides_professional_services")
   // GTM Channel 3 (referral system) — resolved ONCE at signup via the
   // resolve_referral_code() SECURITY DEFINER function and never changed
   // after, so payment-webhook.service.ts can read "who referred this org"
   // straight off its own row (no cross-org lookup needed at conversion
   // time). No FK constraint to referral_codes/organisations — same
   // "plain value, no cascade coupling" reasoning as AuditLog.orgId.
-  referredByOrgId  String?  @map("referred_by_org_id") @db.Uuid
-  referredByCodeId String?  @map("referred_by_code_id") @db.Uuid
-  createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt               DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  referredByOrgId              String?          @map("referred_by_org_id") @db.Uuid
+  referredByCodeId             String?          @map("referred_by_code_id") @db.Uuid
+  createdAt                    DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                    DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   users                 User[]
   sessions              UserSession[]
@@ -147,6 +147,16 @@ model User {
   // other is always present, never neither.
   email                String?   @unique @db.Citext
   passwordHash         String?   @map("password_hash")
+  // Null until the first password reset. Doubles as single-use enforcement
+  // for password-reset tokens (auth.service.ts#resetPassword) without a
+  // separate Redis/jti denylist: a reset token embeds its own issued-at
+  // time (JWT `iat`), and a token issued before the account's most recent
+  // password_changed_at is stale — whether because it was already
+  // redeemed, or because a newer reset link superseded it. The latter is
+  // deliberate, not a side effect: once a password is actually changed,
+  // every other outstanding reset link for that account should stop
+  // working too, not just the one that was used.
+  passwordChangedAt    DateTime? @map("password_changed_at") @db.Timestamptz
   // Phone+PIN login (anti-theft/POS feature) — a second, alternate
   // credential on the same identity, same shape as the 2FA fields below.
   // Normalized to E.164-ish form before storage (lib/phone.ts) so lookups
@@ -819,18 +829,18 @@ model AskVelaMessage {
 // no due date, no formal document; it's an immediate, itemized record.
 
 model Product {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orgId     String   @map("org_id") @db.Uuid
-  name      String
-  price     Decimal  @db.Decimal(14, 2)
-  currency  String   @default("NGN") @db.Char(3)
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId         String   @map("org_id") @db.Uuid
+  name          String
+  price         Decimal  @db.Decimal(14, 2)
+  currency      String   @default("NGN") @db.Char(3)
   // Both validated against a fixed allowlist in product.schema.ts, never
   // free-text — icon is a lucide-react icon name rendered via a lookup map
   // on the frontend, color is a design-token swatch name, not a raw hex, so
   // the sale-logging grid stays visually consistent and can't be used to
   // inject arbitrary content.
-  icon      String
-  color     String
+  icon          String
+  color         String
   // Nullable — stock tracking is opt-in (Handbook-style "minimal viable
   // scope," matching Piece 1's original "no stock-quantity tracking"
   // decision: a trader who doesn't want to count inventory just leaves this
@@ -838,9 +848,9 @@ model Product {
   // decrements it atomically alongside the sale, clamped at 0 — never goes
   // negative even if oversold.
   stockQuantity Int?     @map("stock_quantity")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   saleItems    SaleItem[]
