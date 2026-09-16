@@ -7,6 +7,7 @@ beforeAll(() => {
   process.env.REDIS_URL ??= "redis://localhost:6379";
   process.env.JWT_PRIVATE_KEY_BASE64 ??= "placeholder";
   process.env.JWT_PUBLIC_KEY_BASE64 ??= "placeholder";
+  process.env.TWO_FA_ENCRYPTION_KEY_BASE64 ??= "placeholder";
 });
 
 vi.mock("../repositories/invoice.repository", () => ({
@@ -17,9 +18,24 @@ vi.mock("../repositories/client.repository", () => ({
   findById: vi.fn(),
   updateAvgPaymentDays: vi.fn(),
 }));
+vi.mock("../repositories/organisation.repository", () => ({
+  findOrganisationById: vi.fn(),
+}));
+vi.mock("./email/email.gateway", () => ({
+  sendEmail: vi.fn(),
+}));
+// beforeAll's process.env patching below runs too late to satisfy this —
+// module-level imports (and lib/env.ts's top-level schema parse) evaluate
+// before any test lifecycle hook does. Same convention as
+// quick-sale.service.test.ts for the same reason.
+vi.mock("../lib/env", () => ({
+  env: { WEB_APP_URL: "https://app.vela.test" },
+}));
 
 import * as invoiceRepo from "../repositories/invoice.repository";
 import * as clientRepo from "../repositories/client.repository";
+import * as organisationRepo from "../repositories/organisation.repository";
+import * as emailGateway from "./email/email.gateway";
 import * as invoiceService from "./invoice.service";
 
 // Handbook 16.1's explicit state machine — every valid transition asserted to
@@ -32,6 +48,10 @@ describe("invoice.service state machine", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(clientRepo.findById).mockResolvedValue(null);
+    vi.mocked(organisationRepo.findOrganisationById).mockResolvedValue({
+      name: "Acme Traders",
+    } as never);
+    vi.mocked(emailGateway.sendEmail).mockResolvedValue(undefined);
   });
 
   function stub(status: string, extra: Record<string, unknown> = {}) {
@@ -112,5 +132,63 @@ describe("invoice.service state machine", () => {
 
     expect(result.status).toBe("viewed");
     expect(invoiceRepo.updateStatus).not.toHaveBeenCalled();
+  });
+
+  describe("sendInvoice — F-02's actual email delivery", () => {
+    function sentInvoiceStub() {
+      return stub("sent", {
+        number: "INV-0042",
+        total: 75_000,
+        currency: "NGN",
+        paymentPortalToken: "token-xyz",
+        dueDate: new Date("2026-02-01"),
+      });
+    }
+
+    it("emails the client when they have an email on file", async () => {
+      vi.mocked(invoiceRepo.findById).mockResolvedValue(stub("draft") as never);
+      vi.mocked(invoiceRepo.updateStatus).mockResolvedValue(sentInvoiceStub() as never);
+      vi.mocked(clientRepo.findById).mockResolvedValue({
+        name: "Bola's Bakery",
+        email: "bola@example.com",
+      } as never);
+
+      await invoiceService.sendInvoice(orgId, invoiceId);
+
+      expect(emailGateway.sendEmail).toHaveBeenCalledWith(
+        "bola@example.com",
+        expect.stringContaining("INV-0042"),
+        expect.stringContaining("token-xyz"),
+        expect.any(String),
+      );
+    });
+
+    it("skips the email (but still transitions the status) when the client has no email", async () => {
+      vi.mocked(invoiceRepo.findById).mockResolvedValue(stub("draft") as never);
+      vi.mocked(invoiceRepo.updateStatus).mockResolvedValue(sentInvoiceStub() as never);
+      vi.mocked(clientRepo.findById).mockResolvedValue({
+        name: "Bola's Bakery",
+        email: null,
+      } as never);
+
+      const result = await invoiceService.sendInvoice(orgId, invoiceId);
+
+      expect(result.status).toBe("sent");
+      expect(emailGateway.sendEmail).not.toHaveBeenCalled();
+    });
+
+    it("still transitions the status even when the email send throws", async () => {
+      vi.mocked(invoiceRepo.findById).mockResolvedValue(stub("draft") as never);
+      vi.mocked(invoiceRepo.updateStatus).mockResolvedValue(sentInvoiceStub() as never);
+      vi.mocked(clientRepo.findById).mockResolvedValue({
+        name: "Bola's Bakery",
+        email: "bola@example.com",
+      } as never);
+      vi.mocked(emailGateway.sendEmail).mockRejectedValue(new Error("Resend is down"));
+
+      const result = await invoiceService.sendInvoice(orgId, invoiceId);
+
+      expect(result.status).toBe("sent");
+    });
   });
 });
