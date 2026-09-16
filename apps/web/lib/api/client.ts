@@ -172,6 +172,36 @@ export async function openAuthenticatedPdf(path: string): Promise<void> {
   }
 }
 
+// Same authenticated-fetch problem as openAuthenticatedPdf (a raw <a href>
+// can't carry an Authorization header), but a different goal: an actual file
+// save, not a viewer tab. A blob: URL alone doesn't trigger a download on
+// navigation — the server's Content-Disposition header only applies to the
+// original network response, not a client-created blob URL — so this
+// programmatically clicks a temporary <a download> element instead, which
+// does trigger a save regardless of how the blob was obtained.
+export async function downloadAuthenticatedFile(path: string, filename: string): Promise<void> {
+  const res = await authorizedFetch(path, { method: "GET" });
+  if (!res.ok) {
+    let message = "Couldn't download this file.";
+    try {
+      const body = (await res.json()) as ApiResponse<unknown>;
+      if (!body.success) message = body.error.message;
+    } catch {
+      // Response wasn't JSON — keep the generic message.
+    }
+    throw new ApiError("FILE_DOWNLOAD_FAILED", message, res.status);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
   post: <T>(path: string, data?: unknown) =>
