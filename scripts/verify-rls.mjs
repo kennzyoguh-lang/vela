@@ -13,10 +13,45 @@ const apiDir = join(import.meta.dirname, "..", "apps", "api");
 const schemaPath = join(apiDir, "prisma", "schema.prisma");
 const migrationsDir = join(apiDir, "prisma", "migrations");
 
+// Extracts each `model Name { ... }` block by tracking brace depth and
+// skipping over quoted strings, rather than a single non-greedy regex —
+// a naive `{([^}]*)}` stops at the FIRST literal `}`, which truncates any
+// model containing a JSON-string default like `@default("{}")` before it
+// ever reaches that model's `@@map(...)` line. That bug previously caused
+// this script to check the wrong table name for `Organisation` (falling
+// back to a wrong table name derived from the model name instead of its
+// real mapped table) — a false positive, not a real missing RLS policy.
+function extractModelBlocks(schema) {
+  const blocks = [];
+  const modelStart = /model\s+(\w+)\s*{/g;
+  let match;
+  while ((match = modelStart.exec(schema)) !== null) {
+    const modelName = match[1];
+    let depth = 1;
+    let i = modelStart.lastIndex;
+    let inString = false;
+    while (i < schema.length && depth > 0) {
+      const ch = schema[i];
+      if (inString) {
+        if (ch === '"' && schema[i - 1] !== "\\") inString = false;
+      } else if (ch === '"') {
+        inString = true;
+      } else if (ch === "{") {
+        depth++;
+      } else if (ch === "}") {
+        depth--;
+      }
+      i++;
+    }
+    blocks.push({ modelName, body: schema.slice(modelStart.lastIndex, i - 1) });
+    modelStart.lastIndex = i;
+  }
+  return blocks;
+}
+
 function extractOrgScopedTables(schema) {
   const tables = [];
-  const modelBlocks = schema.matchAll(/model\s+(\w+)\s*{([^}]*)}/gs);
-  for (const [, modelName, body] of modelBlocks) {
+  for (const { modelName, body } of extractModelBlocks(schema)) {
     const hasOrgId = /\borgId\s+String\b/.test(body) || modelName === "Organisation";
     if (!hasOrgId) continue;
     const mapMatch = body.match(/@@map\("([^"]+)"\)/);
