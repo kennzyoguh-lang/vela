@@ -15,6 +15,12 @@ quoteRouter.post(
   auditLog("quote.create", "quote"),
   asyncHandler(quoteController.create),
 );
+quoteRouter.post(
+  "/quick-create",
+  requireRole("owner", "admin"),
+  auditLog("quote.create", "quote"),
+  asyncHandler(quoteController.quickCreate),
+);
 quoteRouter.get("/", asyncHandler(quoteController.list));
 quoteRouter.get("/:quoteId", asyncHandler(quoteController.getOne));
 quoteRouter.post(

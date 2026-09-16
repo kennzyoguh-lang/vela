@@ -242,4 +242,45 @@ describe("quote.service state machine", () => {
       expect(invoiceRepo.createInvoice).not.toHaveBeenCalled();
     });
   });
+
+  describe("quickCreateQuote", () => {
+    it("builds a single-line-item quote from the 3-field flow", async () => {
+      vi.mocked(clientRepo.findById).mockResolvedValue({ id: clientId } as never);
+      vi.mocked(quoteRepo.createQuote).mockResolvedValue(stub("draft") as never);
+
+      await quoteService.quickCreateQuote(orgId, {
+        clientId,
+        amount: 75_000,
+        validUntil: new Date("2026-04-01"),
+        currency: "NGN",
+      });
+
+      expect(quoteRepo.createQuote).toHaveBeenCalledWith(
+        orgId,
+        expect.objectContaining({
+          clientId,
+          subtotal: 75_000,
+          tax: 0,
+          discount: 0,
+          total: 75_000,
+          currency: "NGN",
+          lineItems: [{ description: "Services rendered", quantity: 1, unitPrice: 75_000 }],
+        }),
+      );
+    });
+
+    it("rejects an unknown client", async () => {
+      vi.mocked(clientRepo.findById).mockResolvedValue(null);
+
+      await expect(
+        quoteService.quickCreateQuote(orgId, {
+          clientId,
+          amount: 75_000,
+          validUntil: new Date("2026-04-01"),
+          currency: "NGN",
+        }),
+      ).rejects.toThrow(/Client not found/);
+      expect(quoteRepo.createQuote).not.toHaveBeenCalled();
+    });
+  });
 });

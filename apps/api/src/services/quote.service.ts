@@ -8,7 +8,7 @@ import { env } from "../lib/env";
 import { logger } from "../lib/logger";
 import { NotFoundError, BusinessRuleViolationError } from "../lib/errors";
 import type { Invoice, Quote, QuoteStatus } from "@prisma/client";
-import type { CreateQuoteInput } from "../validation/quote.schema";
+import type { CreateQuoteInput, QuickCreateQuoteInput } from "../validation/quote.schema";
 import type { PageParams } from "../lib/pagination";
 
 // Mirrors invoice.service.ts's state machine exactly (Handbook 7.7,
@@ -46,6 +46,27 @@ export async function createQuote(orgId: string, input: CreateQuoteInput): Promi
     currency: input.currency,
     validUntil: input.validUntil,
     notes: input.notes,
+  });
+}
+
+// Mirrors invoice.service.ts#quickCreateInvoice's 3-field flow exactly (see
+// quote.schema.ts's quickCreateQuoteSchema comment for why).
+export async function quickCreateQuote(
+  orgId: string,
+  input: QuickCreateQuoteInput,
+): Promise<Quote> {
+  const client = await clientRepo.findById(orgId, input.clientId);
+  if (!client) throw new NotFoundError("Client not found");
+
+  return quoteRepo.createQuote(orgId, {
+    clientId: input.clientId,
+    lineItems: [{ description: "Services rendered", quantity: 1, unitPrice: input.amount }],
+    subtotal: input.amount,
+    tax: 0,
+    discount: 0,
+    total: input.amount,
+    currency: input.currency,
+    validUntil: input.validUntil,
   });
 }
 

@@ -3,6 +3,7 @@ import type { ModuleKey } from "@vela/types";
 import {
   LayoutDashboard,
   FileText,
+  FileSignature,
   ShieldCheck,
   Users,
   LineChart,
@@ -36,6 +37,18 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/invoices",
     icon: FileText,
     mobilePrimary: true,
+    moduleKey: "invoicing",
+  },
+  {
+    label: "Quotes",
+    href: "/quotes",
+    icon: FileSignature,
+    // Already 5 mobilePrimary items (Home/Invoices/People/Money/Ask Vela) —
+    // Design System 3.2's bottom-tab-bar cap. Quotes lives in the desktop
+    // sidebar (which shows every item regardless of mobilePrimary) and is
+    // reachable on mobile via a link from the Invoices page instead of its
+    // own tab slot.
+    mobilePrimary: false,
     moduleKey: "invoicing",
   },
   {

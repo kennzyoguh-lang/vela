@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import * as quoteService from "../services/quote.service";
-import { createQuoteSchema } from "../validation/quote.schema";
+import { createQuoteSchema, quickCreateQuoteSchema } from "../validation/quote.schema";
 import { sendSuccess } from "../lib/response";
 import { getAuthContext } from "../lib/auth-context";
 import { parsePageParams } from "../lib/pagination";
@@ -10,6 +10,13 @@ export async function create(req: Request, res: Response) {
   const { orgId } = getAuthContext(req);
   const input = createQuoteSchema.parse(req.body);
   const quote = await quoteService.createQuote(orgId, input);
+  sendSuccess(res, quote, 201);
+}
+
+export async function quickCreate(req: Request, res: Response) {
+  const { orgId } = getAuthContext(req);
+  const input = quickCreateQuoteSchema.parse(req.body);
+  const quote = await quoteService.quickCreateQuote(orgId, input);
   sendSuccess(res, quote, 201);
 }
 
