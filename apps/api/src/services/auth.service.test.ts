@@ -425,4 +425,71 @@ describe("auth.service", () => {
       expect(emailGateway.sendEmail).not.toHaveBeenCalled();
     });
   });
+
+  // BRD F-62 / Handbook 8.1: 60 minutes of inactivity, enforced server-side
+  // at refresh time since the access token's own JWT expiry can't detect
+  // idleness (it's valid regardless of activity until its own TTL elapses).
+  describe("refresh — idle timeout (F-62)", () => {
+    const orgId = randomUUID();
+    const sessionFamilyId = randomUUID();
+    const sessionId = randomUUID();
+
+    function stubSession(lastActive: Date) {
+      return {
+        id: sessionId,
+        userId: randomUUID(),
+        orgId,
+        sessionFamilyId,
+        refreshTokenHash: "hashed-token",
+        deviceInfo: null,
+        ipAddress: null,
+        lastActive,
+      };
+    }
+
+    it("rotates the token normally when the session was active within 60 minutes", async () => {
+      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
+      vi.mocked(sessionRepo.findActiveByFamily).mockResolvedValue(
+        stubSession(thirtyMinAgo) as never,
+      );
+      vi.mocked(passwordService.verifyTokenHash).mockResolvedValue(true);
+      vi.mocked(userRepo.findById).mockResolvedValue(stubUser({ isActive: true }) as never);
+
+      const result = await authService.refresh(orgId, sessionFamilyId, "presented-token");
+
+      expect(result.accessToken).toBe("access-token");
+      expect(sessionRepo.terminateSession).toHaveBeenCalledWith(orgId, sessionId);
+      expect(sessionRepo.createSession).toHaveBeenCalled();
+    });
+
+    it("rejects and terminates the session once idle past 60 minutes, without ever checking the token", async () => {
+      const sixtyOneMinAgo = new Date(Date.now() - 61 * 60 * 1000);
+      vi.mocked(sessionRepo.findActiveByFamily).mockResolvedValue(
+        stubSession(sixtyOneMinAgo) as never,
+      );
+
+      await expect(authService.refresh(orgId, sessionFamilyId, "presented-token")).rejects.toThrow(
+        /inactivity/,
+      );
+
+      expect(sessionRepo.terminateSession).toHaveBeenCalledWith(orgId, sessionId);
+      expect(passwordService.verifyTokenHash).not.toHaveBeenCalled();
+      expect(sessionRepo.createSession).not.toHaveBeenCalled();
+    });
+
+    it("allows a refresh exactly at the 60-minute boundary (not yet over)", async () => {
+      // Just under 60 minutes — the boundary itself must not false-positive,
+      // same "test the exact edge" bar as paye-calculator's band boundaries.
+      const justUnder60 = new Date(Date.now() - (60 * 60 * 1000 - 1000));
+      vi.mocked(sessionRepo.findActiveByFamily).mockResolvedValue(
+        stubSession(justUnder60) as never,
+      );
+      vi.mocked(passwordService.verifyTokenHash).mockResolvedValue(true);
+      vi.mocked(userRepo.findById).mockResolvedValue(stubUser({ isActive: true }) as never);
+
+      await expect(
+        authService.refresh(orgId, sessionFamilyId, "presented-token"),
+      ).resolves.toBeDefined();
+    });
+  });
 });
