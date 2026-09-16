@@ -144,15 +144,21 @@ export async function declineQuote(
   });
 }
 
-// Not yet wired to a scheduled job — same known gap as invoice.service.ts's
-// own markOverdue (dead code today; nothing in this codebase currently
-// drives either transition on a schedule). Kept here, tested, and ready to
-// call once such a job exists, rather than invented as new job-scheduling
-// infrastructure this change doesn't otherwise need.
 export async function markExpired(orgId: string, quoteId: string): Promise<Quote> {
   const quote = await getQuote(orgId, quoteId);
   if (!ALLOWED_TRANSITIONS[quote.status].includes("expired")) return quote; // idempotent no-op
   return quoteRepo.updateStatus(orgId, quoteId, "expired");
+}
+
+// Backs jobs/quote-expiry.job.ts's daily scan — same "one org per call,
+// idempotent no-op via markExpired's own ALLOWED_TRANSITIONS check" shape
+// as invoice.service.ts#markAllOverdue.
+export async function markAllExpired(orgId: string): Promise<number> {
+  const expirable = await quoteRepo.listExpirable(orgId, new Date());
+  for (const quote of expirable) {
+    await markExpired(orgId, quote.id);
+  }
+  return expirable.length;
 }
 
 /**

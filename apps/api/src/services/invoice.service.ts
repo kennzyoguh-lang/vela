@@ -160,6 +160,21 @@ export async function markOverdue(orgId: string, invoiceId: string) {
   return invoiceRepo.updateStatus(orgId, invoiceId, "overdue");
 }
 
+// Backs jobs/invoice-overdue.job.ts's daily scan — markOverdue() itself was
+// real, tested, and correct since it first shipped, but nothing in this
+// codebase ever actually called it on a schedule, so no invoice has ever
+// really transitioned to "overdue" outside a direct API call. One org's
+// scan per call, so a single bad invoice/org never aborts the whole run —
+// the job wraps this per-org, same "continue past one failure" shape as
+// risk-scoring.job.ts.
+export async function markAllOverdue(orgId: string): Promise<number> {
+  const overdue = await invoiceRepo.listOverdue(orgId, new Date());
+  for (const invoice of overdue) {
+    await markOverdue(orgId, invoice.id);
+  }
+  return overdue.length;
+}
+
 export async function voidInvoice(orgId: string, invoiceId: string, reason: string) {
   const invoice = await getInvoice(orgId, invoiceId);
   assertTransitionAllowed(invoice.status, "void");

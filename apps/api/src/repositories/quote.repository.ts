@@ -85,6 +85,19 @@ export async function listByOrg(
   });
 }
 
+// Backs quote.service.ts#markAllExpired's daily scan — only "sent" quotes
+// are eligible (draft never had a chance to be accepted/declined yet;
+// accepted/declined/expired are already terminal), mirroring
+// invoice.repository.ts#listOverdue's shape.
+export async function listExpirable(orgId: string, asOfDate: Date): Promise<Quote[]> {
+  return withOrgScope(orgId, (tx) =>
+    tx.quote.findMany({
+      where: { orgId, status: "sent", validUntil: { lt: asOfDate } },
+      orderBy: { validUntil: "asc" },
+    }),
+  );
+}
+
 export async function updateStatus(
   orgId: string,
   quoteId: string,
