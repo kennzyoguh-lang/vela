@@ -21,6 +21,7 @@ import { saleRouter } from "./sale.routes";
 import { cashCheckRouter } from "./cash-check.routes";
 import { ownerSummaryRouter } from "./owner-summary.routes";
 import { quickSaleRouter } from "./quick-sale.routes";
+import { dataExportRouter } from "./data-export.routes";
 
 // URL path versioning (Handbook 7.4) — a breaking change gets /v2, never an
 // in-place change to /v1.
@@ -49,5 +50,6 @@ v1Router.use("/sales", saleRouter);
 v1Router.use("/cash-checks", cashCheckRouter);
 v1Router.use("/owner-summary", ownerSummaryRouter);
 v1Router.use("/quick-sales", quickSaleRouter);
+v1Router.use("/data-export", dataExportRouter);
 // Public, unauthenticated — Design System 6.13's payment portal.
 v1Router.use("/pay", paymentPortalRouter);
