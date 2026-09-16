@@ -13,6 +13,7 @@ beforeAll(() => {
 vi.mock("../repositories/invoice.repository", () => ({
   findById: vi.fn(),
   updateStatus: vi.fn(),
+  listOverdue: vi.fn(),
 }));
 vi.mock("../repositories/client.repository", () => ({
   findById: vi.fn(),
@@ -189,6 +190,32 @@ describe("invoice.service state machine", () => {
       const result = await invoiceService.sendInvoice(orgId, invoiceId);
 
       expect(result.status).toBe("sent");
+    });
+  });
+
+  describe("markAllOverdue", () => {
+    it("marks every eligible invoice overdue and returns the count", async () => {
+      const overdueA = stub("sent", { id: randomUUID() });
+      const overdueB = stub("viewed", { id: randomUUID() });
+      vi.mocked(invoiceRepo.listOverdue).mockResolvedValue([overdueA, overdueB] as never);
+      vi.mocked(invoiceRepo.findById).mockImplementation((async (_orgId: string, id: string) =>
+        [overdueA, overdueB].find((i) => i.id === id)) as never);
+      vi.mocked(invoiceRepo.updateStatus).mockResolvedValue(stub("overdue") as never);
+
+      const count = await invoiceService.markAllOverdue(orgId);
+
+      expect(count).toBe(2);
+      expect(invoiceRepo.updateStatus).toHaveBeenCalledWith(orgId, overdueA.id, "overdue");
+      expect(invoiceRepo.updateStatus).toHaveBeenCalledWith(orgId, overdueB.id, "overdue");
+    });
+
+    it("returns 0 without calling updateStatus when nothing is overdue", async () => {
+      vi.mocked(invoiceRepo.listOverdue).mockResolvedValue([]);
+
+      const count = await invoiceService.markAllOverdue(orgId);
+
+      expect(count).toBe(0);
+      expect(invoiceRepo.updateStatus).not.toHaveBeenCalled();
     });
   });
 });

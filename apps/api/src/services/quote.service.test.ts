@@ -15,6 +15,7 @@ vi.mock("../repositories/quote.repository", () => ({
   findById: vi.fn(),
   updateStatus: vi.fn(),
   setConvertedInvoiceId: vi.fn(),
+  listExpirable: vi.fn(),
 }));
 vi.mock("../repositories/client.repository", () => ({
   findById: vi.fn(),
@@ -281,6 +282,32 @@ describe("quote.service state machine", () => {
         }),
       ).rejects.toThrow(/Client not found/);
       expect(quoteRepo.createQuote).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("markAllExpired", () => {
+    it("marks every eligible quote expired and returns the count", async () => {
+      const expirableA = stub("sent", { id: randomUUID() });
+      const expirableB = stub("sent", { id: randomUUID() });
+      vi.mocked(quoteRepo.listExpirable).mockResolvedValue([expirableA, expirableB] as never);
+      vi.mocked(quoteRepo.findById).mockImplementation((async (_orgId: string, id: string) =>
+        [expirableA, expirableB].find((q) => q.id === id)) as never);
+      vi.mocked(quoteRepo.updateStatus).mockResolvedValue(stub("expired") as never);
+
+      const count = await quoteService.markAllExpired(orgId);
+
+      expect(count).toBe(2);
+      expect(quoteRepo.updateStatus).toHaveBeenCalledWith(orgId, expirableA.id, "expired");
+      expect(quoteRepo.updateStatus).toHaveBeenCalledWith(orgId, expirableB.id, "expired");
+    });
+
+    it("returns 0 without calling updateStatus when nothing is expirable", async () => {
+      vi.mocked(quoteRepo.listExpirable).mockResolvedValue([]);
+
+      const count = await quoteService.markAllExpired(orgId);
+
+      expect(count).toBe(0);
+      expect(quoteRepo.updateStatus).not.toHaveBeenCalled();
     });
   });
 });
