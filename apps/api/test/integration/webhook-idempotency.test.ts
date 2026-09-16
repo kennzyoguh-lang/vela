@@ -100,7 +100,9 @@ describe("webhook idempotency (Paystack charge.success)", () => {
       tx.transactionMarkup.findMany({ where: { orgId, invoiceId: invoice.id } }),
     );
     expect(markups).toHaveLength(1);
-    expect(markups[0]?.velaFeeAmount.toString()).toBe("500");
+    // 0.5% of the ₦50,000 invoice total (transaction-markup.service.ts's
+    // DEFAULT_MARKUP_PCT) — was "500" (1%) before that rate was halved.
+    expect(markups[0]?.velaFeeAmount.toString()).toBe("250");
   }, 30_000);
 
   it("rejects a webhook whose signature doesn't match, before ever touching the invoice", async () => {
