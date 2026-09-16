@@ -16,9 +16,48 @@
     "typecheck": {
       "dependsOn": ["^build"]
     },
-    "test:unit": {},
+    "test:unit": {
+      "dependsOn": ["^build"],
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "APP_DATABASE_URL",
+        "REDIS_URL",
+        "JWT_PRIVATE_KEY_BASE64",
+        "JWT_PUBLIC_KEY_BASE64",
+        "JWT_ACCESS_TOKEN_TTL_SECONDS",
+        "REFRESH_TOKEN_TTL_DAYS",
+        "TWO_FA_ENCRYPTION_KEY_BASE64",
+        "PAYSTACK_SECRET_KEY",
+        "MONO_SECRET_KEY",
+        "ANTHROPIC_API_KEY",
+        "TERMII_API_KEY",
+        "TERMII_SENDER_ID",
+        "RESEND_API_KEY",
+        "RESEND_FROM_EMAIL",
+        "WEB_APP_URL"
+      ]
+    },
     "test:integration": {
-      "cache": false
+      "cache": false,
+      "dependsOn": ["^build"],
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "APP_DATABASE_URL",
+        "REDIS_URL",
+        "JWT_PRIVATE_KEY_BASE64",
+        "JWT_PUBLIC_KEY_BASE64",
+        "JWT_ACCESS_TOKEN_TTL_SECONDS",
+        "REFRESH_TOKEN_TTL_DAYS",
+        "TWO_FA_ENCRYPTION_KEY_BASE64",
+        "PAYSTACK_SECRET_KEY",
+        "MONO_SECRET_KEY",
+        "ANTHROPIC_API_KEY",
+        "TERMII_API_KEY",
+        "TERMII_SENDER_ID",
+        "RESEND_API_KEY",
+        "RESEND_FROM_EMAIL",
+        "WEB_APP_URL"
+      ]
     }
   }
 }
