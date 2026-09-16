@@ -219,6 +219,48 @@ export interface PublicInvoiceView {
   isQuickSale: boolean;
 }
 
+// === Quotes/Estimates (F-57) ===
+
+export type QuoteStatus = "draft" | "sent" | "accepted" | "declined" | "expired";
+
+export interface Quote {
+  id: string;
+  orgId: string;
+  number: string;
+  clientId: string;
+  lineItems: LineItem[];
+  subtotal: string; // Prisma Decimal serializes as a string over JSON
+  tax: string;
+  discount: string;
+  total: string;
+  currency: string;
+  status: QuoteStatus;
+  validUntil: string;
+  portalToken: string;
+  notes: string | null;
+  sentAt: string | null;
+  respondedAt: string | null;
+  declineReason: string | null;
+  convertedInvoiceId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicQuoteView {
+  number: string;
+  total: string;
+  subtotal: string;
+  tax: string;
+  discount: string;
+  currency: string;
+  validUntil: string;
+  status: QuoteStatus;
+  lineItems: LineItem[];
+  notes: string | null;
+  businessName?: string;
+  clientName?: string;
+}
+
 // Quick Sale / Instant Collect Piece 2 — the entry-screen response. Narrower
 // than Invoice (whose clientId several already-shipped invoice list/detail
 // pages assume is always a non-null client id) rather than widening a type

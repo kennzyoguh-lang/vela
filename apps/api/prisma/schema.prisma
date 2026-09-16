@@ -113,6 +113,7 @@ model Organisation {
   clients               Client[]
   invoices              Invoice[]
   recurringInvoices     RecurringInvoice[]
+  quotes                Quote[]
   transactionMarkups    TransactionMarkup[]
   paymentActivation     PaymentActivation?
   complianceObligations OrgComplianceObligation[]
@@ -285,6 +286,7 @@ model Client {
   organisation      Organisation       @relation(fields: [orgId], references: [id], onDelete: Cascade)
   invoices          Invoice[]
   recurringInvoices RecurringInvoice[]
+  quotes            Quote[]
 
   @@index([orgId])
   @@map("clients")
@@ -353,6 +355,66 @@ model RecurringInvoice {
 
   @@index([orgId, status, nextSendDate])
   @@map("recurring_invoices")
+}
+
+// F-57: Quotes/Estimates. Deliberately its own model rather than reusing
+// Invoice with a "quote" flag (unlike Quick Sale's reuse of Invoice, Design
+// System's InvoiceSource comment) — a quote has no payment portal, no
+// TransactionMarkup fee lifecycle, and a materially different status
+// lifecycle (accepted/declined/expired, never partially_paid/overdue), so
+// sharing the Invoice table would mean most of its columns are meaningless
+// for half of its rows. convertedInvoiceId is a plain scalar + DB-level FK
+// (see the RLS/lookup migration), not a Prisma relation — the link is
+// one-way (an Invoice never needs to look up "which quote became me") and
+// keeping it a relation-free column avoids an unused back-reference array
+// on Invoice.
+enum QuoteStatus {
+  draft
+  sent
+  accepted
+  declined
+  expired
+
+  @@map("quote_status")
+}
+
+// Mirrors InvoiceNumberCounter's race-safe-numbering shape exactly (Handbook:
+// same atomic upsert-and-increment pattern in quote.repository.ts).
+model QuoteNumberCounter {
+  orgId String @id @map("org_id") @db.Uuid
+  next  Int    @default(1)
+
+  @@map("quote_number_counters")
+}
+
+model Quote {
+  id                 String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId              String      @map("org_id") @db.Uuid
+  number             String // "QUO-0001", unique per org (see @@unique below)
+  clientId           String      @map("client_id") @db.Uuid
+  lineItems          Json        @map("line_items")
+  subtotal           Decimal     @db.Decimal(14, 2)
+  tax                Decimal     @default(0) @db.Decimal(14, 2)
+  discount           Decimal     @default(0) @db.Decimal(14, 2)
+  total              Decimal     @db.Decimal(14, 2)
+  currency           String      @default("NGN") @db.Char(3)
+  status             QuoteStatus @default(draft)
+  validUntil         DateTime    @map("valid_until") @db.Date
+  portalToken        String      @unique @map("portal_token")
+  notes              String?
+  sentAt             DateTime?   @map("sent_at") @db.Timestamptz
+  respondedAt        DateTime?   @map("responded_at") @db.Timestamptz
+  declineReason      String?     @map("decline_reason")
+  convertedInvoiceId String?     @map("converted_invoice_id") @db.Uuid
+  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client       Client       @relation(fields: [clientId], references: [id])
+
+  @@unique([orgId, number])
+  @@index([orgId, status, validUntil])
+  @@map("quotes")
 }
 
 // F-72: recorded as a distinct line, never blended into the processor's own

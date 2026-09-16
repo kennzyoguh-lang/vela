@@ -7,6 +7,8 @@ import { sessionRouter } from "./session.routes";
 import { clientRouter } from "./client.routes";
 import { invoiceRouter } from "./invoice.routes";
 import { recurringInvoiceRouter } from "./recurring-invoice.routes";
+import { quoteRouter } from "./quote.routes";
+import { quotePortalRouter } from "./quote-portal.routes";
 import { paymentPortalRouter } from "./payment-portal.routes";
 import { complianceRouter } from "./compliance.routes";
 import { bankAccountRouter } from "./bank-account.routes";
@@ -38,6 +40,7 @@ v1Router.use("/sessions", sessionRouter);
 v1Router.use("/clients", clientRouter);
 v1Router.use("/invoices", invoiceRouter);
 v1Router.use("/recurring-invoices", recurringInvoiceRouter);
+v1Router.use("/quotes", quoteRouter);
 v1Router.use("/compliance", complianceRouter);
 v1Router.use("/bank-accounts", bankAccountRouter);
 v1Router.use("/bank-transactions", bankTransactionRouter);
@@ -55,3 +58,5 @@ v1Router.use("/quick-sales", quickSaleRouter);
 v1Router.use("/data-export", dataExportRouter);
 // Public, unauthenticated — Design System 6.13's payment portal.
 v1Router.use("/pay", paymentPortalRouter);
+// Public, unauthenticated — same shape as /pay above, for quotes (F-57).
+v1Router.use("/quote-portal", quotePortalRouter);
