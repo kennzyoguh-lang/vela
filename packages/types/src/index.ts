@@ -352,6 +352,26 @@ export interface PnlStatement {
   netProfit: number;
 }
 
+// F-33 — reported as a single "operating" bucket, not split into
+// operating/investing/financing: TransactionCategory has no category that
+// distinguishes investing/financing activity from ordinary operating income
+// and expense (see cash-flow.service.ts's fuller comment on the backend).
+export interface CashFlowStatement {
+  periodLabel: string;
+  operatingInflow: number;
+  operatingOutflow: number;
+  netCashFlow: number;
+}
+
+export interface CashFlowProjection {
+  currentCashPosition: number;
+  averageDailyNetCashFlow: number;
+  projected30: number;
+  projected60: number;
+  historyDays: number;
+  hasSufficientHistory: boolean;
+}
+
 // === PeopleHub (Phase 5) ===
 
 export type EmploymentType = "full_time" | "part_time" | "contract";

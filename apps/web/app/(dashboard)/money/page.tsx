@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   BankAccount,
   BankTransaction,
+  CashFlowProjection,
+  CashFlowStatement,
   Page,
   PnlStatement as PnlStatementData,
   TransactionCategory,
@@ -15,6 +17,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { BankAccountCard } from "@/components/modules/BankAccountCard";
 import { PnlStatement } from "@/components/modules/PnlStatement";
+import { CashFlowCard } from "@/components/modules/CashFlowCard";
 import { MonoConnectButton } from "@/components/modules/MonoConnectButton";
 import { formatMoney } from "@/lib/format";
 import {
@@ -58,6 +61,24 @@ export default function MoneyPage() {
     staleTime: 60_000,
     // Full P&L Intelligence is gated (business profiling) — skip the
     // request entirely rather than fetching data the page won't render.
+    enabled: visibility.fullPnl,
+  });
+
+  const {
+    data: cashFlowStatement,
+    isLoading: cashFlowLoading,
+    error: cashFlowError,
+  } = useQuery({
+    queryKey: ["cash-flow", "statement", from, to],
+    queryFn: () => api.get<CashFlowStatement>(`/v1/cash-flow/statement?from=${from}&to=${to}`),
+    staleTime: 60_000,
+    enabled: visibility.fullPnl,
+  });
+
+  const { data: cashFlowProjection } = useQuery({
+    queryKey: ["cash-flow", "projection"],
+    queryFn: () => api.get<CashFlowProjection>("/v1/cash-flow/projection"),
+    staleTime: 60_000,
     enabled: visibility.fullPnl,
   });
 
@@ -143,6 +164,20 @@ export default function MoneyPage() {
               No P&amp;L data for this period yet.
             </p>
           )}
+
+          {cashFlowLoading ? (
+            <Skeleton className="h-48 w-full" />
+          ) : cashFlowError ? (
+            <p className="font-ui text-status-danger text-[0.875rem]">
+              Couldn&apos;t load your cash flow — try again shortly.
+            </p>
+          ) : cashFlowStatement ? (
+            <CashFlowCard
+              statement={cashFlowStatement}
+              projection={cashFlowProjection}
+              currency={currency}
+            />
+          ) : null}
         </>
       ) : null}
 
