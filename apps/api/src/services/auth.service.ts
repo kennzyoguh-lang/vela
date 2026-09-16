@@ -341,14 +341,23 @@ export async function resendVerificationEmail(orgId: string, userId: string): Pr
 export interface CurrentUserSummary {
   email: string | null;
   emailVerifiedAt: Date | null;
+  role: string;
+  twoFaEnabled: boolean;
 }
 
-// Backs the dashboard's email-verification banner — deliberately a fresh DB
-// read rather than a claim on the access token, so the banner disappears the
-// same moment verification succeeds instead of waiting for the next silent
-// token refresh.
+// Backs the dashboard's email-verification banner and the Security
+// settings page's 2FA card — deliberately a fresh DB read rather than a
+// claim on the access token, so both disappear/update the same moment the
+// underlying state changes instead of waiting for the next silent token
+// refresh (the access token's role/2FA claims are only as fresh as the
+// token itself, not real-time).
 export async function getCurrentUser(orgId: string, userId: string): Promise<CurrentUserSummary> {
   const user = await userRepo.findById(orgId, userId);
   if (!user) throw new NotFoundError("Account not found");
-  return { email: user.email, emailVerifiedAt: user.emailVerifiedAt };
+  return {
+    email: user.email,
+    emailVerifiedAt: user.emailVerifiedAt,
+    role: user.role,
+    twoFaEnabled: user.twoFaEnabled,
+  };
 }

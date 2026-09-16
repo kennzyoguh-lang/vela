@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { TwoFactorSetupCard } from "@/components/modules/TwoFactorSetupCard";
 import type { UserSession } from "@vela/types";
 import { api, ApiError } from "@/lib/api/client";
 
@@ -150,15 +151,7 @@ export default function SecuritySettingsPage() {
   return (
     <SettingsTemplate activePath="/settings/security">
       <div className="flex flex-col gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Two-factor authentication</CardTitle>
-          </CardHeader>
-          <p className="font-ui text-text-secondary text-[0.875rem]">
-            Mandatory for the Owner role at first login (Handbook 8.3). Set-up flow: Settings →
-            Security → Enable 2FA.
-          </p>
-        </Card>
+        <TwoFactorSetupCard />
 
         <NotificationPhoneCard />
 

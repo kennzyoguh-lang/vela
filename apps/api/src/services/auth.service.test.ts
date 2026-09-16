@@ -170,6 +170,32 @@ describe("auth.service", () => {
     });
   });
 
+  describe("getCurrentUser", () => {
+    it("includes role and twoFaEnabled — the Security page's 2FA card needs both", async () => {
+      const orgId = randomUUID();
+      const userId = randomUUID();
+      vi.mocked(userRepo.findById).mockResolvedValue(
+        stubUser({
+          id: userId,
+          orgId,
+          email: "owner@example.com",
+          emailVerifiedAt: null,
+          role: "owner",
+          twoFaEnabled: true,
+        }) as never,
+      );
+
+      const result = await authService.getCurrentUser(orgId, userId);
+
+      expect(result).toEqual({
+        email: "owner@example.com",
+        emailVerifiedAt: null,
+        role: "owner",
+        twoFaEnabled: true,
+      });
+    });
+  });
+
   describe("login", () => {
     it("issues a full session when 2FA is not enabled", async () => {
       const user = stubUser({ twoFaEnabled: false });
