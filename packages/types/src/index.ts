@@ -319,6 +319,17 @@ export interface TaxStatus {
   summary: string;
 }
 
+// KYC — never includes the NIN/BVN itself, encrypted or otherwise, only
+// whether each has been submitted and (once a real verification provider
+// is wired) verified. See apps/api/src/services/kyc.service.ts's own
+// comment on why "submitted" and "verified" are kept separate.
+export interface KycStatus {
+  ninSubmitted: boolean;
+  ninVerified: boolean;
+  bvnSubmitted: boolean;
+  bvnVerified: boolean;
+}
+
 // GTM Channel 3 — computed on read from the conversion count, never stored
 // (see apps/api/src/services/referral.service.ts#tierForConversionCount).
 export type ReferralTier = "bronze" | "silver" | "gold" | "platinum";

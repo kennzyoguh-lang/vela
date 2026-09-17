@@ -3,6 +3,7 @@ import * as organisationController from "../controllers/organisation.controller"
 import * as businessProfileController from "../controllers/business-profile.controller";
 import * as taxStatusController from "../controllers/tax-status.controller";
 import * as referralController from "../controllers/referral.controller";
+import * as kycController from "../controllers/kyc.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/rbac.middleware";
 import { requireVerifiedEmail } from "../middleware/email-verification.middleware";
@@ -142,6 +143,26 @@ organisationRouter.get(
   "/referral-summary",
   requireRole("owner", "admin"),
   asyncHandler(referralController.getSummary),
+);
+
+// KYC — owner/admin only both ways, same reasoning as tax-status above:
+// an identity-compliance figure for the owner, not something every role's
+// own UI needs. kyc.service.ts writes its own audit entry (submitting a
+// NIN/BVN is the sensitive act; no generic auditLog() middleware needed).
+organisationRouter.get(
+  "/kyc",
+  requireRole("owner", "admin"),
+  asyncHandler(kycController.getStatus),
+);
+organisationRouter.post(
+  "/kyc/nin",
+  requireRole("owner", "admin"),
+  asyncHandler(kycController.submitNin),
+);
+organisationRouter.post(
+  "/kyc/bvn",
+  requireRole("owner", "admin"),
+  asyncHandler(kycController.submitBvn),
 );
 
 organisationRouter.post(

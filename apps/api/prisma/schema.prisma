@@ -120,6 +120,7 @@ model Organisation {
   accountingConnections  OrgAccountingConnection[]
   invoiceAccountingSyncs InvoiceAccountingSync[]
   payrollExportConfig    OrgPayrollExportConfig?
+  kyc                    OrganisationKyc?
   complianceObligations  OrgComplianceObligation[]
   complianceFilings      ComplianceFiling[]
   bankAccounts           BankAccount[]
@@ -591,6 +592,35 @@ model OrgPayrollExportConfig {
   organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@map("org_payroll_export_configs")
+}
+
+// KYC (Know Your Customer) — the owner's NIN/BVN on file for the business,
+// the baseline identity data CBN-style tiered KYC expects before a fintech
+// account moves past the lowest tier. Encrypted at rest (AES-256-GCM,
+// lib/encryption.ts) under their own dedicated key, same isolation
+// reasoning as every other secret in this codebase — the plaintext values
+// are never returned by any API response, only whether each has been
+// submitted and (once a real verification provider is wired) verified.
+// ninVerifiedAt/bvnVerifiedAt are null until Vela actually integrates NIMC/
+// a bank BVN-verification API (no credentials for either exist yet —
+// kyc.service.ts's own comment explains the honest "pending" state this
+// leaves the UI in, same treatment as Flutterwave/Stripe before those had
+// real keys). One row per org, like OrgPayrollExportConfig above.
+model OrganisationKyc {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId          String    @unique @map("org_id") @db.Uuid
+  ninEncrypted   String?   @map("nin_encrypted")
+  bvnEncrypted   String?   @map("bvn_encrypted")
+  ninSubmittedAt DateTime? @map("nin_submitted_at") @db.Timestamptz
+  bvnSubmittedAt DateTime? @map("bvn_submitted_at") @db.Timestamptz
+  ninVerifiedAt  DateTime? @map("nin_verified_at") @db.Timestamptz
+  bvnVerifiedAt  DateTime? @map("bvn_verified_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("organisation_kyc")
 }
 
 // Handbook 5.9: idempotent against replay via the provider's event ID —

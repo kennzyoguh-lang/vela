@@ -2,9 +2,15 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ComplianceObligation, ComplianceObligationType, TaxStatus } from "@vela/types";
+import type {
+  ComplianceObligation,
+  ComplianceObligationType,
+  KycStatus,
+  TaxStatus,
+} from "@vela/types";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
@@ -142,6 +148,132 @@ function TaxStatusCard() {
   );
 }
 
+// KYC — the owner's NIN/BVN on file for the business, the baseline
+// identity data CBN-style tiered KYC expects. Verification is honestly
+// "pending" for both: Vela has no NIMC or bank BVN-verification API
+// credentials yet (kyc.service.ts's own comment explains why), so this
+// never claims a check that hasn't actually happened. Submitting either
+// value clears it from the input immediately — same write-only treatment
+// as a password, it is never shown back.
+function KycCard() {
+  const queryClient = useQueryClient();
+  const [nin, setNin] = useState("");
+  const [bvn, setBvn] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: kycStatus, isLoading } = useQuery({
+    queryKey: ["kyc-status"],
+    queryFn: () => api.get<KycStatus>("/v1/organisation/kyc"),
+  });
+
+  const submitNinMutation = useMutation({
+    mutationFn: () => api.post("/v1/organisation/kyc/nin", { nin }),
+    onSuccess: () => {
+      setNin("");
+      queryClient.invalidateQueries({ queryKey: ["kyc-status"] });
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Couldn't save your NIN."),
+  });
+
+  const submitBvnMutation = useMutation({
+    mutationFn: () => api.post("/v1/organisation/kyc/bvn", { bvn }),
+    onSuccess: () => {
+      setBvn("");
+      queryClient.invalidateQueries({ queryKey: ["kyc-status"] });
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Couldn't save your BVN."),
+  });
+
+  function statusBadge(submitted: boolean, verified: boolean) {
+    if (verified) return <Badge status="active" label="Verified" />;
+    if (submitted) return <Badge status="partial" label="Verification pending" />;
+    return <Badge status="draft" label="Not on file" />;
+  }
+
+  return (
+    <Card accent>
+      <CardHeader>
+        <CardTitle eyebrow>KYC</CardTitle>
+      </CardHeader>
+      <p className="font-ui text-text-secondary text-[0.875rem]">
+        Your NIN and BVN on file, encrypted and never shown back once saved. Real-time verification
+        against NIMC/your bank is coming soon — for now, saving records them as submitted.
+      </p>
+      {error ? <Alert variant="danger" title={error} /> : null}
+      {isLoading ? (
+        <Skeleton className="mt-3 h-24 w-full" />
+      ) : (
+        <div className="mt-3 flex flex-col gap-3">
+          <div className="border-border rounded-md border p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <p className="font-ui text-text-primary text-[0.875rem] font-semibold">NIN</p>
+              {statusBadge(kycStatus?.ninSubmitted ?? false, kycStatus?.ninVerified ?? false)}
+            </div>
+            <form
+              className="flex flex-col gap-2 sm:flex-row sm:items-end"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setError(null);
+                submitNinMutation.mutate();
+              }}
+            >
+              <div className="flex-1">
+                <Input
+                  label="11-digit National Identification Number"
+                  value={nin}
+                  onChange={(e) => setNin(e.target.value)}
+                  maxLength={11}
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                size="sm"
+                loading={submitNinMutation.isPending}
+                disabled={nin.length !== 11}
+              >
+                Save
+              </Button>
+            </form>
+          </div>
+          <div className="border-border rounded-md border p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <p className="font-ui text-text-primary text-[0.875rem] font-semibold">BVN</p>
+              {statusBadge(kycStatus?.bvnSubmitted ?? false, kycStatus?.bvnVerified ?? false)}
+            </div>
+            <form
+              className="flex flex-col gap-2 sm:flex-row sm:items-end"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setError(null);
+                submitBvnMutation.mutate();
+              }}
+            >
+              <div className="flex-1">
+                <Input
+                  label="11-digit Bank Verification Number"
+                  value={bvn}
+                  onChange={(e) => setBvn(e.target.value)}
+                  maxLength={11}
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                size="sm"
+                loading={submitBvnMutation.isPending}
+                disabled={bvn.length !== 11}
+              >
+                Save
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // Necessary infrastructure for the Compliance module, not itself a nav item —
 // same precedent as /clients relative to /invoices.
 export default function ComplianceSettingsPage() {
@@ -171,6 +303,7 @@ export default function ComplianceSettingsPage() {
       </p>
 
       <TaxStatusCard />
+      <KycCard />
 
       {isLoading ? (
         <div className="flex flex-col gap-2">

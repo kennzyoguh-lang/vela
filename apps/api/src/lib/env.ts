@@ -82,6 +82,11 @@ const envSchema = z.object({
   // feature fails loudly at its own call site (payroll-export.service.ts),
   // never anything else.
   PAYROLL_EXPORT_ENCRYPTION_KEY_BASE64: z.string().optional(),
+  // Optional — encrypts the owner's NIN/BVN on file (organisation_kyc
+  // table). Same isolation reasoning as every other encryption key above:
+  // a missing key means only this one opt-in compliance feature fails
+  // loudly at its own call site (kyc.service.ts), never anything else.
+  KYC_ENCRYPTION_KEY_BASE64: z.string().optional(),
 });
 
 // Fails loud at boot (Handbook 1.4 "fail loud in development") rather than
