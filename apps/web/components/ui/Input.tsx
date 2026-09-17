@@ -43,8 +43,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           aria-describedby={cn(helperText && helperId, error && errorId) || undefined}
           className={cn(
             "border-border bg-surface-raised font-ui text-text-primary h-10 rounded-sm border px-3",
+            // The border was the field's only edge and it never moved — no
+            // hover, and the focus colour snapped. A hover step tells you the
+            // field is live before you commit to it, and duration-quick is the
+            // motion token already used for every other state change.
+            "duration-quick hover:border-border-strong transition-colors",
             "focus:border-data-aiAccent",
-            error && "border-status-danger",
+            error && "border-status-danger hover:border-status-danger",
             className,
           )}
           {...props}

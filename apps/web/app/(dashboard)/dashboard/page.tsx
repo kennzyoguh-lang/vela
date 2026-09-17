@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, ChevronRight, Circle } from "lucide-react";
 import {
   DashboardTemplate,
   type DashboardWidgetSlot,
 } from "@/components/templates/DashboardTemplate";
+import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { api } from "@/lib/api/client";
 import { OutstandingInvoicesWidget } from "@/components/modules/OutstandingInvoicesWidget";
 import { LowStockWidget } from "@/components/modules/LowStockWidget";
@@ -34,7 +36,12 @@ interface SetupChecklist {
 // read from data that already exists elsewhere (compliance obligations, bank
 // accounts, invites/staff) rather than a separate stored flag.
 function FirstRunChecklist() {
-  const { data: checklist } = useQuery({
+  const {
+    data: checklist,
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["organisation", "setup-checklist"],
     queryFn: () => api.get<SetupChecklist>("/v1/organisation/setup-checklist"),
     staleTime: 30_000,
@@ -56,13 +63,78 @@ function FirstRunChecklist() {
   ];
   const doneCount = steps.filter((s) => s.done).length;
 
+  // Until the fetch resolves, every unread flag defaults to `false` — which
+  // would render a confident "1 of 4, nothing done" that then pops as the
+  // real answer arrives. Design System 4.17: show a skeleton of the final
+  // shape rather than a plausible-looking wrong answer.
+  if (isPending) {
+    return (
+      <Card accent className="md:col-span-2">
+        <CardHeader>
+          <CardTitle eyebrow>Get set up</CardTitle>
+          <Skeleton className="h-4 w-8" />
+        </CardHeader>
+        <Skeleton className="rounded-pill mb-4 h-1 w-full" />
+        <div className="divide-border flex flex-col divide-y">
+          {steps.map((step) => (
+            <div key={step.label} className="flex min-h-[44px] items-center gap-3">
+              <Skeleton className="size-4 shrink-0 rounded-full" />
+              <Skeleton className="h-3.5 w-[min(60%,220px)]" />
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
+
+  // Same reasoning as the skeleton above: a failed fetch must not render as
+  // "nothing is set up". This is the one card an owner acts on during their
+  // first week, so it gets a real way forward, not a dead red sentence.
+  if (error) {
+    return (
+      <Card accent className="md:col-span-2">
+        <CardHeader>
+          <CardTitle eyebrow>Get set up</CardTitle>
+        </CardHeader>
+        <p className="font-ui text-text-secondary text-[0.875rem]">
+          We couldn&apos;t check your setup progress just now.
+        </p>
+        <Button variant="secondary" size="sm" className="mt-3" onClick={() => refetch()}>
+          Try again
+        </Button>
+      </Card>
+    );
+  }
+
+  const allDone = doneCount === steps.length;
+
   return (
     <Card accent className="md:col-span-2">
       <CardHeader>
-        <CardTitle eyebrow>
-          Get set up ({doneCount} of {steps.length})
-        </CardTitle>
+        <CardTitle eyebrow>Get set up</CardTitle>
+        {/* The count is the card's one number — mono, tabular, right-aligned,
+            the same ledger treatment every other figure in the product gets,
+            rather than prose inside the eyebrow label. */}
+        <span className="font-data text-text-secondary text-[0.75rem] font-bold tabular-nums">
+          {doneCount}/{steps.length}
+        </span>
       </CardHeader>
+      {/* A gold rule that fills as you go — the same "gold rule under the
+          heading" instrument the PageHeader established, here made to carry
+          progress. Width is the only thing that animates. */}
+      <div
+        role="progressbar"
+        aria-valuenow={doneCount}
+        aria-valuemin={0}
+        aria-valuemax={steps.length}
+        aria-label="Setup progress"
+        className="bg-border rounded-pill mb-4 h-1 w-full overflow-hidden"
+      >
+        <div
+          className="bg-gold duration-deliberate h-full transition-[width] motion-reduce:transition-none"
+          style={{ width: `${(doneCount / steps.length) * 100}%` }}
+        />
+      </div>
       <ul className="divide-border flex flex-col divide-y">
         {steps.map((step) => {
           const icon = step.done ? (
@@ -70,26 +142,46 @@ function FirstRunChecklist() {
           ) : (
             <Circle className="text-text-secondary size-4 shrink-0" aria-hidden />
           );
+          // Done steps recede to secondary so the eye lands on what's left;
+          // remaining steps keep primary weight and are the only rows that
+          // are interactive.
+          const body = (
+            <>
+              {icon}
+              <span className="flex-1">{step.label}</span>
+            </>
+          );
           return (
-            <li
-              key={step.label}
-              className="font-ui text-text-primary flex items-center gap-2 py-2 text-[0.875rem] first:pt-0 last:pb-0"
-            >
+            <li key={step.label} className="font-ui text-[0.875rem]">
               {step.href && !step.done ? (
-                <Link href={step.href} className="flex items-center gap-2 hover:underline">
-                  {icon}
-                  {step.label}
+                <Link
+                  href={step.href}
+                  // The whole row is the target, not the four words inside
+                  // it: 44px tall, and the -mx-2/px-2 pair lets the hover
+                  // wash bleed past the text without breaking the card's
+                  // 16px padding grid.
+                  className="text-text-primary hover:bg-surface-overlay duration-quick group -mx-2 flex min-h-[44px] items-center gap-3 rounded-sm px-2 transition-colors"
+                >
+                  {body}
+                  <ChevronRight
+                    className="text-text-secondary group-hover:text-text-primary duration-quick size-4 shrink-0 transition-colors"
+                    aria-hidden
+                  />
                 </Link>
               ) : (
-                <>
-                  {icon}
-                  {step.label}
-                </>
+                <div className="text-text-secondary -mx-2 flex min-h-[44px] items-center gap-3 px-2">
+                  {body}
+                </div>
               )}
             </li>
           );
         })}
       </ul>
+      {allDone ? (
+        <p className="font-ui text-sage mt-3 text-[0.875rem] font-semibold">
+          Setup complete — everything below is live.
+        </p>
+      ) : null}
     </Card>
   );
 }
@@ -160,9 +252,15 @@ export default function DashboardHomePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <EmailVerificationBanner />
-      <GraduationPromptBanner />
-      {visibility.cashReconciliation ? <OwnerDailyStatusBanner /> : null}
+      {/* The banners are one notification group, not three peers of the page's
+          own sections — spaced 8px from each other and a full 32px from the
+          header below, so proximity says "these belong together" instead of
+          the flat gap-6 that made a stack of three read as page structure. */}
+      <div className="flex flex-col gap-2 empty:hidden">
+        <EmailVerificationBanner />
+        <GraduationPromptBanner />
+        {visibility.cashReconciliation ? <OwnerDailyStatusBanner /> : null}
+      </div>
       <PageHeader
         eyebrow="Dashboard"
         title="Home"

@@ -70,3 +70,14 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "Settings", href: "/settings", icon: Settings, mobilePrimary: false },
 ];
+
+// Design System 3.2 — a destination stays lit for everything underneath it.
+// Both navs previously compared `pathname === item.href`, so /invoices/abc,
+// /settings/users and /quotes/new all rendered with NOTHING active: the user
+// lost their "where am I" anchor the moment they opened a record. Exact match
+// is still right for /dashboard, whose href is a prefix of nothing but would
+// otherwise never be beaten by a longer match anyway.
+export function isNavItemActive(pathname: string, href: string): boolean {
+  if (href === "/dashboard") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
