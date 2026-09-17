@@ -117,6 +117,9 @@ jobs:
               'PAYROLL_EXPORT_ENCRYPTION_KEY_BASE64=' + crypto.randomBytes(32).toString('base64') + '\n' +
               'KYC_ENCRYPTION_KEY_BASE64=' + crypto.randomBytes(32).toString('base64') + '\n'
             );
+            // MINDEE_API_KEY is deliberately left unset here — CI must prove
+            // receipt-ocr.service.ts's "OCR unconfigured" fallback path
+            // works, not exercise a real (and non-existent) Mindee account.
           "
       - run: pnpm --filter @vela/api db:generate
       - run: pnpm --filter @vela/api db:setup

@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
+import { MulterError } from "multer";
 import { DomainError } from "../lib/errors";
 import { logger } from "../lib/logger";
 
@@ -23,6 +24,24 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
         message: fields[0]?.message ?? "Invalid request",
         field: fields[0]?.field,
         fields,
+        requestId: res.locals.requestId,
+      },
+    });
+  }
+
+  // lib/storage.ts's file-upload middleware throws this for "too large" and
+  // its fileFilter's plain Error for "wrong type" both reach here before a
+  // controller ever runs (multer's own middleware, not a controller's zod
+  // .parse()) — without this branch either surfaced as an opaque 500.
+  if (err instanceof MulterError) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: "FILE_UPLOAD_ERROR",
+        message:
+          err.code === "LIMIT_FILE_SIZE"
+            ? "That file is too large — the limit is 5MB."
+            : err.message,
         requestId: res.locals.requestId,
       },
     });

@@ -87,6 +87,11 @@ const envSchema = z.object({
   // a missing key means only this one opt-in compliance feature fails
   // loudly at its own call site (kyc.service.ts), never anything else.
   KYC_ENCRYPTION_KEY_BASE64: z.string().optional(),
+  // Optional — Mindee (receipt OCR provider). Same "never blocks anything
+  // else" contract as every other third-party key above: unset means
+  // receipt-ocr.service.ts's isConfigured() reports false and the upload
+  // flow falls back to manual entry instead of failing the upload itself.
+  MINDEE_API_KEY: z.string().optional(),
 });
 
 // Fails loud at boot (Handbook 1.4 "fail loud in development") rather than
