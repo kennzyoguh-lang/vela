@@ -3,6 +3,7 @@ import * as invoiceRepo from "../repositories/invoice.repository";
 import * as clientRepo from "../repositories/client.repository";
 import * as organisationRepo from "../repositories/organisation.repository";
 import * as invoiceService from "../services/invoice.service";
+import * as paymentCredentialService from "../services/payment-credential.service";
 import { getGateway } from "../services/payment-gateways";
 import { initiatePaymentSchema } from "../validation/payment-portal.schema";
 import { sendSuccess } from "../lib/response";
@@ -56,14 +57,24 @@ export async function initiatePayment(req: Request, res: Response) {
 
   const { payerEmail } = initiatePaymentSchema.parse(req.body);
   const gateway = getGateway("paystack");
+  // The org's own bring-your-own key if they've connected one (F-connectors),
+  // Vela's own platform key otherwise — see payment-credential.service.ts's
+  // resolveSecretKey. Whichever key signs this initialize call is also the
+  // one payment-webhook.service.ts must verify that payment's webhook
+  // against, since Paystack (like most processors) signs webhooks with the
+  // same account's secret key used to create the charge.
+  const secretKey = await paymentCredentialService.requireSecretKey(invoice.orgId, "paystack");
 
-  const result = await gateway.initializePayment({
-    reference: invoice.paymentPortalToken,
-    amount: parseFloat(invoice.total.toString()),
-    currency: invoice.currency,
-    payerEmail,
-    callbackUrl: `${env.WEB_APP_URL}/pay/${invoice.paymentPortalToken}`,
-  });
+  const result = await gateway.initializePayment(
+    {
+      reference: invoice.paymentPortalToken,
+      amount: parseFloat(invoice.total.toString()),
+      currency: invoice.currency,
+      payerEmail,
+      callbackUrl: `${env.WEB_APP_URL}/pay/${invoice.paymentPortalToken}`,
+    },
+    secretKey,
+  );
 
   sendSuccess(res, { checkoutUrl: result.checkoutUrl });
 }

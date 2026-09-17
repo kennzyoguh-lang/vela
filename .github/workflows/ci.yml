@@ -111,7 +111,8 @@ jobs:
             fs.appendFileSync(process.env.GITHUB_ENV,
               'JWT_PRIVATE_KEY_BASE64=' + Buffer.from(privateKey).toString('base64') + '\n' +
               'JWT_PUBLIC_KEY_BASE64=' + Buffer.from(publicKey).toString('base64') + '\n' +
-              'TWO_FA_ENCRYPTION_KEY_BASE64=' + crypto.randomBytes(32).toString('base64') + '\n'
+              'TWO_FA_ENCRYPTION_KEY_BASE64=' + crypto.randomBytes(32).toString('base64') + '\n' +
+              'PAYMENT_CREDENTIAL_ENCRYPTION_KEY_BASE64=' + crypto.randomBytes(32).toString('base64') + '\n'
             );
           "
       - run: pnpm --filter @vela/api db:generate

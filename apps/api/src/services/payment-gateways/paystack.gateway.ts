@@ -1,5 +1,4 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { env } from "../../lib/env";
 import type {
   PaymentGatewayHandler,
   InitializePaymentInput,
@@ -30,25 +29,24 @@ interface PaystackChargeEvent {
 
 /**
  * BRD v3.1's primary Nigerian processor. Test-mode requires a Paystack
- * account (free, sandbox — see the Phase 2 plan's external-account note);
- * PAYSTACK_SECRET_KEY unset means initializePayment fails loudly at the call
- * site, not at boot (Handbook 1.4 — a missing payment key must never block
- * anything else in the app).
+ * account (free, sandbox — see the Phase 2 plan's external-account note).
+ * secretKey is resolved by the caller (payment-credential.service.ts) —
+ * an org's own connected Paystack key if they've bring-your-own-connected
+ * one, Vela's own platform PAYSTACK_SECRET_KEY otherwise; either way, a
+ * missing/unresolved key fails loudly at the call site, never at boot
+ * (Handbook 1.4).
  */
 export const paystackGateway: PaymentGatewayHandler = {
   processor: "paystack",
 
-  async initializePayment(input: InitializePaymentInput): Promise<InitializePaymentResult> {
-    if (!env.PAYSTACK_SECRET_KEY) {
-      throw new Error(
-        "PAYSTACK_SECRET_KEY is not configured — create a Paystack account and set the test secret key to enable payments",
-      );
-    }
-
+  async initializePayment(
+    input: InitializePaymentInput,
+    secretKey: string,
+  ): Promise<InitializePaymentResult> {
     const res = await fetch(`${PAYSTACK_API_BASE}/transaction/initialize`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
+        Authorization: `Bearer ${secretKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -68,9 +66,22 @@ export const paystackGateway: PaymentGatewayHandler = {
     return { checkoutUrl: body.data.authorization_url, providerReference: body.data.reference };
   },
 
-  verifyWebhookSignature(rawBody: Buffer, signatureHeader: string | undefined): boolean {
-    if (!signatureHeader || !env.PAYSTACK_SECRET_KEY) return false;
-    const expected = createHmac("sha512", env.PAYSTACK_SECRET_KEY).update(rawBody).digest("hex");
+  peekReference(rawBody: Buffer): string | null {
+    try {
+      const parsed = JSON.parse(rawBody.toString("utf8")) as { data?: { reference?: string } };
+      return parsed.data?.reference ?? null;
+    } catch {
+      return null;
+    }
+  },
+
+  verifyWebhookSignature(
+    rawBody: Buffer,
+    signatureHeader: string | undefined,
+    secretKey: string,
+  ): boolean {
+    if (!signatureHeader || !secretKey) return false;
+    const expected = createHmac("sha512", secretKey).update(rawBody).digest("hex");
     // Constant-time comparison — a signature check that short-circuits on the
     // first differing byte leaks timing information an attacker can exploit.
     const expectedBuf = Buffer.from(expected, "hex");

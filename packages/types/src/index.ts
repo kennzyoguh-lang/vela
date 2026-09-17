@@ -468,6 +468,20 @@ export interface PayrollRunDetail extends PayrollRun {
   payslips: Payslip[];
 }
 
+// === Bring-your-own payment processor (F-connectors) ===
+
+export type PaymentProcessor = "paystack" | "flutterwave" | "stripe";
+
+// Never includes the secret key or its encrypted form in any shape — see
+// apps/api/src/services/payment-credential.service.ts's own comment.
+export interface PaymentCredentialSummary {
+  id: string;
+  processor: PaymentProcessor;
+  publicKey: string | null;
+  isActive: boolean;
+  updatedAt: string;
+}
+
 /** API response envelope — Engineering Handbook Part 7.6. Uniform for every endpoint. */
 export type ApiResponse<T> =
   | {

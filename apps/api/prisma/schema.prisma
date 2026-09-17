@@ -116,6 +116,7 @@ model Organisation {
   quotes                Quote[]
   transactionMarkups    TransactionMarkup[]
   paymentActivation     PaymentActivation?
+  orgPaymentCredentials OrgPaymentCredential[]
   complianceObligations OrgComplianceObligation[]
   complianceFilings     ComplianceFiling[]
   bankAccounts          BankAccount[]
@@ -463,6 +464,35 @@ model PaymentActivation {
   organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@map("payment_activations")
+}
+
+// Bring-your-own payment processor — an org that already has its own
+// Paystack/Stripe/Flutterwave merchant account can connect it here so
+// customer payments settle directly into THAT account instead of Vela's
+// own platform account, for a business that doesn't want to route payments
+// through Vela at all. Distinct from PaymentActivation above (which tracks
+// usage of Vela's OWN payment rails, not third-party credentials).
+// secretKeyEncrypted is reversible (AES-256-GCM, lib/encryption.ts) for the
+// same structural reason as User.twoFaSecretEncrypted — initializing a
+// real payment or verifying a webhook signature needs the original key,
+// which a one-way hash can never provide. AAD binds the ciphertext to its
+// own [orgId, processor] pair (payment-credential.service.ts).
+model OrgPaymentCredential {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId              String           @map("org_id") @db.Uuid
+  processor          PaymentProcessor
+  secretKeyEncrypted String           @map("secret_key_encrypted")
+  // Paystack/Stripe's publishable/public key — not secret, safe to read
+  // back to the settings UI for confirmation, unlike secretKeyEncrypted.
+  publicKey          String?          @map("public_key")
+  isActive           Boolean          @default(true) @map("is_active")
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, processor])
+  @@map("org_payment_credentials")
 }
 
 // Handbook 5.9: idempotent against replay via the provider's event ID —

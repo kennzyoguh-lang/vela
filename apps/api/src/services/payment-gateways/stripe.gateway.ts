@@ -10,6 +10,10 @@ export const stripeGateway: PaymentGatewayHandler = {
     throw new Error("Stripe is not yet configured — Paystack is the primary processor for Phase 2");
   },
 
+  peekReference() {
+    return null;
+  },
+
   verifyWebhookSignature() {
     return false;
   },
