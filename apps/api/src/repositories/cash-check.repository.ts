@@ -67,6 +67,24 @@ export async function create(
   );
 }
 
+// Staff leaderboard's cash-accountability input
+// (staff-leaderboard.service.ts) — raw rows rather than a Prisma
+// aggregation, since summing shortfalls and overages separately needs a
+// sign check `groupBy`'s `_sum` can't express; the leaderboard service
+// does that reduction in JS, the same style as pnl.service.ts#calculatePnl.
+export async function listByOrgAndRange(
+  orgId: string,
+  start: Date,
+  end: Date,
+): Promise<Pick<CashReconciliation, "staffUserId" | "matched" | "difference">[]> {
+  return withOrgScope(orgId, (tx) =>
+    tx.cashReconciliation.findMany({
+      where: { orgId, businessDate: { gte: start, lt: end } },
+      select: { staffUserId: true, matched: true, difference: true },
+    }),
+  );
+}
+
 export async function listByOrg(
   orgId: string,
   page: PageParams,

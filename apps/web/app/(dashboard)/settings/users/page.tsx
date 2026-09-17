@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShoppingBag, Briefcase, Check } from "lucide-react";
+import Link from "next/link";
 import { SettingsTemplate } from "@/components/templates/SettingsTemplate";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -223,6 +224,21 @@ export default function UsersSettingsPage() {
   return (
     <SettingsTemplate activePath="/settings/users">
       <div className="flex flex-col gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Staff leaderboard</CardTitle>
+          </CardHeader>
+          <p className="font-ui text-text-secondary text-[0.875rem]">
+            Sales volume and cash-handling accuracy for every staff member, side by side.
+          </p>
+          <Link
+            href="/leaderboard"
+            className="font-ui text-data-aiAccent mt-2 self-start text-[0.8125rem] font-semibold hover:underline"
+          >
+            View leaderboard
+          </Link>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Invite a teammate</CardTitle>

@@ -183,6 +183,20 @@ export interface StaffUserSummary {
 
 export type OwnerSummaryStatus = "matched" | "shortfall" | "overage" | "pending";
 
+// Anti-theft accountability — sales and cash-handling accuracy reported
+// side by side, deliberately never blended into one score (see
+// apps/api/src/services/staff-leaderboard.service.ts's own comment).
+export interface StaffLeaderboardEntry {
+  staffUserId: string;
+  staffName: string;
+  salesCount: number;
+  salesTotal: number;
+  cashChecksCount: number;
+  matchedCashChecksCount: number;
+  totalShortfall: number;
+  totalOverage: number;
+}
+
 export interface OwnerDailySummary {
   salesCount: number;
   expectedAmount: number;
