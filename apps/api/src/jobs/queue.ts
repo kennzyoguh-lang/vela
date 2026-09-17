@@ -21,6 +21,7 @@ export const NURTURE_EMAIL_QUEUE = "nurture-email";
 export const ACCOUNTANT_EARNINGS_GENERATION_QUEUE = "accountant-earnings-generation";
 export const INVOICE_OVERDUE_QUEUE = "invoice-overdue";
 export const QUOTE_EXPIRY_QUEUE = "quote-expiry";
+export const ACCOUNTING_PUSH_QUEUE = "accounting-push";
 
 export const reminderQueue = new Queue(REMINDER_QUEUE, { connection: jobsConnection });
 export const recurringInvoiceQueue = new Queue(RECURRING_INVOICE_QUEUE, {
@@ -41,6 +42,7 @@ export const accountantEarningsGenerationQueue = new Queue(ACCOUNTANT_EARNINGS_G
 });
 export const invoiceOverdueQueue = new Queue(INVOICE_OVERDUE_QUEUE, { connection: jobsConnection });
 export const quoteExpiryQueue = new Queue(QUOTE_EXPIRY_QUEUE, { connection: jobsConnection });
+export const accountingPushQueue = new Queue(ACCOUNTING_PUSH_QUEUE, { connection: jobsConnection });
 
 // All jobs are idempotent by design (Handbook 5.8) — safe to re-run. Retry
 // policy: 3 attempts with exponential backoff, matching the reminder/

@@ -107,33 +107,35 @@ model Organisation {
   createdAt                    DateTime         @default(now()) @map("created_at") @db.Timestamptz
   updatedAt                    DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  users                 User[]
-  sessions              UserSession[]
-  invites               OrganisationInvite[]
-  clients               Client[]
-  invoices              Invoice[]
-  recurringInvoices     RecurringInvoice[]
-  quotes                Quote[]
-  transactionMarkups    TransactionMarkup[]
-  paymentActivation     PaymentActivation?
-  orgPaymentCredentials OrgPaymentCredential[]
-  complianceObligations OrgComplianceObligation[]
-  complianceFilings     ComplianceFiling[]
-  bankAccounts          BankAccount[]
-  bankTransactions      BankTransaction[]
-  employees             Employee[]
-  payrollRuns           PayrollRun[]
-  payslips              Payslip[]
-  accountantLinks       AccountantClientLink[]
-  askVelaConversations  AskVelaConversation[]
-  askVelaMessages       AskVelaMessage[]
-  products              Product[]
-  sales                 Sale[]
-  saleItems             SaleItem[]
-  cashReconciliations   CashReconciliation[]
-  referralCodes         ReferralCode[]
-  referralConversions   ReferralConversion[]
-  accountantEarnings    AccountantEarning[]
+  users                  User[]
+  sessions               UserSession[]
+  invites                OrganisationInvite[]
+  clients                Client[]
+  invoices               Invoice[]
+  recurringInvoices      RecurringInvoice[]
+  quotes                 Quote[]
+  transactionMarkups     TransactionMarkup[]
+  paymentActivation      PaymentActivation?
+  orgPaymentCredentials  OrgPaymentCredential[]
+  accountingConnections  OrgAccountingConnection[]
+  invoiceAccountingSyncs InvoiceAccountingSync[]
+  complianceObligations  OrgComplianceObligation[]
+  complianceFilings      ComplianceFiling[]
+  bankAccounts           BankAccount[]
+  bankTransactions       BankTransaction[]
+  employees              Employee[]
+  payrollRuns            PayrollRun[]
+  payslips               Payslip[]
+  accountantLinks        AccountantClientLink[]
+  askVelaConversations   AskVelaConversation[]
+  askVelaMessages        AskVelaMessage[]
+  products               Product[]
+  sales                  Sale[]
+  saleItems              SaleItem[]
+  cashReconciliations    CashReconciliation[]
+  referralCodes          ReferralCode[]
+  referralConversions    ReferralConversion[]
+  accountantEarnings     AccountantEarning[]
 
   @@map("organisations")
 }
@@ -340,9 +342,10 @@ model Invoice {
   createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  organisation       Organisation        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  client             Client?             @relation(fields: [clientId], references: [id])
+  organisation       Organisation            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client             Client?                 @relation(fields: [clientId], references: [id])
   transactionMarkups TransactionMarkup[]
+  accountingSyncs    InvoiceAccountingSync[]
 
   @@unique([orgId, number])
   @@index([orgId, status, dueDate])
@@ -493,6 +496,69 @@ model OrgPaymentCredential {
 
   @@unique([orgId, processor])
   @@map("org_payment_credentials")
+}
+
+// F-connectors — an accounting app the org already keeps its books in.
+// Vela never reads from these; every sync is one-way (Vela -> provider),
+// so Vela's own invoice records always stay the source of truth and this
+// integration can never silently overwrite anything entered inside
+// QuickBooks/Xero itself. Wave has no supported third-party OAuth API as
+// of this writing (Wave closed its public API to new integrations), so
+// wave.gateway.ts is a stub with no working connect flow at all — listed
+// here as a provider mainly so the settings UI can say so honestly rather
+// than hiding it.
+enum AccountingProvider {
+  quickbooks
+  xero
+  wave
+
+  @@map("accounting_provider")
+}
+
+// OAuth 2.0 tokens, AES-256-GCM encrypted at rest (lib/encryption.ts) under
+// their own dedicated key (ACCOUNTING_TOKEN_ENCRYPTION_KEY_BASE64) — same
+// blast-radius isolation reasoning as OrgPaymentCredential and
+// TWO_FA_ENCRYPTION_KEY_BASE64. externalTenantId is QuickBooks' realmId /
+// Xero's tenantId, the id every subsequent API call against that connected
+// company must include; it comes back at the end of the OAuth handshake,
+// not something Vela chooses.
+model OrgAccountingConnection {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId                 String             @map("org_id") @db.Uuid
+  provider              AccountingProvider
+  externalTenantId      String             @map("external_tenant_id")
+  accessTokenEncrypted  String             @map("access_token_encrypted")
+  refreshTokenEncrypted String             @map("refresh_token_encrypted")
+  tokenExpiresAt        DateTime           @map("token_expires_at") @db.Timestamptz
+  isActive              Boolean            @default(true) @map("is_active")
+  lastSyncedAt          DateTime?          @map("last_synced_at") @db.Timestamptz
+  lastSyncError         String?            @map("last_sync_error")
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, provider])
+  @@map("org_accounting_connections")
+}
+
+// One row per (invoice, provider) push — the idempotency record that stops
+// the daily accounting-push job (accounting-push.job.ts) from creating the
+// same invoice twice in a business's connected accounting app on a retried
+// or re-scheduled run.
+model InvoiceAccountingSync {
+  id         String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId      String             @map("org_id") @db.Uuid
+  invoiceId  String             @map("invoice_id") @db.Uuid
+  provider   AccountingProvider
+  externalId String             @map("external_id")
+  syncedAt   DateTime           @default(now()) @map("synced_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([invoiceId, provider])
+  @@map("invoice_accounting_syncs")
 }
 
 // Handbook 5.9: idempotent against replay via the provider's event ID —

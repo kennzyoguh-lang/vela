@@ -21,6 +21,7 @@ import {
 } from "./accountant-earnings-generation.job";
 import { startInvoiceOverdueWorker, scheduleInvoiceOverdueScan } from "./invoice-overdue.job";
 import { startQuoteExpiryWorker, scheduleQuoteExpiryScan } from "./quote-expiry.job";
+import { startAccountingPushWorker, scheduleAccountingPushScan } from "./accounting-push.job";
 import { logger } from "../lib/logger";
 
 export async function startJobs() {
@@ -38,6 +39,7 @@ export async function startJobs() {
     startAccountantEarningsGenerationWorker(),
     startInvoiceOverdueWorker(),
     startQuoteExpiryWorker(),
+    startAccountingPushWorker(),
   ];
 
   await Promise.all([
@@ -51,6 +53,7 @@ export async function startJobs() {
     scheduleAccountantEarningsGeneration(),
     scheduleInvoiceOverdueScan(),
     scheduleQuoteExpiryScan(),
+    scheduleAccountingPushScan(),
   ]);
 
   logger.info("Background job workers started and daily schedules registered");

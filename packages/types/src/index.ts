@@ -482,6 +482,21 @@ export interface PaymentCredentialSummary {
   updatedAt: string;
 }
 
+// === Bring-your-own accounting app (F-connectors) ===
+
+export type AccountingProvider = "quickbooks" | "xero" | "wave";
+
+// Never includes any token or its encrypted form in any shape — see
+// apps/api/src/services/accounting-connection.service.ts's own comment.
+export interface AccountingConnectionSummary {
+  id: string;
+  provider: AccountingProvider;
+  isActive: boolean;
+  lastSyncedAt: string | null;
+  lastSyncError: string | null;
+  createdAt: string;
+}
+
 /** API response envelope — Engineering Handbook Part 7.6. Uniform for every endpoint. */
 export type ApiResponse<T> =
   | {
