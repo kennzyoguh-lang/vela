@@ -58,6 +58,23 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().default("Vela <notifications@vela.app>"),
   WEB_APP_URL: z.string().default("http://localhost:3000"),
+  // Optional — encrypts an org's own accounting-app OAuth tokens
+  // (org_accounting_connections table) at rest. Same "never blocks anything
+  // else, separate key from every other encryption key" contract as
+  // PAYMENT_CREDENTIAL_ENCRYPTION_KEY_BASE64 above.
+  ACCOUNTING_TOKEN_ENCRYPTION_KEY_BASE64: z.string().optional(),
+  // Optional — QuickBooks/Xero OAuth app credentials (Handbook 1.4: a
+  // missing developer-account credential must never block anything else).
+  // Unset means accounting-connection.service.ts's isProviderConfigured()
+  // reports the provider unavailable and the settings UI shows "Coming
+  // soon" instead of a broken Connect button — see PaymentConnectorsCard's
+  // identical treatment of flutterwave/stripe before those had real keys.
+  QUICKBOOKS_CLIENT_ID: z.string().optional(),
+  QUICKBOOKS_CLIENT_SECRET: z.string().optional(),
+  QUICKBOOKS_REDIRECT_URI: z.string().optional(),
+  XERO_CLIENT_ID: z.string().optional(),
+  XERO_CLIENT_SECRET: z.string().optional(),
+  XERO_REDIRECT_URI: z.string().optional(),
 });
 
 // Fails loud at boot (Handbook 1.4 "fail loud in development") rather than

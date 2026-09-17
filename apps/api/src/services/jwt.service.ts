@@ -127,6 +127,41 @@ export function verifyPasswordResetToken(token: string): VerifiedPasswordResetCl
   }) as unknown as VerifiedPasswordResetClaims;
 }
 
+export interface AccountingOAuthStateClaims {
+  sub: string; // org id
+  provider: string; // AccountingProvider — kept as string here to avoid a
+  // Prisma-generated-type import in this low-level module; the callback
+  // handler validates it against the enum before use.
+}
+
+const ACCOUNTING_OAUTH_STATE_AUDIENCE = "accounting-oauth-state";
+// Only needs to survive one round trip to the provider's consent screen and
+// back — a real user clicking through QuickBooks/Xero's own OAuth UI takes
+// seconds to minutes, never the hours a stale bookmark or replayed link
+// would need this to stay short-lived like the 2FA challenge token above.
+const ACCOUNTING_OAUTH_STATE_TTL_SECONDS = 10 * 60;
+
+// The `state` param on an OAuth 2.0 authorization request — binds the
+// provider's callback back to a specific org without ever needing a
+// server-side session store, and (Handbook 5.9's "verify before trust")
+// makes the callback itself forgeable-proof: an attacker can't redirect
+// their own authorized connection into a victim org's account without also
+// forging this signature.
+export function signAccountingOAuthState(claims: AccountingOAuthStateClaims): string {
+  return jwt.sign(claims, privateKey, {
+    algorithm: "RS256",
+    expiresIn: ACCOUNTING_OAUTH_STATE_TTL_SECONDS,
+    audience: ACCOUNTING_OAUTH_STATE_AUDIENCE,
+  });
+}
+
+export function verifyAccountingOAuthState(token: string): AccountingOAuthStateClaims {
+  return jwt.verify(token, publicKey, {
+    algorithms: ["RS256"],
+    audience: ACCOUNTING_OAUTH_STATE_AUDIENCE,
+  }) as unknown as AccountingOAuthStateClaims;
+}
+
 export function newRefreshToken(): { token: string; familyId: string } {
   // Opaque random token, not a JWT — stored hashed (session.service.ts), never
   // decodable client-side. familyId groups every rotation of one login session
