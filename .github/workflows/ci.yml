@@ -114,7 +114,8 @@ jobs:
               'TWO_FA_ENCRYPTION_KEY_BASE64=' + crypto.randomBytes(32).toString('base64') + '\n' +
               'PAYMENT_CREDENTIAL_ENCRYPTION_KEY_BASE64=' + crypto.randomBytes(32).toString('base64') + '\n' +
               'ACCOUNTING_TOKEN_ENCRYPTION_KEY_BASE64=' + crypto.randomBytes(32).toString('base64') + '\n' +
-              'PAYROLL_EXPORT_ENCRYPTION_KEY_BASE64=' + crypto.randomBytes(32).toString('base64') + '\n'
+              'PAYROLL_EXPORT_ENCRYPTION_KEY_BASE64=' + crypto.randomBytes(32).toString('base64') + '\n' +
+              'KYC_ENCRYPTION_KEY_BASE64=' + crypto.randomBytes(32).toString('base64') + '\n'
             );
           "
       - run: pnpm --filter @vela/api db:generate
