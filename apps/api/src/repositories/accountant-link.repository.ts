@@ -141,3 +141,23 @@ export async function findActiveLink(
     tx.accountantClientLink.findFirst({ where: { orgId, accountantUserId, status: "active" } }),
   );
 }
+
+export interface ActiveAccountantLinkRef {
+  orgId: string;
+  accountantEmail: string;
+}
+
+// Cross-org read for the monthly automated-accountant-report job
+// (accountant-report.job.ts) — same shape as
+// accounting-connection.repository.ts#listAllActiveRefs: a direct query as
+// api_write_role with no app.current_org_id set would return zero rows
+// under this table's RLS policy, so this goes through the
+// list_active_accountant_links() SECURITY DEFINER function instead. Every
+// other function in this file acts on one already-known org's own data via
+// withOrgScope; this is the one exception.
+export async function listAllActiveLinks(): Promise<ActiveAccountantLinkRef[]> {
+  const rows = await prisma.$queryRaw<{ org_id: string; accountant_email: string }[]>`
+    SELECT * FROM list_active_accountant_links()
+  `;
+  return rows.map((r) => ({ orgId: r.org_id, accountantEmail: r.accountant_email }));
+}
