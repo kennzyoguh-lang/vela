@@ -121,6 +121,7 @@ model Organisation {
   invoiceAccountingSyncs InvoiceAccountingSync[]
   payrollExportConfig    OrgPayrollExportConfig?
   kyc                    OrganisationKyc?
+  storedFiles            StoredFile[]
   complianceObligations  OrgComplianceObligation[]
   complianceFilings      ComplianceFiling[]
   bankAccounts           BankAccount[]
@@ -621,6 +622,32 @@ model OrganisationKyc {
   organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@map("organisation_kyc")
+}
+
+// Shared file storage — receipts (receipt-ocr.service.ts) and, soon,
+// expense-claim attachments. Content lives directly in Postgres (bytea)
+// rather than an object-storage bucket: this codebase has no
+// object-storage layer yet (see data-export.service.ts's own comment on
+// the same tradeoff), and at Horizon 1's data volumes a plain column is
+// simpler and correct — revisit only with evidence a real org's files are
+// large/frequent enough to need one. Capped at 5MB per file at the upload
+// middleware (lib/storage.ts), well within what a single Postgres row
+// comfortably holds. orgId-scoped and RLS-covered like everything else;
+// content is never returned to any client except by the one endpoint that
+// streams it back to the org that uploaded it.
+model StoredFile {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId            String   @map("org_id") @db.Uuid
+  uploadedByUserId String   @map("uploaded_by_user_id") @db.Uuid
+  mimeType         String   @map("mime_type")
+  sizeBytes        Int      @map("size_bytes")
+  content          Bytes
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@map("stored_files")
 }
 
 // Handbook 5.9: idempotent against replay via the provider's event ID —
