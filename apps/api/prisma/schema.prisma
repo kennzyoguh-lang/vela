@@ -123,6 +123,7 @@ model Organisation {
   kyc                    OrganisationKyc?
   storedFiles            StoredFile[]
   expenseClaims          ExpenseClaim[]
+  branches               Branch[]
   complianceObligations  OrgComplianceObligation[]
   complianceFilings      ComplianceFiling[]
   bankAccounts           BankAccount[]
@@ -192,10 +193,16 @@ model User {
   // reach.
   emailVerifiedAt      DateTime? @map("email_verified_at") @db.Timestamptz
   isActive             Boolean   @default(true) @map("is_active")
+  // Which physical branch this staff member works at — null for a
+  // single-branch org (the common case) or an owner/admin who isn't tied
+  // to one location. See Branch's own comment for the deliberately narrow
+  // scope of what branch-tags.
+  branchId             String?   @map("branch_id") @db.Uuid
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   organisation           Organisation           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  branch                 Branch?                @relation(fields: [branchId], references: [id], onDelete: SetNull)
   sessions               UserSession[]
   accountantLinks        AccountantClientLink[]
   askVelaConversations   AskVelaConversation[]
@@ -700,6 +707,33 @@ model ExpenseClaim {
   @@map("expense_claims")
 }
 
+// Multi-branch — scoped deliberately narrow: a physical location tag on
+// the transactional data that actually varies by location (Sale,
+// CashReconciliation) and on which staff work where (User.branchId).
+// Invoicing, payroll, compliance, and every connector stay org-wide — a
+// Nigerian SME with multiple shop floors still has one legal entity, one
+// tax filing, one payroll run; splitting those by branch is a real,
+// separate feature this doesn't attempt. branchId is nullable everywhere
+// it's added so a single-branch org (the common case) never has to tag
+// anything.
+model Branch {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId     String   @map("org_id") @db.Uuid
+  name      String
+  address   String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation        Organisation         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  staff               User[]
+  sales               Sale[]
+  cashReconciliations CashReconciliation[]
+
+  @@unique([orgId, name])
+  @@map("branches")
+}
+
 // Handbook 5.9: idempotent against replay via the provider's event ID —
 // every webhook handler checks this table before processing, regardless of
 // provider.
@@ -1132,11 +1166,16 @@ model Sale {
   // (sale.void) already records who and when; this is what stays visible
   // directly on the record for anyone looking at the sale itself.
   voidedReason   String?    @map("voided_reason")
+  // Which branch this sale happened at — auto-inferred from the acting
+  // staff user's own branchId at sale time (sale.service.ts#logSale), not
+  // user-selectable. Null for a single-branch org.
+  branchId       String?    @map("branch_id") @db.Uuid
   soldAt         DateTime   @default(now()) @map("sold_at") @db.Timestamptz
   createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz
 
   organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   staffUser    User         @relation(fields: [staffUserId], references: [id])
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
   items        SaleItem[]
 
   // Piece 2's "today's sales total" query is exactly this index.
@@ -1187,10 +1226,15 @@ model CashReconciliation {
   difference     Decimal  @db.Decimal(14, 2)
   matched        Boolean
   currency       String   @default("NGN") @db.Char(3)
+  // Which branch this cash check covers — auto-inferred from the acting
+  // staff user's own branchId, same as Sale.branchId. Null for a
+  // single-branch org.
+  branchId       String?  @map("branch_id") @db.Uuid
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
   staffUser    User         @relation(fields: [staffUserId], references: [id])
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   @@index([orgId, businessDate])
   @@map("cash_reconciliations")

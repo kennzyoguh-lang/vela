@@ -116,7 +116,10 @@ async function flagMismatchToOwner(
 export async function submitCashCheck(orgId: string, staffUserId: string, countedAmount: number) {
   const now = new Date();
   const { start, end, businessDate } = businessDayRange(now);
-  const expectedAmount = await cashCheckRepo.sumCompletedSalesTotal(orgId, start, end);
+  const [expectedAmount, staffUser] = await Promise.all([
+    cashCheckRepo.sumCompletedSalesTotal(orgId, start, end),
+    userRepo.findById(orgId, staffUserId),
+  ]);
   // `|| 0` normalizes a possible -0 (e.g. countedAmount 0.3 vs an
   // expectedAmount that floated to 0.30000000000000004) so a true match
   // never stores or returns a signed-zero difference.
@@ -131,6 +134,9 @@ export async function submitCashCheck(orgId: string, staffUserId: string, counte
     difference,
     matched,
     currency: "NGN",
+    // Same auto-inferred, never client-selectable branch tag as
+    // sale.service.ts#logSale.
+    branchId: staffUser?.branchId ?? null,
   });
 
   await auditLogRepo.write({

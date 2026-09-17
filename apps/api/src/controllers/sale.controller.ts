@@ -14,7 +14,8 @@ export async function create(req: Request, res: Response) {
 
 export async function list(req: Request, res: Response) {
   const { orgId } = getAuthContext(req);
-  const sales = await saleService.listSales(orgId, parsePageParams(req));
+  const branchId = typeof req.query.branchId === "string" ? req.query.branchId : undefined;
+  const sales = await saleService.listSales(orgId, parsePageParams(req), branchId);
   sendSuccess(res, sales);
 }
 

@@ -114,6 +114,13 @@ organisationRouter.post(
   auditLog("staff.create", "user"),
   asyncHandler(organisationController.createStaff),
 );
+// Org-wide roster (e.g. for the branch-assignment screen) — owner/admin
+// only, same tier as the create endpoint above.
+organisationRouter.get(
+  "/staff",
+  requireRole("owner", "admin"),
+  asyncHandler(organisationController.listStaff),
+);
 organisationRouter.post(
   "/staff/:userId/reset-device",
   requireRole("owner", "admin"),

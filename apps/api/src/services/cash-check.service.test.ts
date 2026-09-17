@@ -13,6 +13,7 @@ vi.mock("../repositories/audit-log.repository", () => ({
 vi.mock("../repositories/user.repository", () => ({
   findNotifiablePhones: vi.fn(),
   findNotifiableRecipients: vi.fn(),
+  findById: vi.fn(),
 }));
 vi.mock("./sms/termii.gateway", () => ({
   sendSms: vi.fn(),
@@ -103,6 +104,7 @@ describe("cash-check.service#submitCashCheck", () => {
         }) as never,
     );
     vi.mocked(userRepo.findNotifiableRecipients).mockResolvedValue([]);
+    vi.mocked(userRepo.findById).mockResolvedValue({ branchId: null } as never);
     vi.mocked(smsGateway.sendSms).mockResolvedValue(undefined);
     vi.mocked(emailGateway.sendEmail).mockResolvedValue(undefined);
     vi.mocked(businessProfileService.getBusinessProfile).mockResolvedValue(UNSURE_FACTORS as never);
@@ -143,6 +145,17 @@ describe("cash-check.service#submitCashCheck", () => {
         newValue: { expectedAmount: 15000, countedAmount: 12000, difference: -3000 },
       }),
     );
+  });
+
+  it("auto-tags the check with the acting staff member's own branch", async () => {
+    const branchId = randomUUID();
+    vi.mocked(cashCheckRepo.sumCompletedSalesTotal).mockResolvedValue(15000);
+    vi.mocked(userRepo.findById).mockResolvedValue({ branchId } as never);
+
+    const record = await cashCheckService.submitCashCheck(orgId, staffUserId, 15000);
+
+    expect(cashCheckRepo.create).toHaveBeenCalledWith(orgId, expect.objectContaining({ branchId }));
+    expect(record).toMatchObject({ branchId });
   });
 
   it("treats sub-kobo floating point drift as a match rather than a false mismatch", async () => {

@@ -108,6 +108,23 @@ export interface StaffUserSummary {
   // backup codes/API keys are shown once at creation and never again. An
   // owner-supplied PIN is never echoed back — they already know it.
   generatedPin?: string;
+  branchId?: string | null;
+}
+
+// Org-wide roster for management screens (e.g. assigning staff to a
+// branch) — same sanitized shape as createStaffUser's return value, never
+// the raw Prisma User row.
+export async function listStaffUsers(orgId: string): Promise<StaffUserSummary[]> {
+  const users = await userRepo.listByOrg(orgId);
+  return users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    phone: u.phone,
+    role: u.role,
+    isActive: u.isActive,
+    createdAt: u.createdAt,
+    branchId: u.branchId,
+  }));
 }
 
 function generateStaffPin(): string {

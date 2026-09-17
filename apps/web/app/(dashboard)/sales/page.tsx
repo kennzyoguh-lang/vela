@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Page, Sale } from "@vela/types";
+import type { Branch, Page, Sale } from "@vela/types";
 import { ListTemplate } from "@/components/templates/ListTemplate";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -24,10 +24,22 @@ export default function SalesPage() {
   const [voidingId, setVoidingId] = useState<string | null>(null);
   const [voidReason, setVoidReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [branchFilter, setBranchFilter] = useState("");
+
+  // 404s (rather than an empty list) for a staff-role caller — this page is
+  // owner/admin only, so the request never fires for anyone who'd hit that.
+  const { data: branches } = useQuery({
+    queryKey: ["branches"],
+    queryFn: () => api.get<Branch[]>("/v1/branches"),
+    staleTime: 5 * 60_000,
+  });
 
   const { data: salePage, isLoading } = useQuery({
-    queryKey: ["sales"],
-    queryFn: () => api.get<Page<Sale>>("/v1/sales?pageSize=100"),
+    queryKey: ["sales", branchFilter],
+    queryFn: () =>
+      api.get<Page<Sale>>(
+        `/v1/sales?pageSize=100${branchFilter ? `&branchId=${branchFilter}` : ""}`,
+      ),
     staleTime: 30_000,
   });
   const sales = salePage?.items;
@@ -45,7 +57,25 @@ export default function SalesPage() {
   });
 
   return (
-    <ListTemplate title="Sales">
+    <ListTemplate
+      title="Sales"
+      filters={
+        branches && branches.length > 0 ? (
+          <select
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            className="border-border bg-surface-raised font-ui text-text-primary h-9 rounded-sm border px-3 text-[0.8125rem]"
+          >
+            <option value="">All branches</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        ) : undefined
+      }
+    >
       {isLoading ? (
         <div className="flex flex-col gap-2">
           <Skeleton className="h-20 w-full" />

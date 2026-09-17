@@ -1,6 +1,7 @@
 import * as productRepo from "../repositories/product.repository";
 import * as saleRepo from "../repositories/sale.repository";
 import * as organisationRepo from "../repositories/organisation.repository";
+import * as userRepo from "../repositories/user.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
 import { verifyPassword } from "./password.service";
 import {
@@ -94,12 +95,19 @@ export async function logSale(
 
   const total = subtotal - discountAmount;
 
+  // Auto-inferred from the acting staff member's own assigned branch — never
+  // client-selectable, same "server derives it" precedent as price above.
+  // Null for a single-branch org or a staff member with no branch assigned.
+  const staffUser = await userRepo.findById(orgId, staffUserId);
+  const branchId = staffUser?.branchId ?? null;
+
   const sale = await saleRepo.createSale(orgId, {
     staffUserId,
     total,
     discountAmount,
     currency,
     customerName: input.customerName,
+    branchId,
     items,
   });
 
@@ -117,8 +125,8 @@ export async function logSale(
   return sale;
 }
 
-export async function listSales(orgId: string, page: PageParams) {
-  return saleRepo.listByOrg(orgId, page);
+export async function listSales(orgId: string, page: PageParams, branchId?: string) {
+  return saleRepo.listByOrg(orgId, page, branchId);
 }
 
 /**
