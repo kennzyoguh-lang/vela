@@ -7,6 +7,8 @@ vi.mock("../repositories/product.repository", () => ({
 vi.mock("../repositories/sale.repository", () => ({
   createSale: vi.fn(),
   listByOrg: vi.fn(),
+  findById: vi.fn(),
+  voidSale: vi.fn(),
 }));
 vi.mock("../repositories/organisation.repository", () => ({
   findOrganisationById: vi.fn(),
@@ -261,5 +263,44 @@ describe("sale.service#logSale — discount approval (anti-theft Piece 4)", () =
       orgId,
       expect.objectContaining({ discountAmount: 100 }),
     );
+  });
+});
+
+describe("sale.service#voidSale", () => {
+  const orgId = randomUUID();
+  const saleId = randomUUID();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("voids a completed sale with the given reason", async () => {
+    vi.mocked(saleRepo.findById).mockResolvedValue({ id: saleId, status: "completed" } as never);
+    vi.mocked(saleRepo.voidSale).mockResolvedValue({
+      id: saleId,
+      status: "voided",
+      voidedReason: "Rang up wrong item",
+    } as never);
+
+    const result = await saleService.voidSale(orgId, saleId, "Rang up wrong item");
+
+    expect(saleRepo.voidSale).toHaveBeenCalledWith(orgId, saleId, "Rang up wrong item");
+    expect(result).toMatchObject({ status: "voided" });
+  });
+
+  it("throws when the sale doesn't exist", async () => {
+    vi.mocked(saleRepo.findById).mockResolvedValue(null);
+
+    await expect(saleService.voidSale(orgId, saleId, "reason")).rejects.toThrow(/not found/);
+    expect(saleRepo.voidSale).not.toHaveBeenCalled();
+  });
+
+  it("refuses to void a sale that's already voided", async () => {
+    vi.mocked(saleRepo.findById).mockResolvedValue({ id: saleId, status: "voided" } as never);
+
+    await expect(saleService.voidSale(orgId, saleId, "reason")).rejects.toThrow(
+      /already been voided/,
+    );
+    expect(saleRepo.voidSale).not.toHaveBeenCalled();
   });
 });

@@ -120,3 +120,23 @@ export async function logSale(
 export async function listSales(orgId: string, page: PageParams) {
   return saleRepo.listByOrg(orgId, page);
 }
+
+/**
+ * SaleStatus has had "voided" as a value since Piece 1 shipped, but no code
+ * path ever actually set it — this is the first one. Owner/admin only
+ * (sale.routes.ts): a staff member voiding their own sale unilaterally is
+ * exactly the anti-theft risk this guardrail exists to prevent (same
+ * reasoning as the discount-approval PIN above). Once voided, the sale
+ * drops out of getDailyStats/getStatsByStaff's "completed" filter
+ * immediately — cash-check.service.ts recomputes expected cash fresh on
+ * every check rather than snapshotting it, so a stale expected-cash figure
+ * never lingers after a correction.
+ */
+export async function voidSale(orgId: string, saleId: string, reason: string) {
+  const sale = await saleRepo.findById(orgId, saleId);
+  if (!sale) throw new NotFoundError("Sale not found");
+  if (sale.status === "voided") {
+    throw new BusinessRuleViolationError("This sale has already been voided");
+  }
+  return saleRepo.voidSale(orgId, saleId, reason);
+}

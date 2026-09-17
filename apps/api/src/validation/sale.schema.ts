@@ -21,4 +21,8 @@ export const createSaleSchema = z.object({
     .optional(),
 });
 
+export const voidSaleSchema = z.object({
+  reason: z.string().min(1).max(500),
+});
+
 export type CreateSaleInput = z.infer<typeof createSaleSchema>;

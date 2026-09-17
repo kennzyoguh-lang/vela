@@ -19,3 +19,12 @@ saleRouter.post(
 // Owner/admin reporting — unused by Piece 1's UI, present so Piece 2 (cash
 // reconciliation) doesn't need a schema/route change.
 saleRouter.get("/", requireRole("owner", "admin"), asyncHandler(saleController.list));
+// Owner/admin only — a staff member voiding their own sale unilaterally is
+// exactly the anti-theft risk this guardrail exists to prevent (same
+// reasoning as invoice.routes.ts's own void endpoint).
+saleRouter.post(
+  "/:saleId/void",
+  requireRole("owner", "admin"),
+  auditLog("sale.void", "sale"),
+  asyncHandler(saleController.voidSale),
+);
