@@ -385,6 +385,31 @@ export interface BankTransaction {
   narration: string;
   transactionDate: string;
   createdAt: string;
+  matchedInvoiceId: string | null;
+  matchedAt: string | null;
+}
+
+// === Bank reconciliation (F-connectors adjacent — a business paid by direct
+// bank transfer, not through Vela's own payment portal) ===
+
+export type MatchConfidence = "exact" | "close";
+
+export interface InvoiceMatchCandidate {
+  invoiceId: string;
+  invoiceNumber: string;
+  clientId: string | null;
+  total: number;
+  dueDate: string;
+  confidence: MatchConfidence;
+  daysFromDueDate: number;
+}
+
+export interface ReconciliationSuggestion {
+  transactionId: string;
+  amount: number;
+  narration: string;
+  transactionDate: string;
+  candidates: InvoiceMatchCandidate[];
 }
 
 export interface PnlStatement {

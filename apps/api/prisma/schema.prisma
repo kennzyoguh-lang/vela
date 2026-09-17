@@ -343,10 +343,11 @@ model Invoice {
   createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt          DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  organisation       Organisation            @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  client             Client?                 @relation(fields: [clientId], references: [id])
-  transactionMarkups TransactionMarkup[]
-  accountingSyncs    InvoiceAccountingSync[]
+  organisation            Organisation            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client                  Client?                 @relation(fields: [clientId], references: [id])
+  transactionMarkups      TransactionMarkup[]
+  accountingSyncs         InvoiceAccountingSync[]
+  matchedBankTransactions BankTransaction[]
 
   @@unique([orgId, number])
   @@index([orgId, status, dueDate])
@@ -757,12 +758,26 @@ model BankTransaction {
   narration             String
   transactionDate       DateTime            @map("transaction_date") @db.Date
   createdAt             DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  // Bank reconciliation (reconciliation.service.ts) — an incoming credit
+  // matched to the invoice it settled, for a customer who paid by direct
+  // bank transfer rather than through Vela's own payment portal/gateway.
+  // Nullable, one-directional (transaction -> invoice), and deliberately
+  // NOT the mechanism that marks an invoice paid by itself: confirming a
+  // match calls invoice.service.ts#markPaid explicitly, so this column is
+  // always a record of what already happened, never a second, competing
+  // way for an invoice to become paid. At most one invoice per transaction
+  // (no split/partial-payment matching in this version — the same
+  // full-amount-only scope invoice.service.ts#markPaid already has).
+  matchedInvoiceId      String?             @map("matched_invoice_id") @db.Uuid
+  matchedAt             DateTime?           @map("matched_at") @db.Timestamptz
 
-  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  bankAccount  BankAccount  @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  organisation   Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  bankAccount    BankAccount  @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  matchedInvoice Invoice?     @relation(fields: [matchedInvoiceId], references: [id])
 
   @@unique([bankAccountId, providerTransactionId])
   @@index([orgId, transactionDate])
+  @@index([matchedInvoiceId])
   @@map("bank_transactions")
 }
 

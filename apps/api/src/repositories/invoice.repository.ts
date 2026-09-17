@@ -123,6 +123,17 @@ export async function listAllByOrg(
   );
 }
 
+// Bank reconciliation's candidate pool (reconciliation.service.ts) —
+// anything that could still be settled by an incoming bank transfer.
+export async function listUnpaid(orgId: string): Promise<Invoice[]> {
+  return withOrgScope(orgId, (tx) =>
+    tx.invoice.findMany({
+      where: { orgId, status: { notIn: ["paid", "written_off", "void", "draft"] } },
+      orderBy: { dueDate: "asc" },
+    }),
+  );
+}
+
 export async function listOverdue(orgId: string, asOfDate: Date): Promise<Invoice[]> {
   return withOrgScope(orgId, (tx) =>
     tx.invoice.findMany({

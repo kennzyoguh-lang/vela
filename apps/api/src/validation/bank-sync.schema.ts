@@ -28,6 +28,11 @@ export const pnlRangeSchema = z.object({
   to: z.coerce.date(),
 });
 
+export const confirmReconciliationMatchSchema = z.object({
+  invoiceId: z.string().uuid(),
+});
+
 export type LinkAccountInput = z.infer<typeof linkAccountSchema>;
 export type RecategorizeInput = z.infer<typeof recategorizeSchema>;
 export type PnlRangeInput = z.infer<typeof pnlRangeSchema>;
+export type ConfirmReconciliationMatchInput = z.infer<typeof confirmReconciliationMatchSchema>;
