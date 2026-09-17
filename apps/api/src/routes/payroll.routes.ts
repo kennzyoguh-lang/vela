@@ -32,3 +32,8 @@ payrollRouter.get(
   requireRole("owner", "admin"),
   asyncHandler(payrollController.downloadPayslipPdf),
 );
+payrollRouter.get(
+  "/:runId/export.csv",
+  requireRole("owner", "admin"),
+  asyncHandler(payrollController.exportCsv),
+);

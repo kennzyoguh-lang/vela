@@ -75,6 +75,13 @@ const envSchema = z.object({
   XERO_CLIENT_ID: z.string().optional(),
   XERO_CLIENT_SECRET: z.string().optional(),
   XERO_REDIRECT_URI: z.string().optional(),
+  // Optional — encrypts the Vela-generated webhook signing secret an org
+  // uses to verify its own third-party payroll app's outbound deliveries
+  // (org_payroll_export_configs table). Same isolation reasoning as every
+  // other encryption key above: a missing key means only this one opt-in
+  // feature fails loudly at its own call site (payroll-export.service.ts),
+  // never anything else.
+  PAYROLL_EXPORT_ENCRYPTION_KEY_BASE64: z.string().optional(),
 });
 
 // Fails loud at boot (Handbook 1.4 "fail loud in development") rather than

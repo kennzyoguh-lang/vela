@@ -1,6 +1,7 @@
 import * as employeeRepo from "../repositories/employee.repository";
 import * as payrollRunRepo from "../repositories/payroll-run.repository";
 import * as payslipRepo from "../repositories/payslip.repository";
+import * as payrollExportService from "./payroll-export.service";
 import { calculateMonthlyPaye } from "./paye-calculator";
 import { NotFoundError, BusinessRuleViolationError } from "../lib/errors";
 import type { Employee } from "@prisma/client";
@@ -82,5 +83,12 @@ export async function getRun(orgId: string, runId: string) {
 export async function markRunPaid(orgId: string, runId: string) {
   const run = await payrollRunRepo.findById(orgId, runId);
   if (!run) throw new NotFoundError("Payroll run not found");
-  return payrollRunRepo.markPaid(orgId, runId);
+  const paidRun = await payrollRunRepo.markPaid(orgId, runId);
+  // Fire-and-forget in effect, but awaited: deliverPayrollRunExport never
+  // throws (every failure path is caught and recorded internally), so this
+  // adds one webhook round-trip's latency to marking payroll paid without
+  // ever being able to fail that action itself (F-connectors' generic
+  // third-party payroll export, approved alongside the accounting connector).
+  await payrollExportService.deliverPayrollRunExport(orgId, runId);
+  return paidRun;
 }

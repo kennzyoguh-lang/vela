@@ -46,6 +46,17 @@ export async function listActiveByOrg(orgId: string): Promise<Employee[]> {
   );
 }
 
+// Batched lookup for a known set of ids (payroll-export.service.ts's CSV/
+// webhook export) — deliberately not filtered to isActive, unlike
+// listActiveByOrg above: a payroll run may include an employee who has
+// since left, and their historic payslip must still export correctly.
+export async function listByIds(orgId: string, employeeIds: string[]): Promise<Employee[]> {
+  if (employeeIds.length === 0) return [];
+  return withOrgScope(orgId, (tx) =>
+    tx.employee.findMany({ where: { orgId, id: { in: employeeIds } } }),
+  );
+}
+
 export async function update(
   orgId: string,
   employeeId: string,
