@@ -122,6 +122,7 @@ model Organisation {
   payrollExportConfig    OrgPayrollExportConfig?
   kyc                    OrganisationKyc?
   storedFiles            StoredFile[]
+  expenseClaims          ExpenseClaim[]
   complianceObligations  OrgComplianceObligation[]
   complianceFilings      ComplianceFiling[]
   bankAccounts           BankAccount[]
@@ -194,12 +195,14 @@ model User {
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  organisation         Organisation           @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  sessions             UserSession[]
-  accountantLinks      AccountantClientLink[]
-  askVelaConversations AskVelaConversation[]
-  sales                Sale[]
-  cashReconciliations  CashReconciliation[]
+  organisation           Organisation           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  sessions               UserSession[]
+  accountantLinks        AccountantClientLink[]
+  askVelaConversations   AskVelaConversation[]
+  sales                  Sale[]
+  cashReconciliations    CashReconciliation[]
+  expenseClaimsSubmitted ExpenseClaim[]         @relation("ExpenseClaimSubmitter")
+  expenseClaimsReviewed  ExpenseClaim[]         @relation("ExpenseClaimReviewer")
 
   @@index([orgId])
   @@map("users")
@@ -644,10 +647,57 @@ model StoredFile {
   content          Bytes
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  organisation  Organisation   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  expenseClaims ExpenseClaim[]
 
   @@index([orgId])
   @@map("stored_files")
+}
+
+enum ExpenseClaimStatus {
+  pending
+  approved
+  rejected
+
+  @@map("expense_claim_status")
+}
+
+// Reimbursement tracking, not a P&L input — deliberately never merged into
+// pnl.service.ts's calculation, which derives purely from categorized
+// BankTransaction rows. A claim is "money someone says they spent," not
+// "money that left the business's bank account" — those are genuinely
+// different facts (a claim can be submitted, rejected, or sit pending for
+// weeks before any transfer happens), and conflating them would silently
+// double-count or mistime real expenses once the actual reimbursement
+// transfer later shows up and gets categorized on its own. submittedByUserId
+// references User, not Employee — Employee has no login and exists purely
+// for payroll (see its own model comment); any authenticated org member can
+// submit a claim for themselves.
+model ExpenseClaim {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId             String              @map("org_id") @db.Uuid
+  submittedByUserId String              @map("submitted_by_user_id") @db.Uuid
+  category          TransactionCategory
+  vendor            String
+  amount            Decimal             @db.Decimal(14, 2)
+  currency          String              @default("NGN") @db.Char(3)
+  expenseDate       DateTime            @map("expense_date") @db.Date
+  description       String?
+  receiptFileId     String?             @map("receipt_file_id") @db.Uuid
+  status            ExpenseClaimStatus  @default(pending)
+  reviewedByUserId  String?             @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt        DateTime?           @map("reviewed_at") @db.Timestamptz
+  reviewNote        String?             @map("review_note")
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation    Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  receiptFile     StoredFile?  @relation(fields: [receiptFileId], references: [id])
+  submittedByUser User         @relation("ExpenseClaimSubmitter", fields: [submittedByUserId], references: [id])
+  reviewedByUser  User?        @relation("ExpenseClaimReviewer", fields: [reviewedByUserId], references: [id])
+
+  @@index([orgId, status])
+  @@map("expense_claims")
 }
 
 // Handbook 5.9: idempotent against replay via the provider's event ID —

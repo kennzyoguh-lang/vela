@@ -31,6 +31,7 @@ import { accountingConnectionCallbackRouter } from "./accounting-connection-call
 import { payrollExportRouter } from "./payroll-export.routes";
 import { staffLeaderboardRouter } from "./staff-leaderboard.routes";
 import { receiptRouter } from "./receipt.routes";
+import { expenseClaimRouter } from "./expense-claim.routes";
 
 // URL path versioning (Handbook 7.4) — a breaking change gets /v2, never an
 // in-place change to /v1.
@@ -67,6 +68,7 @@ v1Router.use("/accounting-connections", accountingConnectionRouter);
 v1Router.use("/payroll-export-config", payrollExportRouter);
 v1Router.use("/staff-leaderboard", staffLeaderboardRouter);
 v1Router.use("/receipts", receiptRouter);
+v1Router.use("/expense-claims", expenseClaimRouter);
 // Public, unauthenticated — Design System 6.13's payment portal.
 v1Router.use("/pay", paymentPortalRouter);
 // Public, unauthenticated — same shape as /pay above, for quotes (F-57).
