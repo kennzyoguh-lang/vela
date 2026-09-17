@@ -497,6 +497,18 @@ export interface AccountingConnectionSummary {
   createdAt: string;
 }
 
+// === Generic third-party payroll webhook export (F-connectors) ===
+
+// Never includes the signing secret — see
+// apps/api/src/services/payroll-export.service.ts's own comment on why it
+// is shown only once, at configure/regenerate time.
+export interface PayrollExportConfigSummary {
+  webhookUrl: string;
+  isActive: boolean;
+  lastDeliveryAt: string | null;
+  lastDeliveryError: string | null;
+}
+
 /** API response envelope — Engineering Handbook Part 7.6. Uniform for every endpoint. */
 export type ApiResponse<T> =
   | {

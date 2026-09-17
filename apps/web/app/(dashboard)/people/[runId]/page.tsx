@@ -11,7 +11,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PayslipRow } from "@/components/modules/PayslipRow";
 import { formatMoney } from "@/lib/format";
-import { api, ApiError } from "@/lib/api/client";
+import { api, ApiError, downloadAuthenticatedFile } from "@/lib/api/client";
 
 export default function PayrollRunDetailPage() {
   const params = useParams<{ runId: string }>();
@@ -46,6 +46,18 @@ export default function PayrollRunDetailPage() {
       setActionError(err instanceof ApiError ? err.message : "Couldn't mark this run as paid."),
   });
 
+  async function handleExportCsv() {
+    setActionError(null);
+    try {
+      await downloadAuthenticatedFile(
+        `/v1/payroll-runs/${params.runId}/export.csv`,
+        `payroll-${run?.periodLabel ?? params.runId}.csv`,
+      );
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Couldn't export this run.");
+    }
+  }
+
   if (isLoading || !run) {
     return (
       <div className="flex flex-col gap-4">
@@ -76,11 +88,16 @@ export default function PayrollRunDetailPage() {
             <span className="font-data tabular-nums">{formatMoney(run.totalNetPay, "NGN")}</span>
           </p>
         </div>
-        {run.status === "draft" ? (
-          <Button loading={markPaidMutation.isPending} onClick={() => markPaidMutation.mutate()}>
-            Mark as paid
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={handleExportCsv}>
+            Export CSV
           </Button>
-        ) : null}
+          {run.status === "draft" ? (
+            <Button loading={markPaidMutation.isPending} onClick={() => markPaidMutation.mutate()}>
+              Mark as paid
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {actionError ? <Alert variant="danger" title={actionError} /> : null}

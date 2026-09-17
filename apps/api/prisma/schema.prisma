@@ -119,6 +119,7 @@ model Organisation {
   orgPaymentCredentials  OrgPaymentCredential[]
   accountingConnections  OrgAccountingConnection[]
   invoiceAccountingSyncs InvoiceAccountingSync[]
+  payrollExportConfig    OrgPayrollExportConfig?
   complianceObligations  OrgComplianceObligation[]
   complianceFilings      ComplianceFiling[]
   bankAccounts           BankAccount[]
@@ -559,6 +560,36 @@ model InvoiceAccountingSync {
 
   @@unique([invoiceId, provider])
   @@map("invoice_accounting_syncs")
+}
+
+// F-connectors — a generic, provider-agnostic connection for a third-party
+// payroll app, for a business that doesn't want to use Vela's own payroll.
+// Unlike QuickBooks/Xero, no single payroll provider has a comparable
+// standard OAuth API (most Nigerian payroll apps are closed systems with no
+// public integration surface at all) — so this is Vela AS THE SENDER of a
+// signed outbound webhook to a URL the org supplies, the same shape
+// Shopify/GitHub use for their own outbound webhooks, rather than Vela
+// authenticating INTO a specific provider. webhookSecretEncrypted is
+// Vela-generated (never entered by the org, unlike OrgPaymentCredential's
+// secretKeyEncrypted) and shown to the org exactly once at creation/
+// regeneration, exactly like an API key — its only purpose is letting the
+// org's own receiving system verify a delivery genuinely came from Vela.
+// One row per org (not per provider, unlike the two connector tables
+// above) since there is exactly one webhook URL to deliver to.
+model OrgPayrollExportConfig {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orgId                  String    @unique @map("org_id") @db.Uuid
+  webhookUrl             String    @map("webhook_url")
+  webhookSecretEncrypted String    @map("webhook_secret_encrypted")
+  isActive               Boolean   @default(true) @map("is_active")
+  lastDeliveryAt         DateTime? @map("last_delivery_at") @db.Timestamptz
+  lastDeliveryError      String?   @map("last_delivery_error")
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("org_payroll_export_configs")
 }
 
 // Handbook 5.9: idempotent against replay via the provider's event ID —

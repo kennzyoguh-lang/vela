@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import * as payrollService from "../services/payroll.service";
 import * as employeeRepo from "../repositories/employee.repository";
 import * as organisationRepo from "../repositories/organisation.repository";
+import * as payrollExportService from "../services/payroll-export.service";
 import { renderPayslipPdf } from "../services/payslip-pdf.service";
 import { runPayrollSchema } from "../validation/payroll.schema";
 import { sendSuccess } from "../lib/response";
@@ -51,4 +52,20 @@ export async function downloadPayslipPdf(req: Request, res: Response) {
   const doc = renderPayslipPdf(payslip, employee, payrollRun, organisation!);
   doc.pipe(res);
   doc.end();
+}
+
+// F-connectors — a generic, importable-anywhere export of one payroll run,
+// independent of whether the org has configured a webhook
+// (payroll-export.service.ts's own comment explains the split).
+export async function exportCsv(req: Request, res: Response) {
+  const { orgId } = getAuthContext(req);
+  const { run: payrollRun } = await payrollService.getRun(orgId, req.params.runId!);
+  const csv = await payrollExportService.exportRunAsCsv(orgId, req.params.runId!);
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="payroll-${payrollRun.periodLabel}.csv"`,
+  );
+  res.send(csv);
 }

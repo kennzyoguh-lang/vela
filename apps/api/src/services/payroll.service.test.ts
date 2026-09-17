@@ -21,9 +21,13 @@ vi.mock("../repositories/payroll-run.repository", () => ({
 vi.mock("../repositories/payslip.repository", () => ({
   listByRun: vi.fn(),
 }));
+vi.mock("./payroll-export.service", () => ({
+  deliverPayrollRunExport: vi.fn(),
+}));
 
 import * as employeeRepo from "../repositories/employee.repository";
 import * as payrollRunRepo from "../repositories/payroll-run.repository";
+import * as payrollExportService from "./payroll-export.service";
 import * as payrollService from "./payroll.service";
 import { calculateMonthlyPaye } from "./paye-calculator";
 
@@ -153,6 +157,27 @@ describe("payroll.service", () => {
         /already marked paid/,
       );
       expect(payrollRunRepo.saveRun).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("markRunPaid", () => {
+    it("marks the run paid and triggers the third-party payroll export", async () => {
+      const runId = randomUUID();
+      vi.mocked(payrollRunRepo.findById).mockResolvedValue({ id: runId } as never);
+      vi.mocked(payrollRunRepo.markPaid).mockResolvedValue({ id: runId, status: "paid" } as never);
+
+      const result = await payrollService.markRunPaid(orgId, runId);
+
+      expect(result).toEqual({ id: runId, status: "paid" });
+      expect(payrollExportService.deliverPayrollRunExport).toHaveBeenCalledWith(orgId, runId);
+    });
+
+    it("throws when the run doesn't exist, without marking anything paid", async () => {
+      vi.mocked(payrollRunRepo.findById).mockResolvedValue(null);
+
+      await expect(payrollService.markRunPaid(orgId, randomUUID())).rejects.toThrow(/not found/);
+      expect(payrollRunRepo.markPaid).not.toHaveBeenCalled();
+      expect(payrollExportService.deliverPayrollRunExport).not.toHaveBeenCalled();
     });
   });
 });
