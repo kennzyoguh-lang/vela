@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
@@ -154,6 +155,10 @@ export default function MoneyPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader eyebrow="Money" title="Money" action={<MonoConnectButton />} />
+
+      <Link href="/expenses" className="font-ui text-cobalt -mt-2 inline-block text-[0.8125rem]">
+        Submit or review an expense claim →
+      </Link>
 
       <Card accent>
         <CardHeader>

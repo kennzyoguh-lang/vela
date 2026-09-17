@@ -202,6 +202,20 @@ export async function downloadAuthenticatedFile(path: string, filename: string):
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+// Multipart upload (first caller: receipt scanning) — deliberately doesn't
+// go through request() above, which always sets Content-Type: application/json
+// and JSON.stringifies the body. A FormData body needs the browser to set
+// its own Content-Type (with the multipart boundary it generates), so this
+// passes no Content-Type header at all rather than a wrong, hardcoded one.
+export async function uploadFile<T>(path: string, formData: FormData): Promise<T> {
+  const res = await authorizedFetch(path, { method: "POST", body: formData });
+  const body = (await res.json()) as ApiResponse<T>;
+  if (!body.success) {
+    throw new ApiError(body.error.code, body.error.message, res.status);
+  }
+  return body.data;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
   post: <T>(path: string, data?: unknown) =>

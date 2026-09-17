@@ -198,6 +198,47 @@ export interface StaffLeaderboardEntry {
   totalOverage: number;
 }
 
+export type ExpenseClaimCategory =
+  "cost_of_goods" | "payroll" | "rent" | "utilities" | "marketing" | "transport" | "other_expense";
+
+export type ExpenseClaimStatus = "pending" | "approved" | "rejected";
+
+// Reimbursement tracking, not a P&L input — never reflected in the P&L
+// statement (see apps/api/src/services/expense-claim.service.ts's own
+// comment on why).
+export interface ExpenseClaim {
+  id: string;
+  orgId: string;
+  submittedByUserId: string;
+  category: ExpenseClaimCategory;
+  vendor: string;
+  amount: string;
+  currency: string;
+  expenseDate: string;
+  description: string | null;
+  receiptFileId: string | null;
+  status: ExpenseClaimStatus;
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Present only on the owner/admin org-wide listing, never on "my own
+  // claims" (the viewer already knows who they are) — see
+  // expense-claim.repository.ts#listAllByOrg.
+  submittedByUser?: { name: string };
+}
+
+export interface ScannedReceipt {
+  storedFileId: string;
+  extracted: {
+    vendor: string | null;
+    amount: number | null;
+    currency: string | null;
+    date: string | null;
+  } | null;
+}
+
 export interface OwnerDailySummary {
   salesCount: number;
   expectedAmount: number;
