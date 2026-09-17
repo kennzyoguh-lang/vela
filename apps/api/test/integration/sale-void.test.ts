@@ -44,7 +44,7 @@ describe("Sale voiding (real DB, real HTTP layer)", () => {
     const productRes = await request(app)
       .post("/v1/products")
       .set("Authorization", `Bearer ${ownerAccessToken}`)
-      .send({ name: "Notebook", price: 2000, currency: "NGN", icon: "book", color: "blue" });
+      .send({ name: "Notebook", price: 2000, currency: "NGN", icon: "package", color: "blue" });
     expect(productRes.status).toBe(201);
     productId = productRes.body.data.id;
 
