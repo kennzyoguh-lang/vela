@@ -82,6 +82,35 @@ export async function getDailyStats(
   });
 }
 
+export interface StaffSalesStats {
+  staffUserId: string;
+  count: number;
+  total: number;
+}
+
+// Staff leaderboard's sales-side input (staff-leaderboard.service.ts) —
+// void sales are excluded, same as getDailyStats above, since a voided
+// sale was never real revenue to credit anyone for.
+export async function getStatsByStaff(
+  orgId: string,
+  start: Date,
+  end: Date,
+): Promise<StaffSalesStats[]> {
+  return withOrgScope(orgId, async (tx) => {
+    const groups = await tx.sale.groupBy({
+      by: ["staffUserId"],
+      where: { orgId, status: "completed", soldAt: { gte: start, lt: end } },
+      _count: { _all: true },
+      _sum: { total: true },
+    });
+    return groups.map((g) => ({
+      staffUserId: g.staffUserId,
+      count: g._count._all,
+      total: Number(g._sum.total ?? 0),
+    }));
+  });
+}
+
 // Business profiling's graduation prompts (piece 4) — detects a customer
 // name that recurs at least `minCount` times, the closest proxy for "this
 // customer keeps coming back" available today: no phone/customer-identity
