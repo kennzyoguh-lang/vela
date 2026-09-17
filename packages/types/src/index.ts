@@ -162,6 +162,7 @@ export interface Sale {
   currency: string;
   customerName: string | null;
   status: SaleStatus;
+  voidedReason: string | null;
   soldAt: string;
   createdAt: string;
   items: SaleItem[];

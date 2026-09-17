@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import * as saleService from "../services/sale.service";
-import { createSaleSchema } from "../validation/sale.schema";
+import { createSaleSchema, voidSaleSchema } from "../validation/sale.schema";
 import { sendSuccess } from "../lib/response";
 import { getAuthContext } from "../lib/auth-context";
 import { parsePageParams } from "../lib/pagination";
@@ -16,4 +16,11 @@ export async function list(req: Request, res: Response) {
   const { orgId } = getAuthContext(req);
   const sales = await saleService.listSales(orgId, parsePageParams(req));
   sendSuccess(res, sales);
+}
+
+export async function voidSale(req: Request, res: Response) {
+  const { orgId } = getAuthContext(req);
+  const { reason } = voidSaleSchema.parse(req.body);
+  const sale = await saleService.voidSale(orgId, req.params.saleId!, reason);
+  sendSuccess(res, sale);
 }

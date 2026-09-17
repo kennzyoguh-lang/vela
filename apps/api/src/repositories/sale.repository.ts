@@ -146,3 +146,16 @@ export async function listByOrg(orgId: string, page: PageParams): Promise<Page<S
     return toPage(items, total, page);
   });
 }
+
+export async function findById(orgId: string, saleId: string): Promise<Sale | null> {
+  return withOrgScope(orgId, (tx) => tx.sale.findFirst({ where: { id: saleId, orgId } }));
+}
+
+export async function voidSale(orgId: string, saleId: string, reason: string): Promise<Sale> {
+  return withOrgScope(orgId, (tx) =>
+    tx.sale.update({
+      where: { id: saleId, orgId },
+      data: { status: "voided", voidedReason: reason },
+    }),
+  );
+}

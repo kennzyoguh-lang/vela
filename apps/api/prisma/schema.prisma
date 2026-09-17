@@ -1020,6 +1020,11 @@ model Sale {
   currency       String     @default("NGN") @db.Char(3)
   customerName   String?    @map("customer_name")
   status         SaleStatus @default(completed)
+  // Same purpose as Invoice.voidedReason — owner/admin-only
+  // (sale.service.ts#voidSale), null until voided. The audit_log entry
+  // (sale.void) already records who and when; this is what stays visible
+  // directly on the record for anyone looking at the sale itself.
+  voidedReason   String?    @map("voided_reason")
   soldAt         DateTime   @default(now()) @map("sold_at") @db.Timestamptz
   createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { StaffLeaderboardEntry } from "@vela/types";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -41,6 +42,10 @@ export default function LeaderboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader eyebrow="People" title="Staff leaderboard" />
+
+      <Link href="/sales" className="font-ui text-cobalt -mt-2 inline-block text-[0.8125rem]">
+        Looking for individual sales, or need to void one? →
+      </Link>
 
       <div
         className="bg-surface-secondary rounded-pill inline-flex gap-1 self-start p-1"
