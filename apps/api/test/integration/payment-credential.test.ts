@@ -118,11 +118,16 @@ describe("Payment credentials (real DB, real HTTP layer)", () => {
         .set("Authorization", `Bearer ${ownerToken}`);
       expect(disconnectRes.status).toBe(200);
 
+      // disconnect deactivates rather than deletes (payment-credential.service.ts's
+      // disconnect doc comment) — the row still lists, just with isActive: false;
+      // the frontend is what filters to active-only for the "Connected" badge.
       const listAfterRes = await request(app)
         .get("/v1/payment-credentials")
         .set("Authorization", `Bearer ${ownerToken}`);
       expect(listAfterRes.status).toBe(200);
-      expect(listAfterRes.body.data).toEqual([]);
+      expect(listAfterRes.body.data).toEqual([
+        expect.objectContaining({ processor: "paystack", isActive: false }),
+      ]);
     },
     TEST_TIMEOUT_MS,
   );
