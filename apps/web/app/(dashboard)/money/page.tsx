@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   BankAccount,
@@ -27,8 +28,45 @@ import {
 } from "@/lib/transaction-category";
 import { api } from "@/lib/api/client";
 import { useModuleVisibility } from "@/lib/business-profile/useModuleVisibility";
+import { cn } from "@/lib/utils";
 
 type Period = "this_month" | "last_month";
+
+// Design System 4.17 — both statements on this page are the same object: a
+// titled card of label/figure rows with a bold total ruled off at the bottom
+// (see PnlStatement.tsx and CashFlowCard.tsx). One shared skeleton mirrors
+// that exactly, in place of the `h-64 w-full` and `h-48 w-full` grey blocks
+// that told the reader nothing about what was arriving.
+function StatementSkeleton({ rows }: { rows: number }) {
+  return (
+    <Card className="flex flex-col gap-3">
+      <Skeleton className="h-4 w-32" />
+      {Array.from({ length: rows }, (_, row) => (
+        <div key={row} className="flex items-center justify-between gap-4">
+          <Skeleton className="h-3.5 w-[min(45%,180px)]" />
+          <Skeleton className="h-3.5 w-24 shrink-0" />
+        </div>
+      ))}
+      <div className="border-border flex items-center justify-between gap-4 border-t pt-3">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-5 w-32 shrink-0" />
+      </div>
+    </Card>
+  );
+}
+
+// Empty and error both render inside the card the statement would have
+// occupied, so the page keeps its shape instead of collapsing to a floating
+// sentence — and both read as plain language with a way forward rather than a
+// red one-liner (the danger colour is reserved for something the owner has to
+// act on, not a request that needs retrying).
+function StatementMessage({ children }: { children: ReactNode }) {
+  return (
+    <Card>
+      <p className="font-ui text-text-secondary text-[0.875rem]">{children}</p>
+    </Card>
+  );
+}
 
 function periodRange(period: Period): { from: string; to: string } {
   const now = new Date();
@@ -45,7 +83,11 @@ export default function MoneyPage() {
   const [period, setPeriod] = useState<Period>("this_month");
   const { from, to } = periodRange(period);
 
-  const { data: accounts, isLoading: accountsLoading } = useQuery({
+  const {
+    data: accounts,
+    isLoading: accountsLoading,
+    error: accountsError,
+  } = useQuery({
     queryKey: ["bank-accounts"],
     queryFn: () => api.get<BankAccount[]>("/v1/bank-accounts"),
     staleTime: 60_000,
@@ -82,7 +124,11 @@ export default function MoneyPage() {
     enabled: visibility.fullPnl,
   });
 
-  const { data: transactionPage, isLoading: transactionsLoading } = useQuery({
+  const {
+    data: transactionPage,
+    isLoading: transactionsLoading,
+    error: transactionsError,
+  } = useQuery({
     queryKey: ["bank-transactions"],
     queryFn: () => api.get<Page<BankTransaction>>("/v1/bank-transactions?pageSize=100"),
     staleTime: 30_000,
@@ -113,11 +159,37 @@ export default function MoneyPage() {
           <CardTitle eyebrow>Cash position</CardTitle>
         </CardHeader>
         {accountsLoading ? (
-          <Skeleton className="h-8 w-1/3" />
-        ) : !accounts || accounts.length === 0 ? (
+          // Design System 4.17 — the skeleton is the real layout with the
+          // words taken out: the 1.5rem total, then one row per account card.
+          // A lone `h-8 w-1/3` bar told the user nothing about what was coming.
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-7 w-[45%] max-w-[220px]" />
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-[68px] w-full" />
+              <Skeleton className="h-[68px] w-full" />
+            </div>
+          </div>
+        ) : accountsError ? (
+          // Previously a failed request fell through to the empty branch below
+          // and told the owner "No bank accounts connected yet." — an
+          // outright false statement about their own money, and the one thing
+          // this page must never get wrong.
           <p className="font-ui text-text-secondary text-[0.875rem]">
-            No bank accounts connected yet.
+            We couldn&apos;t reach your bank accounts just now. Your balances are safe — refresh in
+            a moment to try again.
           </p>
+        ) : !accounts || accounts.length === 0 ? (
+          // Design System 4.18 — a first-use empty state names the next action
+          // instead of stating an absence. The connect control is repeated
+          // here rather than only in the page header, where a new owner with
+          // nothing on screen has to go hunting for it.
+          <div className="flex flex-col items-start gap-3">
+            <p className="font-ui text-text-secondary text-[0.875rem]">
+              Connect a bank account and Vela keeps your balance, transactions and P&amp;L up to
+              date on its own.
+            </p>
+            <MonoConnectButton />
+          </div>
         ) : (
           <>
             <p className="font-data text-text-primary mb-3 text-[1.5rem] font-bold tabular-nums">
@@ -133,18 +205,39 @@ export default function MoneyPage() {
       </Card>
 
       {visibility.fullPnl ? (
-        <>
-          <div className="flex gap-2">
+        // The period toggle governs the two statements underneath it, so it
+        // sits 12px from them inside one group rather than floating at the
+        // page's uniform 24px rhythm, equidistant from the cash card above
+        // that it has nothing to do with.
+        <section className="flex flex-col gap-3" aria-label="Profit, loss and cash flow">
+          {/* A real segmented control: one recessed track, the selected
+              segment raised out of it. The previous version gave the selected
+              period `bg-midnight`, which IS --surface-canvas in dark theme —
+              so the chosen period vanished into the page while the unchosen
+              one sat on a lighter chip, reading as selected. The track/raised
+              pairing below reverses correctly in both themes because it moves
+              along the surface ramp instead of naming a fixed colour. */}
+          <div
+            className="bg-surface-secondary rounded-pill inline-flex gap-1 self-start p-1"
+            role="group"
+            aria-label="Reporting period"
+          >
             {(["this_month", "last_month"] as const).map((p) => (
               <button
                 key={p}
                 type="button"
                 onClick={() => setPeriod(p)}
-                className={`font-ui rounded-pill h-11 px-3 text-[0.8125rem] font-semibold transition-colors ${
+                // aria-pressed, not just a visual swap: which period you're
+                // reading has to survive being read aloud too.
+                aria-pressed={period === p}
+                className={cn(
+                  // h-11 kept from the original: 44px is the tap-target floor,
+                  // and a segmented control is a thumb target on mobile.
+                  "font-ui rounded-pill duration-quick h-11 px-4 text-[0.8125rem] font-semibold transition-colors",
                   period === p
-                    ? "bg-midnight text-white"
-                    : "bg-surface-secondary text-text-secondary hover:bg-surface-raised"
-                }`}
+                    ? "bg-surface-overlay text-text-primary shadow-1"
+                    : "text-text-secondary hover:text-text-primary",
+                )}
               >
                 {p === "this_month" ? "This month" : "Last month"}
               </button>
@@ -152,25 +245,29 @@ export default function MoneyPage() {
           </div>
 
           {statementLoading ? (
-            <Skeleton className="h-64 w-full" />
+            <StatementSkeleton rows={5} />
           ) : statementError ? (
-            <p className="font-ui text-status-danger text-[0.875rem]">
-              Couldn&apos;t load your P&amp;L — try again shortly.
-            </p>
+            <StatementMessage>
+              We couldn&apos;t put your P&amp;L together for this period. Try switching periods, or
+              refresh in a moment.
+            </StatementMessage>
           ) : statement ? (
             <PnlStatement statement={statement} currency={currency} />
           ) : (
-            <p className="font-ui text-text-secondary text-[0.875rem]">
-              No P&amp;L data for this period yet.
-            </p>
+            <StatementMessage>
+              No income or expenses recorded for{" "}
+              {period === "this_month" ? "this month" : "last month"} yet. Categorised transactions
+              build this statement automatically.
+            </StatementMessage>
           )}
 
           {cashFlowLoading ? (
-            <Skeleton className="h-48 w-full" />
+            <StatementSkeleton rows={3} />
           ) : cashFlowError ? (
-            <p className="font-ui text-status-danger text-[0.875rem]">
-              Couldn&apos;t load your cash flow — try again shortly.
-            </p>
+            <StatementMessage>
+              We couldn&apos;t work out your cash flow for this period. Refresh in a moment to try
+              again.
+            </StatementMessage>
           ) : cashFlowStatement ? (
             <CashFlowCard
               statement={cashFlowStatement}
@@ -178,7 +275,7 @@ export default function MoneyPage() {
               currency={currency}
             />
           ) : null}
-        </>
+        </section>
       ) : null}
 
       <Card accent>
@@ -186,60 +283,111 @@ export default function MoneyPage() {
           <CardTitle eyebrow>Transactions</CardTitle>
         </CardHeader>
         {transactionsLoading ? (
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        ) : !transactions || transactions.length === 0 ? (
-          <p className="font-ui text-text-secondary text-[0.875rem]">No transactions synced yet.</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {transactions.map((tx) => (
-              <div
-                key={tx.id}
-                className="border-border flex items-center justify-between gap-3 border-b py-2 last:border-b-0"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-ui text-text-primary truncate text-[0.875rem]">
-                    {tx.narration}
-                  </p>
-                  <p className="text-text-secondary font-mono text-[0.75rem]">
-                    {new Date(tx.transactionDate).toLocaleDateString()}
-                  </p>
+          // Design System 4.17 — three rows shaped like real ones (narration
+          // over date on the left, figure on the right), not two grey slabs.
+          <div className="divide-border flex flex-col divide-y">
+            {[0, 1, 2].map((row) => (
+              <div key={row} className="flex items-center justify-between gap-3 py-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <Skeleton className="h-3.5 w-[min(70%,260px)]" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
-                <p
-                  className={`font-data shrink-0 text-[0.875rem] font-bold tabular-nums ${
-                    tx.type === "credit" ? "text-sage" : "text-text-primary"
-                  }`}
-                >
-                  {tx.type === "credit" ? "+" : "-"}
-                  {formatMoney(tx.amount, currency)}
-                </p>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Badge
-                    status={categoryBadgeStatus(tx.category)}
-                    label={categoryLabel(tx.category)}
-                  />
-                  <select
-                    aria-label="Recategorize transaction"
-                    value={tx.category}
-                    onChange={(e) =>
-                      recategorizeMutation.mutate({
-                        id: tx.id,
-                        category: e.target.value as TransactionCategory,
-                      })
-                    }
-                    className="border-border bg-surface-raised font-ui text-text-primary h-8 rounded-sm border px-2 text-[0.75rem]"
-                  >
-                    {RECATEGORIZABLE_CATEGORIES.map((category) => (
-                      <option key={category} value={category}>
-                        {categoryLabel(category)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <Skeleton className="h-4 w-24 shrink-0" />
               </div>
             ))}
+          </div>
+        ) : transactionsError ? (
+          // Same correction as the cash card above — a failed request used to
+          // render as "No transactions synced yet.", which reads as a fact
+          // about the account rather than a problem with the connection.
+          <p className="font-ui text-text-secondary text-[0.875rem]">
+            We couldn&apos;t load your transactions just now. Refresh in a moment to try again.
+          </p>
+        ) : !transactions || transactions.length === 0 ? (
+          <p className="font-ui text-text-secondary text-[0.875rem]">
+            {accounts && accounts.length > 0
+              ? "No transactions yet. New ones appear here automatically once your bank sends them through — usually within a day."
+              : "Transactions appear here automatically once a bank account is connected."}
+          </p>
+        ) : (
+          <div className="divide-border flex flex-col divide-y">
+            {transactions.map((tx) => {
+              const pending =
+                recategorizeMutation.isPending && recategorizeMutation.variables?.id === tx.id;
+              return (
+                <div
+                  key={tx.id}
+                  // At 375px the old single row crushed narration, amount,
+                  // badge and a <select> into one line. Below sm the row
+                  // becomes two bands — identity above, money and category
+                  // below — and only re-forms as one line when there's room.
+                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-ui text-text-primary truncate text-[0.875rem]">
+                      {tx.narration}
+                    </p>
+                    {/* font-data, not font-mono: font-mono is Tailwind's own
+                        default stack and bypasses --font-data, so this date
+                        was the one figure on the page not set in the ledger
+                        typeface (Handbook 4.4). */}
+                    <p className="font-data text-text-secondary mt-0.5 text-[0.75rem] tabular-nums">
+                      {new Date(tx.transactionDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 sm:shrink-0">
+                    <p
+                      className={cn(
+                        "font-data shrink-0 text-[0.875rem] font-bold tabular-nums",
+                        // Sign and colour together, never colour alone
+                        // (Design System 4.14) — the +/- already carries the
+                        // meaning for anyone who can't separate sage from
+                        // the body colour.
+                        tx.type === "credit" ? "text-sage" : "text-text-primary",
+                      )}
+                    >
+                      {tx.type === "credit" ? "+" : "-"}
+                      {formatMoney(tx.amount, currency)}
+                    </p>
+                    <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
+                      <Badge
+                        status={categoryBadgeStatus(tx.category)}
+                        label={categoryLabel(tx.category)}
+                      />
+                      <select
+                        aria-label={`Recategorize ${tx.narration}`}
+                        value={tx.category}
+                        // Recategorising re-runs the P&L behind the scenes;
+                        // without this the control stayed live and identical
+                        // through the round trip, so a slow connection looked
+                        // like the change hadn't registered.
+                        disabled={pending}
+                        onChange={(e) =>
+                          recategorizeMutation.mutate({
+                            id: tx.id,
+                            category: e.target.value as TransactionCategory,
+                          })
+                        }
+                        // h-10, not h-8/h-9: tailwind.config.ts's `spacing`
+                        // block redefines keys 0-9, so `h-8` resolves to
+                        // --space-8 (64px) and `h-9` to --space-9 (96px) —
+                        // this control was rendering ~2x its intended height.
+                        // 10-12 are untouched by that block and behave as the
+                        // normal sizing scale, and 40px sits just under the
+                        // Badge it's paired with.
+                        className="border-border bg-surface-raised font-ui text-text-primary hover:border-border-strong duration-quick h-10 rounded-sm border px-2 text-[0.75rem] transition-colors disabled:opacity-50"
+                      >
+                        {RECATEGORIZABLE_CATEGORIES.map((category) => (
+                          <option key={category} value={category}>
+                            {categoryLabel(category)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </Card>
