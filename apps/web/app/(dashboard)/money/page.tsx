@@ -20,6 +20,7 @@ import { BankAccountCard } from "@/components/modules/BankAccountCard";
 import { PnlStatement } from "@/components/modules/PnlStatement";
 import { CashFlowCard } from "@/components/modules/CashFlowCard";
 import { MonoConnectButton } from "@/components/modules/MonoConnectButton";
+import { ReconciliationCard } from "@/components/modules/ReconciliationCard";
 import { formatMoney } from "@/lib/format";
 import {
   RECATEGORIZABLE_CATEGORIES,
@@ -203,6 +204,8 @@ export default function MoneyPage() {
           </>
         )}
       </Card>
+
+      {accounts && accounts.length > 0 ? <ReconciliationCard currency={currency} /> : null}
 
       {visibility.fullPnl ? (
         // The period toggle governs the two statements underneath it, so it

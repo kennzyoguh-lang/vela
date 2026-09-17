@@ -98,3 +98,38 @@ export async function recategorize(
     }),
   );
 }
+
+// Bank reconciliation's candidate pool (reconciliation.service.ts) — every
+// unmatched credit, most recent first, capped to a sensible window since a
+// transaction older than a few months is unlikely to still be an
+// outstanding invoice's payment.
+export async function listUnmatchedCredits(orgId: string, since: Date): Promise<BankTransaction[]> {
+  return withOrgScope(orgId, (tx) =>
+    tx.bankTransaction.findMany({
+      where: { orgId, type: "credit", matchedInvoiceId: null, transactionDate: { gte: since } },
+      orderBy: { transactionDate: "desc" },
+    }),
+  );
+}
+
+export async function matchToInvoice(
+  orgId: string,
+  transactionId: string,
+  invoiceId: string,
+): Promise<BankTransaction> {
+  return withOrgScope(orgId, (tx) =>
+    tx.bankTransaction.update({
+      where: { id: transactionId, orgId },
+      data: { matchedInvoiceId: invoiceId, matchedAt: new Date() },
+    }),
+  );
+}
+
+export async function clearMatch(orgId: string, transactionId: string): Promise<BankTransaction> {
+  return withOrgScope(orgId, (tx) =>
+    tx.bankTransaction.update({
+      where: { id: transactionId, orgId },
+      data: { matchedInvoiceId: null, matchedAt: null },
+    }),
+  );
+}
