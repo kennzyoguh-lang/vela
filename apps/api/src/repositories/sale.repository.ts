@@ -17,6 +17,7 @@ export interface CreateSaleData {
   discountAmount: number;
   currency: string;
   customerName?: string;
+  branchId?: string | null;
   items: SaleItemInput[];
 }
 
@@ -33,6 +34,7 @@ export async function createSale(orgId: string, input: CreateSaleData): Promise<
         discountAmount: input.discountAmount,
         currency: input.currency,
         customerName: input.customerName,
+        branchId: input.branchId,
         items: {
           create: input.items.map((item) => ({
             id: randomUUID(),
@@ -131,17 +133,24 @@ export async function hasRepeatCustomer(orgId: string, minCount: number): Promis
 
 // Piece 2's "today's sales" view — paginated for a human, unlike a future
 // cash-reconciliation total which would need every row (not built yet).
-export async function listByOrg(orgId: string, page: PageParams): Promise<Page<SaleWithItems>> {
+// Optional branchId narrows to one location — omitted for a single-branch
+// org or when an owner wants the whole-business view.
+export async function listByOrg(
+  orgId: string,
+  page: PageParams,
+  branchId?: string,
+): Promise<Page<SaleWithItems>> {
   return withOrgScope(orgId, async (tx) => {
+    const where = { orgId, ...(branchId ? { branchId } : {}) };
     const [items, total] = await Promise.all([
       tx.sale.findMany({
-        where: { orgId },
+        where,
         orderBy: { soldAt: "desc" },
         skip: page.skip,
         take: page.take,
         include: { items: true },
       }),
-      tx.sale.count({ where: { orgId } }),
+      tx.sale.count({ where }),
     ]);
     return toPage(items, total, page);
   });

@@ -13,6 +13,9 @@ vi.mock("../repositories/sale.repository", () => ({
 vi.mock("../repositories/organisation.repository", () => ({
   findOrganisationById: vi.fn(),
 }));
+vi.mock("../repositories/user.repository", () => ({
+  findById: vi.fn(),
+}));
 vi.mock("../repositories/audit-log.repository", () => ({
   write: vi.fn(),
 }));
@@ -28,6 +31,7 @@ vi.mock("./rate-limit.service", () => ({
 import * as productRepo from "../repositories/product.repository";
 import * as saleRepo from "../repositories/sale.repository";
 import * as organisationRepo from "../repositories/organisation.repository";
+import * as userRepo from "../repositories/user.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
 import * as passwordService from "./password.service";
 import * as rateLimitService from "./rate-limit.service";
@@ -42,6 +46,7 @@ describe("sale.service#logSale", () => {
     vi.clearAllMocks();
     vi.mocked(saleRepo.createSale).mockResolvedValue({ id: randomUUID() } as never);
     vi.mocked(rateLimitService.isDiscountApprovalLockedOut).mockResolvedValue(false);
+    vi.mocked(userRepo.findById).mockResolvedValue({ branchId: null } as never);
   });
 
   it("computes the total from the catalog price, ignoring anything resembling a client-sent price", async () => {
@@ -73,6 +78,20 @@ describe("sale.service#logSale", () => {
         ],
       }),
     );
+  });
+
+  it("auto-tags the sale with the acting staff member's own branch, never a client-sent one", async () => {
+    const branchId = randomUUID();
+    vi.mocked(productRepo.findManyByIds).mockResolvedValue([
+      { id: productId, name: "Phone case", price: 1500, currency: "NGN", isActive: true },
+    ] as never);
+    vi.mocked(userRepo.findById).mockResolvedValue({ branchId } as never);
+
+    await saleService.logSale(orgId, staffUserId, "staff", {
+      items: [{ productId, quantity: 1 }],
+    });
+
+    expect(saleRepo.createSale).toHaveBeenCalledWith(orgId, expect.objectContaining({ branchId }));
   });
 
   it("rejects an unknown product id", async () => {
@@ -128,6 +147,7 @@ describe("sale.service#logSale — discount approval (anti-theft Piece 4)", () =
     vi.clearAllMocks();
     vi.mocked(saleRepo.createSale).mockResolvedValue({ id: randomUUID() } as never);
     vi.mocked(rateLimitService.isDiscountApprovalLockedOut).mockResolvedValue(false);
+    vi.mocked(userRepo.findById).mockResolvedValue({ branchId: null } as never);
     vi.mocked(productRepo.findManyByIds).mockResolvedValue([
       { id: productId, name: "Phone case", price: 1500, currency: "NGN", isActive: true },
     ] as never);

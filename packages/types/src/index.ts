@@ -163,15 +163,30 @@ export interface Sale {
   customerName: string | null;
   status: SaleStatus;
   voidedReason: string | null;
+  branchId: string | null;
   soldAt: string;
   createdAt: string;
   items: SaleItem[];
 }
 
-// Anti-theft Piece 5 — sanitized shape returned by POST /v1/organisation/staff.
-// generatedPin is present only when the caller omitted a PIN (the visual
-// "Add Sales Staff" flow never collects one) — shown to the owner exactly
-// once, same one-time-reveal treatment as a backup code or API key.
+// Multi-branch — see the API's schema.prisma comment on the Branch model
+// for why this stays a narrow location tag rather than a full multi-entity
+// split (invoicing/payroll/compliance/connectors remain org-wide).
+export interface Branch {
+  id: string;
+  orgId: string;
+  name: string;
+  address: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Anti-theft Piece 5 — sanitized shape returned by POST /v1/organisation/staff
+// and GET /v1/organisation/staff. generatedPin is present only when the
+// caller omitted a PIN (the visual "Add Sales Staff" flow never collects
+// one) — shown to the owner exactly once, same one-time-reveal treatment as
+// a backup code or API key.
 export interface StaffUserSummary {
   id: string;
   name: string;
@@ -180,6 +195,7 @@ export interface StaffUserSummary {
   isActive: boolean;
   createdAt: string;
   generatedPin?: string;
+  branchId?: string | null;
 }
 
 export type OwnerSummaryStatus = "matched" | "shortfall" | "overage" | "pending";

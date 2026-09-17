@@ -11,6 +11,7 @@ export interface CreateCashCheckData {
   difference: number;
   matched: boolean;
   currency: string;
+  branchId?: string | null;
 }
 
 // Voided sales are excluded by construction — status: "completed" is part of
@@ -62,6 +63,7 @@ export async function create(
         difference: input.difference,
         matched: input.matched,
         currency: input.currency,
+        branchId: input.branchId,
       },
     }),
   );

@@ -59,6 +59,12 @@ export async function createStaff(req: Request, res: Response) {
   sendSuccess(res, staff, 201);
 }
 
+export async function listStaff(req: Request, res: Response) {
+  const { orgId } = getAuthContext(req);
+  const staff = await organisationService.listStaffUsers(orgId);
+  sendSuccess(res, staff);
+}
+
 export async function setDiscountApprovalPin(req: Request, res: Response) {
   const { orgId, userId } = getAuthContext(req);
   const { pin } = setDiscountApprovalPinSchema.parse(req.body);
