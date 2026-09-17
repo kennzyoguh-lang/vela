@@ -4,6 +4,7 @@ import * as transactionMarkupService from "./transaction-markup.service";
 import * as webhookEventRepo from "../repositories/webhook-event.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
 import * as referralService from "./referral.service";
+import * as paymentCredentialService from "./payment-credential.service";
 import { getGateway } from "./payment-gateways";
 import { logger } from "../lib/logger";
 import type { PaymentProcessor } from "@prisma/client";
@@ -35,7 +36,23 @@ export async function processWebhook(
 ): Promise<WebhookOutcome> {
   const gateway = getGateway(processor);
 
-  if (!gateway.verifyWebhookSignature(rawBody, signatureHeader)) {
+  // Bring-your-own-processor (F-connectors) means the correct signing key
+  // depends on WHICH org this webhook belongs to, which isn't known yet —
+  // peekReference reads only the reference field to look that up, making no
+  // other use of the body's contents (its own doc comment explains why this
+  // isn't an exception to "verify before trust": every other field, and
+  // this invoice lookup's own result, still isn't acted on until the
+  // signature below actually passes).
+  const peekedReference = gateway.peekReference(rawBody);
+  const peekedInvoice = peekedReference
+    ? await invoiceRepo.findByPaymentPortalToken(peekedReference)
+    : null;
+  const secretKey = await paymentCredentialService.resolveSecretKey(
+    peekedInvoice?.orgId ?? null,
+    processor,
+  );
+
+  if (!secretKey || !gateway.verifyWebhookSignature(rawBody, signatureHeader, secretKey)) {
     logger.warn({ processor }, "Webhook signature verification failed — rejecting");
     return "invalid_signature";
   }
@@ -54,8 +71,11 @@ export async function processWebhook(
 
   if (event.status !== "success") return "ignored";
 
-  // The reference IS the invoice's payment_portal_token — see invoice-portal
-  // .controller.ts's initialize step, which passes it as-is to the gateway.
+  // Re-fetched rather than reusing peekedInvoice: that lookup ran before
+  // signature verification and only ever existed to pick the right key
+  // above — the invoice this webhook actually acts on is looked up fresh
+  // from the NOW-VERIFIED event.reference, same as before this function
+  // supported per-org keys at all.
   const invoice = await invoiceRepo.findByPaymentPortalToken(event.reference);
   if (!invoice) {
     logger.error(

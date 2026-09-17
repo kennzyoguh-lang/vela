@@ -15,6 +15,10 @@ export const flutterwaveGateway: PaymentGatewayHandler = {
     );
   },
 
+  peekReference() {
+    return null;
+  },
+
   verifyWebhookSignature() {
     return false;
   },

@@ -15,6 +15,17 @@ const envSchema = z.object({
   // Anthropic, so a missing key fails loud at boot rather than silently
   // degrading. 32 raw bytes, base64-encoded (AES-256-GCM key).
   TWO_FA_ENCRYPTION_KEY_BASE64: z.string().min(1),
+  // Optional, unlike the key above — org-supplied payment processor
+  // credentials (an org connecting their own Paystack/Stripe account
+  // instead of Vela's platform one) are an opt-in feature most orgs never
+  // touch, not a mandatory security control every account goes through.
+  // Unset means that one feature fails loudly at the call site
+  // (payment-credential.service.ts) — the app boots and every existing
+  // payment flow (Vela's own platform keys) works exactly as before.
+  // 32 raw bytes, base64-encoded (AES-256-GCM key, lib/encryption.ts) — a
+  // separate key from TWO_FA_ENCRYPTION_KEY_BASE64 so a compromise of one
+  // doesn't also expose the other.
+  PAYMENT_CREDENTIAL_ENCRYPTION_KEY_BASE64: z.string().optional(),
   // Optional — payment gateway keys (Epic 5). The app boots and every non-
   // payment feature works without these (Handbook 1.4: "AI is a feature, not
   // a foundation" applies equally here — a missing Paystack key must never

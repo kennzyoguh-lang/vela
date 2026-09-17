@@ -22,6 +22,9 @@ vi.mock("./payment-gateways", () => ({
 vi.mock("./referral.service", () => ({
   recordConversionIfReferred: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("./payment-credential.service", () => ({
+  resolveSecretKey: vi.fn(),
+}));
 
 import * as invoiceRepo from "../repositories/invoice.repository";
 import * as invoiceService from "./invoice.service";
@@ -29,6 +32,7 @@ import * as transactionMarkupService from "./transaction-markup.service";
 import * as webhookEventRepo from "../repositories/webhook-event.repository";
 import * as auditLogRepo from "../repositories/audit-log.repository";
 import * as referralService from "./referral.service";
+import * as paymentCredentialService from "./payment-credential.service";
 import { getGateway } from "./payment-gateways";
 import { processWebhook } from "./payment-webhook.service";
 
@@ -36,6 +40,7 @@ function stubGateway(overrides: Record<string, unknown> = {}) {
   return {
     processor: "paystack",
     initializePayment: vi.fn(),
+    peekReference: vi.fn(() => "portal-token-1"),
     verifyWebhookSignature: vi.fn(() => true),
     parseWebhookEvent: vi.fn(() => ({
       eventId: "evt_1",
@@ -61,6 +66,39 @@ describe("payment-webhook.service — idempotency and signature verification", (
       orgId,
       id: invoiceId,
     } as never);
+    // Resolved once for peekReference's pre-verification lookup, then again
+    // when parseWebhookEvent's own reference is looked up post-verification
+    // — a real (non-null) key here is what lets verifyWebhookSignature's own
+    // mock decide the outcome, same as before this service supported
+    // per-org keys.
+    vi.mocked(paymentCredentialService.resolveSecretKey).mockResolvedValue("resolved-secret-key");
+  });
+
+  it("resolves the signing key using the org peeked from the reference, before verifying", async () => {
+    vi.mocked(getGateway).mockReturnValue(stubGateway() as never);
+
+    await processWebhook("paystack", Buffer.from("{}"), "sig");
+
+    expect(paymentCredentialService.resolveSecretKey).toHaveBeenCalledWith(orgId, "paystack");
+  });
+
+  it("falls back to org-less key resolution when the reference can't be peeked", async () => {
+    vi.mocked(getGateway).mockReturnValue(stubGateway({ peekReference: () => null }) as never);
+
+    await processWebhook("paystack", Buffer.from("{}"), "sig");
+
+    expect(paymentCredentialService.resolveSecretKey).toHaveBeenCalledWith(null, "paystack");
+  });
+
+  it("rejects the webhook (never calls verifyWebhookSignature) when no key resolves at all", async () => {
+    vi.mocked(paymentCredentialService.resolveSecretKey).mockResolvedValue(null);
+    const gateway = stubGateway();
+    vi.mocked(getGateway).mockReturnValue(gateway as never);
+
+    const outcome = await processWebhook("paystack", Buffer.from("{}"), "sig");
+
+    expect(outcome).toBe("invalid_signature");
+    expect(gateway.verifyWebhookSignature).not.toHaveBeenCalled();
   });
 
   it("rejects a webhook with an invalid signature before touching any invoice", async () => {
